@@ -31,7 +31,7 @@ export default function PurchaseOrdersPage() {
     () => api.purchaseOrders.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: sort ?? undefined }),
     [page, debouncedSearch, sort],
   );
-  useEventStream({ "document.posted": () => orders.reload() });
+  useEventStream({ "document.posted": () => orders.reload() }, !!user);
 
   return (
     <AppShell>

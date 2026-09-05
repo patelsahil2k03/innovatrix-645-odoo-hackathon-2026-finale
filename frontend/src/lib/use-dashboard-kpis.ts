@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useEventStream } from "@/lib/use-event-stream";
 
 export interface DashboardKpis {
@@ -22,6 +23,7 @@ export interface DashboardKpis {
 }
 
 export function useDashboardKpis(): DashboardKpis {
+  const { user } = useAuth();
   const [state, setState] = useState<DashboardKpis>({
     receivables: null,
     payables: null,
@@ -32,6 +34,7 @@ export function useDashboardKpis(): DashboardKpis {
   });
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
 
     async function load() {
@@ -60,19 +63,22 @@ export function useDashboardKpis(): DashboardKpis {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
-  useEventStream({
-    "kpi.refresh": (payload) => {
-      setState((prev) => ({
-        ...prev,
-        receivables: typeof payload.receivables === "number" ? payload.receivables : prev.receivables,
-        payables: typeof payload.payables === "number" ? payload.payables : prev.payables,
-        cash: typeof payload.cash === "number" ? payload.cash : prev.cash,
-        netProfit: typeof payload.net_profit === "number" ? payload.net_profit : prev.netProfit,
-      }));
+  useEventStream(
+    {
+      "kpi.refresh": (payload) => {
+        setState((prev) => ({
+          ...prev,
+          receivables: typeof payload.receivables === "number" ? payload.receivables : prev.receivables,
+          payables: typeof payload.payables === "number" ? payload.payables : prev.payables,
+          cash: typeof payload.cash === "number" ? payload.cash : prev.cash,
+          netProfit: typeof payload.net_profit === "number" ? payload.net_profit : prev.netProfit,
+        }));
+      },
     },
-  });
+    !!user,
+  );
 
   return state;
 }

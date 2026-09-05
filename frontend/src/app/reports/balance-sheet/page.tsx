@@ -5,6 +5,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { DownloadIcon } from "@/components/icons";
 import { api, type ReportGroup } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 import { date, money } from "@/lib/format";
@@ -44,8 +45,12 @@ function GroupTable({ group, asOf }: { group: ReportGroup; asOf: string }) {
 }
 
 export default function BalanceSheetPage() {
-  const report = useFetch(() => api.reports.balanceSheet(), []);
-  useEventStream({ "ledger.changed": () => report.reload() });
+  const { user } = useAuth();
+  const report = useFetch(
+    () => (user ? api.reports.balanceSheet() : Promise.resolve(null)),
+    [user],
+  );
+  useEventStream({ "ledger.changed": () => report.reload() }, !!user);
 
   return (
     <AppShell>

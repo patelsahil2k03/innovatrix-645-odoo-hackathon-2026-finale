@@ -33,10 +33,13 @@ export default function CustomerInvoiceDetailPage({ params }: { params: Promise<
   const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200 }), []);
   const contacts = useFetch(() => api.contacts.list({ page_size: 200 }), []);
 
-  useEventStream({
-    "document.posted": (payload) => { if (payload.id === id) invoice.reload(); },
-    "payment.registered": () => invoice.reload(),
-  });
+  useEventStream(
+    {
+      "document.posted": (payload) => { if (payload.id === id) invoice.reload(); },
+      "payment.registered": () => invoice.reload(),
+    },
+    !!user,
+  );
 
   const [working, setWorking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);

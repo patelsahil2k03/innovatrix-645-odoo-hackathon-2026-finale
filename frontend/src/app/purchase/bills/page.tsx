@@ -31,10 +31,13 @@ export default function VendorBillsPage() {
     () => api.vendorBills.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: sort ?? undefined }),
     [page, debouncedSearch, sort],
   );
-  useEventStream({
-    "document.posted": () => bills.reload(),
-    "payment.registered": () => bills.reload(),
-  });
+  useEventStream(
+    {
+      "document.posted": () => bills.reload(),
+      "payment.registered": () => bills.reload(),
+    },
+    !!user,
+  );
 
   return (
     <AppShell>

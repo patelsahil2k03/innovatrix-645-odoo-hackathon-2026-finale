@@ -198,6 +198,56 @@ only the row being mutated and works whether or not the join is present.
 - **The concurrency test in [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md) §1.3
   only proves anything on Postgres.** Mark it `@pytest.mark.postgres` and skip it on
   SQLite rather than letting it pass vacuously.
+- **In practice, this team only ever runs Postgres.** There is one shared instance
+  (`08_RUNBOOK.md` §1–2), not one-per-laptop, so the SQLite path above is a theoretical
+  fallback for isolated offline work, never the actual team workflow.
+
+---
+
+## 3.2 SHARED DATABASE — OPERATIONAL REFERENCE
+
+Setup commands live in [`08_RUNBOOK.md`](08_RUNBOOK.md) §1–2. This is the reasoning and
+the edge cases behind them.
+
+**Rotating `POSTGRES_PASSWORD`.** Postgres only reads it once, on first init of an empty
+volume — editing `.env` later does nothing to an already-running instance. Rotate the live
+one instead: `docker exec hackathon-db psql -U app -d app -c "ALTER USER app WITH
+PASSWORD '<new>';"`, then update `DATABASE_URL` in `.env` to match.
+
+**A `docker exec ... psql` test proves nothing about real remote auth.** The base image's
+`pg_hba.conf` trusts `127.0.0.1`/`::1` unconditionally for connections from *inside the
+container's own network namespace* — an old, already-rotated password will still look
+like it "works" tested that way. Anything from outside that namespace (the host via
+`localhost`, a teammate via LAN IP) hits the real `scram-sha-256` rule. Test a password
+change from the host or another machine, never via `docker exec`.
+
+**AP client isolation.** Some venue/office wifi blocks device-to-device connections on
+purpose. Test the moment everyone's on the same network: `nc -zv <host-ip> 5432`
+(Windows: `Test-NetConnection <host-ip> -Port 5432`). Connects → fine. "Connection
+refused" → check the container's healthy and `sudo ufw allow 5432/tcp` on the host. Times
+out / hangs → that's the isolation signature; stop debugging Postgres, use the fallback
+below.
+
+**Fallback: a phone hotspot.** A phone's hotspot is a NAT you control and typically
+doesn't isolate its own clients. One person tethers, everyone — including whoever hosts
+Postgres — joins that hotspot instead of venue wifi, then re-run `hostname -I` on the
+host for the new IP. The phone doesn't have to belong to whoever hosts Postgres.
+
+**Migrations.** Only one person ever runs `alembic upgrade head` — whoever's actively on
+the schema. Everyone else only reads/writes rows; a second uncoordinated `alembic
+revision --autogenerate` against a database someone else is also migrating is how two
+migration histories diverge. Schema change → say so in the group chat first, same as any
+other contract change (`04_API_CONTRACT.md` §5).
+
+**Confirming a teammate's write actually reached the shared database.** Log in as
+`admin@urbanfurniture.in` and open `GET /api/v1/audit-logs` (or the frontend page backed
+by it) — every successful write, by anyone, anywhere, is recorded there automatically
+(`core/audit.py`) with who, what, and when. If a teammate says they created something and
+it isn't there, their `DATABASE_URL` is pointed at the wrong place — most likely still
+`localhost` (talking to a database that doesn't exist on their machine, or worse, a stray
+local Postgres container they forgot they started: check `docker ps` for a `hackathon-db`
+on THEIR machine, which should never exist). Adminer (`08_RUNBOOK.md` §1) is the fallback
+if the audit log itself is what's in question.
 
 ---
 
