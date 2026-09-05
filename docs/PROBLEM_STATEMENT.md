@@ -185,6 +185,21 @@ from it alone.
 10. An Accountant **cannot** modify or archive master data.
 11. Converting a PO to a Bill **must** copy lines faithfully and mark the PO `BILLED`.
 12. Tax on a sale **must** be computed by the system, not typed by the user.
+13. A document **cannot** be posted or confirmed with zero lines.
+14. A document with any payment already recorded against it **cannot** be cancelled — a
+    partial or full refund is a reversing correction, never a raw cancel of paid history.
+15. Tax is computed **per line**, rounded to two decimals per line, then summed — never
+    computed once on the order subtotal, which can round to a different total by a paisa.
+16. A line's tax rate and account mapping are captured **at the moment the line is
+    created**, and never re-derived from the product's current settings afterward — a later
+    rate change must not retroactively alter an existing document.
+17. Archiving a contact, product, or account **cannot** affect any document or ledger entry
+    that already references it — archiving only blocks new use, never rewrites history.
+
+Rules 13–17 were found by cross-checking the schema for edge cases neither official source
+states explicitly but that a real accounting system cannot skip — a document editor that
+allows zero lines, or a cancel button that quietly orphans a recorded payment, would pass
+every example in the statement while still being wrong.
 
 Each of these gets a rejecting test **and** an accepting test — see
 [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md).
@@ -203,10 +218,18 @@ Each of these gets a rejecting test **and** an accepting test — see
 
 ### Bonus / optional (not asked for — build only after the above is green)
 
-- [ ] Partial payments allocated across several documents
+- [ ] **Advance / deposit payments** — recording money against a Purchase or Sales Order
+      *before* a Bill or Invoice exists. Not asked for by either source, and the current
+      schema deliberately doesn't support it — see [`03_DATA_MODEL.md`](03_DATA_MODEL.md)
+      §4 for exactly what's missing and how it would be added if wanted.
 - [ ] Drill-down: report figure → account → journal lines → source document
 - [ ] Aged receivables / payables
 - [ ] Period lock (a closed month cannot be posted into)
+
+> Partial payment itself is **not** on this list — entering less than the amount due is
+> already core, mandatory behaviour (§1, "Payment" row). The item above is specifically
+> about paying *before any bill or invoice exists at all*, which is a different, harder
+> problem: there is no document yet for the payment to point at.
 
 ### 🟩 The capability that defines the build
 

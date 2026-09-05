@@ -71,6 +71,10 @@ shortcut a tired teammate would take at 03:00.
 | Budget revised only once | `ALREADY_REVISED` on a second revise | first revise succeeds |
 | Sign-up credential rules | `WEAK_PASSWORD`, `LOGIN_ID_TAKEN`, `EMAIL_TAKEN` | valid signup creates an Accountant |
 | Mail never blocks posting | SMTP down → document still `POSTED`, error recorded | configured host → `last_sent_at` set |
+| No zero-line documents | `EMPTY_DOCUMENT` confirming an invoice with no lines | one line present → confirms |
+| No cancel after payment | `CANNOT_CANCEL_WITH_PAYMENTS` once `amount_paid > 0` | cancel on an unpaid draft succeeds |
+| Tax rate is a snapshot | changing `product.sales_tax_pct` today leaves yesterday's posted invoice line untouched | a **new** line picks up the current rate |
+| Archiving doesn't touch history | archived account's past postings still appear in a period report that covers them | archived account rejected on a **new** posting (`ACCOUNT_ARCHIVED`) |
 
 ### 1.2b The budget computation deserves its own tests
 

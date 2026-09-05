@@ -65,7 +65,10 @@ def post_entry(
         raise AppError("ALREADY_POSTED", "...")
 
     # 3 — ALLOCATE the number under a row lock (never MAX()+1 — it races)
-    entry_number = next_sequence(db, journal)      # SELECT ... FOR UPDATE inside
+    # One global sequence for JE/{year}/{00000} — independent of `journal`,
+    # independent of any document. Document numbers (INV/…, Bill/…, S…, P…)
+    # are a separate sequence, allocated when that document is created.
+    entry_number = next_entry_number(db, entry_date.year)   # SELECT ... FOR UPDATE inside
 
     # 4 — WRITE
     entry = JournalEntry(..., state=EntryState.POSTED, posted_by_id=actor_id)
@@ -91,6 +94,27 @@ def reverse_entry(db, entry, *, actor_id, reason):
 
 Two entries now exist, both immutable, and the trial balance still lands on zero. That is
 what makes the audit trail real rather than claimed.
+
+**Two guards that run before `post_entry` or `reverse_entry` is ever called:**
+
+```python
+def confirm_invoice(db, invoice_id, *, actor_id):
+    invoice = lock_row(db, CustomerInvoice, invoice_id)
+    require_status(invoice.status, InvoiceStatus.DRAFT)
+    require(len(invoice.lines) > 0, "EMPTY_DOCUMENT",
+            "Add at least one line before confirming.")
+    ...
+
+def cancel_invoice(db, invoice_id, *, actor_id):
+    invoice = lock_row(db, CustomerInvoice, invoice_id)
+    require(invoice.amount_paid == 0, "CANNOT_CANCEL_WITH_PAYMENTS",
+            "This invoice has payments recorded — issue a credit note instead.")
+    ...
+```
+
+Neither belongs inside `post_entry` itself — by the time a call reaches `post_entry`, the
+lines have already been built, so there is nothing left to check about the *document's own*
+line count. Both guards run at the document layer, before the ledger is touched at all.
 
 ---
 

@@ -1,0 +1,58 @@
+name: hackathon
+
+# Postgres is OPTIONAL for solo local dev — SQLite needs no Docker at all. It is
+# NOT optional once the team shares one database (docs/08_RUNBOOK.md "Shared
+# team database"): SELECT ... FOR UPDATE is silently a no-op on SQLite, which
+# breaks the row-locking the posting engine depends on.
+#
+# Start it with:  ./scripts/dev.sh --db docker
+#
+# ⚠️ DATA SAFETY — read this before running any docker compose command here.
+# `pgdata` is a NAMED volume. `docker compose down` (bare, no flags) does NOT
+# touch named volumes — stopping and restarting this stack never loses data.
+# The only commands that destroy it are:
+#   docker compose down -v          (or --volumes)
+#   docker volume rm hackathon_pgdata
+# Never run either against a database anyone is actually using.
+
+services:
+  db:
+    image: postgres:18
+    container_name: hackathon-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    ports:
+      # Binds 0.0.0.0 explicitly — a teammate on the same network reaches this
+      # at <this-machine's-LAN-IP>:5432. See docs/08_RUNBOOK.md for the exact
+      # connection steps and the wifi-isolation fallback.
+      - "0.0.0.0:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Postgres 18+ images store data pg_ctlcluster-style and need the volume
+      # mounted one level UP (at /var/lib/postgresql, not .../data). Mounting at
+      # .../data fails on 18+ even on a fresh volume.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional web UI so anyone on the team can look at the shared data without
+  # installing a Postgres client. Never started by `up -d db` alone — bring it
+  # up explicitly with `--profile adminer` when someone actually wants it.
+  adminer:
+    image: adminer:5
+    container_name: hackathon-adminer
+    profiles: ["adminer"]
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "0.0.0.0:${ADMINER_PORT:-8081}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
