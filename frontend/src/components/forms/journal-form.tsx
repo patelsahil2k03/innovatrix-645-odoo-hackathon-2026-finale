@@ -41,7 +41,7 @@ export function JournalForm({ initial, onSubmit, submitLabel, readOnly }: Journa
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200, sort: "code" }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100, sort: "code" }), []);
   const accountOptions = accounts.data?.items ?? [];
 
   async function handleSubmit(event: React.FormEvent) {

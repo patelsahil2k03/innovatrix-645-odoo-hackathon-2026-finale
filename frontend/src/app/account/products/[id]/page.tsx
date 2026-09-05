@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ProductForm, productToFormValues } from "@/components/forms/product-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ProductCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useFetch } from "@/lib/use-fetch";
@@ -49,6 +50,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   {archiving ? "Archiving…" : "Archive"}
                 </button>
               ) : null}
+              <ClosePanel />
             </div>
 
             {!canManage ? (

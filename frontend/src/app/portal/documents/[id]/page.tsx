@@ -7,6 +7,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DownloadIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type CustomerInvoice, type VendorBill } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { round2 } from "@/lib/use-document-lines";
@@ -52,6 +53,7 @@ export default function PortalDocumentDetailPage({ params }: { params: Promise<{
                     </button>
                   ) : null}
                 </div>
+                <ClosePanel />
               </div>
 
               <div className="kpi-grid">

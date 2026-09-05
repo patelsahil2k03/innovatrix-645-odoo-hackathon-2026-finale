@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { JournalForm, journalToFormValues } from "@/components/forms/journal-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type JournalCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useFetch } from "@/lib/use-fetch";
@@ -48,6 +49,7 @@ export default function JournalDetailPage({ params }: { params: Promise<{ id: st
                   {archiving ? "Archiving…" : "Archive"}
                 </button>
               ) : null}
+              <ClosePanel />
             </div>
             {!canManage ? (
               <div className="alert alert-info">Only an Admin can modify or archive master data.</div>

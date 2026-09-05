@@ -285,6 +285,12 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
 .page-head p { color: var(--text-muted); font-size: var(--t-sm); margin-top: 2px; }
+/* The title block claims the leftover space, so every control after it groups on
+   the right. `space-between` alone only behaves with exactly two children — a
+   panel with both an action and a close button would strand the action in the
+   middle of the header. This keeps Archive/Post/Pay and Close together however
+   many of them a given panel has. */
+.page-head > :first-child { margin-right: auto; }
 
 .row { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }

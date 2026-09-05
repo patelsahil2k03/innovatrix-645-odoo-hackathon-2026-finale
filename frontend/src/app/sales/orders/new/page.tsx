@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
@@ -20,9 +21,9 @@ export default function NewSalesOrderPage() {
   const [customerError, setCustomerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const contacts = useFetch(() => api.contacts.list({ page_size: 200, sort: "name" }), []);
-  const products = useFetch(() => api.products.list({ page_size: 200, sort: "name" }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200, sort: "name" }), []);
+  const contacts = useFetch(() => api.contacts.list({ page_size: 100, sort: "name" }), []);
+  const products = useFetch(() => api.products.list({ page_size: 100, sort: "name" }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100, sort: "name" }), []);
   const customers = (contacts.data?.items ?? []).filter((c) => c.type === "CUSTOMER" || c.type === "BOTH");
 
   const { lines, addLine, removeLine, updateLine, selectProduct, totals } = useDocumentLines();
@@ -68,6 +69,7 @@ export default function NewSalesOrderPage() {
           <h1>New sales order</h1>
           <p>Nothing posts to the ledger until this becomes an invoice and that invoice is posted.</p>
         </div>
+        <ClosePanel />
       </div>
 
       <form className="stack" onSubmit={handleSubmit} noValidate>
