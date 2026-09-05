@@ -23,7 +23,8 @@ expands a section of it.
 | [12_SESSION_CONTEXT.md](12_SESSION_CONTEXT.md) | Handing this project to a new AI session |
 | [13_DESIGN_FAQ.md](13_DESIGN_FAQ.md) | **Four worked walkthroughs with real numbers**, then 30 questions on the reasoning. Read to refresh, not memorise. |
 | [team/LANES.md](team/LANES.md) | The four working lanes — reference, not assignments |
-| `technicals/` *(local, not tracked)* | Design explorations and decision records — gitignored, not present in a fresh clone |
+| [technicals/](technicals/) | System design, data model, UI system and screen blueprints — visual deep-dives |
+| `full_flow/` | The official Excalidraw mockup, kept alongside the docs it informed |
 
 ---
 

@@ -1,0 +1,427 @@
+<title>Ledger Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#F4F3F0; --surface:#FBFAF8; --sunk:#EBE9E4;
+  --ink:#1C1A17; --muted:#6B6660; --faint:#948E86;
+  --rule:#DEDAD3; --rule-strong:#C4BEB4;
+  --accent:#6B4A35; --accent-soft:#EFE5DC; --accent-ink:#6B4A35;
+  --good:#2F6B4F; --good-soft:#E3EFE8;
+  --warn:#8A6114; --warn-soft:#F5EBD8;
+  --crit:#A33A2E; --crit-soft:#F7E5E2;
+  --sans:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --pad:clamp(20px,5vw,60px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#171614; --surface:#1F1D1A; --sunk:#262320;
+  --ink:#EDEAE4; --muted:#A8A199; --faint:#7C756D;
+  --rule:#332F2B; --rule-strong:#463F39;
+  --accent:#C08E63; --accent-soft:#2C231C; --accent-ink:#C08E63;
+  --good:#6FBF95; --good-soft:#16241D;
+  --warn:#D5A445; --warn-soft:#2A2213;
+  --crit:#DE8478; --crit-soft:#2B1815;
+}}
+:root[data-theme="dark"]{
+  --ground:#171614; --surface:#1F1D1A; --sunk:#262320;
+  --ink:#EDEAE4; --muted:#A8A199; --faint:#7C756D;
+  --rule:#332F2B; --rule-strong:#463F39;
+  --accent:#C08E63; --accent-soft:#2C231C; --accent-ink:#C08E63;
+  --good:#6FBF95; --good-soft:#16241D;
+  --warn:#D5A445; --warn-soft:#2A2213;
+  --crit:#DE8478; --crit-soft:#2B1815;
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:var(--pad)}
+h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:600;letter-spacing:-.02em}
+h1{font-size:clamp(34px,5.4vw,52px);line-height:1.04;font-weight:700}
+h2{font-size:clamp(23px,3vw,31px);line-height:1.15}
+h3{font-size:18px}
+h4{font-size:15px}
+p{margin:0;max-width:66ch}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+.lede{font-size:19px;line-height:1.55;color:var(--muted);max-width:60ch}
+.small{font-size:14.5px;line-height:1.6;color:var(--muted)}
+.tiny{font-size:13px;line-height:1.55;color:var(--faint)}
+.mono{font-family:var(--mono)}
+
+header.mast{display:flex;flex-direction:column;gap:20px;padding-bottom:30px;border-bottom:2px solid var(--ink)}
+.mast-meta{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--rule-strong)}
+section{display:flex;flex-direction:column;gap:24px;padding:52px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-head{display:flex;flex-direction:column;gap:9px}
+
+figure{margin:0;display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--rule);padding:24px}
+figure svg{max-width:100%;height:auto;display:block;color:var(--ink)}
+figcaption{font-size:13.5px;line-height:1.55;color:var(--muted);max-width:70ch}
+figcaption b{color:var(--ink);font-weight:600}
+.figscroll{overflow-x:auto}
+
+.claim{border-left:3px solid var(--accent);background:var(--accent-soft);padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.claim p{max-width:none}
+.claim .eyebrow{color:var(--accent-ink)}
+
+.note{border:1px solid var(--rule);border-left:3px solid var(--crit);background:var(--crit-soft);padding:16px 18px;display:flex;flex-direction:column;gap:7px}
+.note .eyebrow{color:var(--crit)}
+.note p{max-width:none;font-size:14.5px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:800px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--rule);padding:18px 20px;display:flex;flex-direction:column;gap:11px}
+.panel p{max-width:none}
+
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.step{background:var(--surface);border:1px solid var(--rule);padding:14px 18px;display:grid;grid-template-columns:26px 1fr;gap:14px;align-items:start}
+.step-n{font-family:var(--mono);font-size:12px;color:var(--accent-ink);font-weight:600;padding-top:2px}
+.step p{max-width:none;font-size:14.5px}
+.step code{font-family:var(--mono);font-size:13px;background:var(--sunk);padding:1px 5px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px}
+th,td{text-align:left;padding:10px 15px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);background:var(--sunk);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--mono);font-size:13px}
+.num{font-variant-numeric:tabular-nums}
+
+.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:var(--ink);color:var(--ground);padding:18px 20px;overflow-x:auto;white-space:pre}
+:root[data-theme="dark"] .code{background:#0C0B0A;color:#DCD8D2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .code{background:#0C0B0A;color:#DCD8D2}}
+.code b{color:#C08E63;font-weight:600}
+.code i{color:#8F9E86;font-style:normal}
+
+footer{padding:38px 0 6px;color:var(--faint);font-size:13px;display:flex;flex-direction:column;gap:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="mast-meta">
+    <span class="eyebrow">Innovatrix #645</span><span class="dot"></span>
+    <span class="eyebrow">Urban Furniture — Accounting System</span><span class="dot"></span>
+    <span class="eyebrow">System design</span>
+  </div>
+  <h1>Ledger Architecture</h1>
+  <p class="lede">Every document in this system posts into one ledger through one function. That single constraint is what makes the reports trustworthy — and it is the thing most easily lost at three in the morning.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">The shape</span>
+    <h2>Two front ends, one API, one ledger</h2>
+  </div>
+
+  <figure class="figscroll">
+    <svg viewBox="0 0 980 430" role="img" aria-label="Internal app and customer portal both call the FastAPI service; routers delegate to services; only the posting service writes journal lines into PostgreSQL; a background simulator calls the same services; SSE flows back to both front ends.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+        </marker>
+        <marker id="ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#6B4A35"/>
+        </marker>
+      </defs>
+
+      <!-- clients -->
+      <rect x="20" y="30" width="180" height="64" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="110" y="56" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Internal app</text>
+      <text x="110" y="76" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">Admin · Accountant</text>
+
+      <rect x="20" y="126" width="180" height="64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="110" y="152" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Customer portal</text>
+      <text x="110" y="172" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">User — own documents only</text>
+
+      <!-- api boundary -->
+      <rect x="280" y="20" width="250" height="290" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="405" y="42" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor" letter-spacing="1.4">FASTAPI</text>
+
+      <rect x="300" y="58" width="210" height="46" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text x="405" y="80" text-anchor="middle" font-size="12" fill="currentColor">Routers</text>
+      <text x="405" y="96" text-anchor="middle" font-size="10" fill="currentColor" opacity=".65">RBAC · shape only</text>
+
+      <rect x="300" y="120" width="210" height="46" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text x="405" y="142" text-anchor="middle" font-size="12" fill="currentColor">Services</text>
+      <text x="405" y="158" text-anchor="middle" font-size="10" fill="currentColor" opacity=".65">all business rules</text>
+
+      <rect x="300" y="182" width="210" height="52" fill="#6B4A35" stroke="#6B4A35"/>
+      <text x="405" y="204" text-anchor="middle" font-size="12.5" font-weight="600" fill="#FBFAF8">posting.py</text>
+      <text x="405" y="221" text-anchor="middle" font-size="10" fill="#FBFAF8" opacity=".85">the only writer of journal_lines</text>
+
+      <rect x="300" y="250" width="210" height="42" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text x="405" y="268" text-anchor="middle" font-size="12" fill="currentColor">SSE hub</text>
+      <text x="405" y="283" text-anchor="middle" font-size="10" fill="currentColor" opacity=".65">publishes after commit</text>
+
+      <!-- db -->
+      <rect x="610" y="120" width="180" height="114" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="700" y="146" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">PostgreSQL</text>
+      <line x1="628" y1="158" x2="772" y2="158" stroke="currentColor" stroke-width="1" opacity=".35"/>
+      <text x="700" y="178" text-anchor="middle" font-size="11" fill="currentColor" opacity=".8">documents · masters</text>
+      <text x="700" y="198" text-anchor="middle" font-size="11.5" font-weight="600" fill="#6B4A35">journal_entries</text>
+      <text x="700" y="216" text-anchor="middle" font-size="11.5" font-weight="600" fill="#6B4A35">journal_lines</text>
+
+      <!-- reports -->
+      <rect x="860" y="120" width="100" height="114" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="910" y="150" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Reports</text>
+      <text x="910" y="172" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".75">Balance</text>
+      <text x="910" y="189" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".75">P&amp;L</text>
+      <text x="910" y="206" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".75">Budget</text>
+
+      <!-- simulator -->
+      <rect x="300" y="344" width="210" height="44" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="405" y="363" text-anchor="middle" font-size="12" fill="currentColor">Background simulator</text>
+      <text x="405" y="379" text-anchor="middle" font-size="10" fill="currentColor" opacity=".65">posts a real payment on a timer</text>
+
+      <!-- arrows -->
+      <line x1="200" y1="62" x2="278" y2="70" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"/>
+      <line x1="200" y1="158" x2="278" y2="92" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"/>
+      <text x="243" y="52" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">REST</text>
+
+      <line x1="405" y1="104" x2="405" y2="118" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"/>
+      <line x1="405" y1="166" x2="405" y2="180" stroke="#6B4A35" stroke-width="1.6" marker-end="url(#ar-a)"/>
+
+      <line x1="510" y1="208" x2="608" y2="190" stroke="#6B4A35" stroke-width="1.6" marker-end="url(#ar-a)"/>
+      <text x="562" y="188" text-anchor="middle" font-size="10" fill="#6B4A35" font-weight="600">writes</text>
+
+      <line x1="790" y1="177" x2="858" y2="177" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"/>
+      <text x="824" y="169" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">aggregates</text>
+
+      <line x1="405" y1="344" x2="405" y2="296" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+      <text x="470" y="322" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">same services</text>
+
+      <path d="M300 271 L 250 271 L 250 200 L 200 176" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+      <path d="M300 258 L 232 258 L 232 84 L 200 78" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+      <text x="256" y="300" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">SSE</text>
+    </svg>
+    <figcaption><b>The customer portal is a separate client, not a second internal screen.</b> Both front ends hit the same API, but portal queries are scoped to the caller's own contact. Note the single filled box: routers and services can read anything, but only <span class="mono">posting.py</span> writes to the ledger, and reports read the ledger rather than the documents beside it.</figcaption>
+  </figure>
+
+  <div class="claim">
+    <span class="eyebrow">The constraint the whole design rests on</span>
+    <p>Documents never store a balance that a report reads. A document <em>posts</em>; a report <em>aggregates</em>. Break that and the balance sheet becomes decoration — it will still render, still look right, and be wrong the moment anything is cancelled.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">The mechanism</span>
+    <h2>Four document types, one door into the ledger</h2>
+    <p class="small">This is the diagram worth memorising. Every arrow into <span class="mono">journal_lines</span> passes through one function — and the crossed path is the one that will be attempted.</p>
+  </div>
+
+  <figure class="figscroll">
+    <svg viewBox="0 0 900 360" role="img" aria-label="Vendor bills, customer invoices, payments and manual entries all route through post_entry, which is the only writer of journal lines. A direct write from a router to journal lines is marked as forbidden.">
+      <defs>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+        </marker>
+        <marker id="ar2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#6B4A35"/>
+        </marker>
+        <marker id="ar2x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#A33A2E"/>
+        </marker>
+      </defs>
+
+      <text x="90" y="26" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.2" fill="currentColor" opacity=".7">SOURCES</text>
+
+      <rect x="20" y="44" width="150" height="40" fill="none" stroke="currentColor"/>
+      <text x="95" y="69" text-anchor="middle" font-size="12" fill="currentColor">Vendor bill</text>
+      <rect x="20" y="96" width="150" height="40" fill="none" stroke="currentColor"/>
+      <text x="95" y="121" text-anchor="middle" font-size="12" fill="currentColor">Customer invoice</text>
+      <rect x="20" y="148" width="150" height="40" fill="none" stroke="currentColor"/>
+      <text x="95" y="173" text-anchor="middle" font-size="12" fill="currentColor">Payment</text>
+      <rect x="20" y="200" width="150" height="40" fill="none" stroke="currentColor"/>
+      <text x="95" y="225" text-anchor="middle" font-size="12" fill="currentColor">Manual entry</text>
+
+      <rect x="20" y="286" width="150" height="42" fill="none" stroke="#A33A2E" stroke-dasharray="4 3"/>
+      <text x="95" y="305" text-anchor="middle" font-size="11.5" fill="#A33A2E">Router / seed /</text>
+      <text x="95" y="320" text-anchor="middle" font-size="11.5" fill="#A33A2E">simulator</text>
+
+      <!-- the door -->
+      <rect x="330" y="96" width="200" height="92" fill="#6B4A35" stroke="#6B4A35"/>
+      <text x="430" y="126" text-anchor="middle" font-size="14" font-weight="600" fill="#FBFAF8">post_entry()</text>
+      <text x="430" y="147" text-anchor="middle" font-size="10.5" fill="#FBFAF8" opacity=".85">balance · duplicate guard</text>
+      <text x="430" y="163" text-anchor="middle" font-size="10.5" fill="#FBFAF8" opacity=".85">sequence · lock · commit</text>
+      <text x="430" y="179" text-anchor="middle" font-size="10.5" fill="#FBFAF8" opacity=".85">then publish</text>
+
+      <!-- ledger -->
+      <rect x="690" y="96" width="180" height="92" fill="none" stroke="#6B4A35" stroke-width="2"/>
+      <text x="780" y="128" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">journal_entries</text>
+      <text x="780" y="150" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">journal_lines</text>
+      <text x="780" y="172" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".7">immutable once POSTED</text>
+
+      <!-- source arrows -->
+      <path d="M170 64 L 250 64 L 250 130 L 328 130" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)"/>
+      <path d="M170 116 L 250 116 L 250 134 L 328 134" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)"/>
+      <path d="M170 168 L 250 168 L 250 146 L 328 146" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)"/>
+      <path d="M170 220 L 250 220 L 250 154 L 328 154" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)"/>
+
+      <line x1="530" y1="142" x2="688" y2="142" stroke="#6B4A35" stroke-width="2" marker-end="url(#ar2a)"/>
+      <text x="609" y="133" text-anchor="middle" font-size="10.5" font-weight="600" fill="#6B4A35">the only write path</text>
+
+      <!-- forbidden -->
+      <path d="M170 307 L 600 307 L 600 196" fill="none" stroke="#A33A2E" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ar2x)"/>
+      <line x1="366" y1="292" x2="396" y2="322" stroke="#A33A2E" stroke-width="2.4"/>
+      <line x1="396" y1="292" x2="366" y2="322" stroke="#A33A2E" stroke-width="2.4"/>
+      <text x="470" y="300" text-anchor="middle" font-size="11" font-weight="600" fill="#A33A2E">never a direct write</text>
+
+      <text x="430" y="352" text-anchor="middle" font-size="11" fill="currentColor" opacity=".65">grep -rn "JournalLine(" --include="*.py" | grep -v services/posting.py</text>
+    </svg>
+    <figcaption><b>The crossed arrow is not hypothetical.</b> A seed script or a simulator writing rows directly is the fastest way to a ledger that no longer balances, and it looks entirely reasonable in review. The grep at the bottom is the check — it belongs in the merge checklist, not in someone's memory.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="eyebrow">Why a duplicate is worse than an error here</span>
+    <p>Two concurrent posts of the same invoice produce <em>two balanced entries</em>. The trial balance still reads zero, every report still renders, and the books are silently doubled. That is why the row lock comes before the status re-check, and why <span class="mono">UNIQUE(source_type, source_id)</span> exists as a backstop at the database.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Sequence</span>
+    <h2>What happens when a document is confirmed</h2>
+  </div>
+
+  <div class="steps">
+    <div class="step"><span class="step-n">01</span><p><b>Router</b> — authenticate, check the role. <code>require_roles("Admin","Accountant")</code>. No business logic lives here.</p></div>
+    <div class="step"><span class="step-n">02</span><p><b>Lock the row</b> — <code>lock_row(db, CustomerInvoice, id)</code> takes <code>SELECT … FOR UPDATE</code>. On SQLite this clause is silently dropped, which is why anything graded runs on Postgres.</p></div>
+    <div class="step"><span class="step-n">03</span><p><b>Re-check status after the lock</b> — <code>require_status(inv.status, DRAFT)</code>. A check made before the lock is a check against a value that may already be stale.</p></div>
+    <div class="step"><span class="step-n">04</span><p><b>Build the lines</b> from the data, never from constants: receivable off the contact, income off the product, tax off the line. A missing mapping raises <code>MISSING_ACCOUNT_MAPPING</code> rather than falling back to a default account.</p></div>
+    <div class="step"><span class="step-n">05</span><p><b>Post</b> — balance check, duplicate guard, sequence number allocated under its own lock, insert.</p></div>
+    <div class="step"><span class="step-n">06</span><p><b>Commit.</b> Then publish <code>document.posted</code> and <code>ledger.changed</code>. An event published before the commit can describe a transaction that then rolls back.</p></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h4>Corrections reverse, never mutate</h4>
+      <p class="small">Cancelling a posted document writes a second entry with debit and credit swapped and <span class="mono">reversal_of_id</span> set. Two immutable entries now exist and the trial balance still lands on zero.</p>
+      <p class="tiny">This is also the direct answer to “what happens after a credit note?” — nothing is deleted, a second entry records the correction.</p>
+    </div>
+    <div class="panel">
+      <h4>Payments are idempotent</h4>
+      <p class="small">A double-clicked Pay button would otherwise produce two payments, two balanced entries, and books that are quietly wrong. A unique <span class="mono">idempotency_key</span> returns the original payment on a retry — a retry is not an error.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">The four postings</span>
+    <h2>The entire accounting engine</h2>
+    <p class="small">Everything else in this system is CRUD around these four rules.</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Document</th><th>Debit</th><th>Credit</th><th>Account comes from</th></tr></thead>
+      <tbody>
+        <tr><td class="rowhead"><b>Customer invoice</b></td><td class="mono">Debtors — total</td><td class="mono">Sales Income — untaxed<br>Tax Payable — tax</td><td class="small">contact.receivable · product.income</td></tr>
+        <tr><td class="rowhead"><b>Vendor bill</b></td><td class="mono">Purchase Expense — per line</td><td class="mono">Creditors — total</td><td class="small">product.expense · contact.payable</td></tr>
+        <tr><td class="rowhead"><b>Payment received</b></td><td class="mono">Bank / Cash — amount</td><td class="mono">Debtors — amount</td><td class="small">journal.default_debit</td></tr>
+        <tr><td class="rowhead"><b>Payment sent</b></td><td class="mono">Creditors — amount</td><td class="mono">Bank / Cash — amount</td><td class="small">journal.default_credit</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="code">Balance Sheet = Σ journal_lines <b>group by</b> account.type ∈ {ASSET, LIABILITY, CAPITAL}
+P&amp;L          = Σ journal_lines <b>group by</b> account.type ∈ {INCOME, EXPENSE, OTHER_EXPENSE}
+Trial balance = Σ debit − Σ credit  <b>≡ 0.00</b>   <i>← asserted live, on every screen</i>
+
+<i>The mockup states the same invariant in its own words:</i>
+<i>“The Total of All asset and liability would always match.”</i></div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Derived data</span>
+    <h2>How a budget knows what it has achieved</h2>
+    <p class="small">The one computation that does <em>not</em> read the ledger — and the reason it doesn't is worth understanding before you build it.</p>
+  </div>
+
+  <figure class="figscroll">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Analytic tags on invoice and bill lines are searched within the budget period and summed into the achieved amount, from which achieved percentage and amount remaining are derived.">
+      <defs>
+        <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+        </marker>
+        <marker id="ar3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#6B4A35"/>
+        </marker>
+      </defs>
+
+      <rect x="20" y="40" width="190" height="56" fill="none" stroke="currentColor"/>
+      <text x="115" y="63" text-anchor="middle" font-size="12" fill="currentColor">Customer invoice lines</text>
+      <text x="115" y="82" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".7">analytic type = INCOME</text>
+
+      <rect x="20" y="118" width="190" height="56" fill="none" stroke="currentColor"/>
+      <text x="115" y="141" text-anchor="middle" font-size="12" fill="currentColor">Vendor bill lines</text>
+      <text x="115" y="160" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".7">analytic type = EXPENSE</text>
+
+      <rect x="300" y="70" width="200" height="74" fill="none" stroke="#6B4A35" stroke-width="1.6"/>
+      <text x="400" y="96" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">match analytic</text>
+      <text x="400" y="116" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".75">+ within budget period</text>
+      <text x="400" y="133" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".75">Σ line totals</text>
+
+      <rect x="590" y="40" width="180" height="42" fill="#6B4A35" stroke="#6B4A35"/>
+      <text x="680" y="66" text-anchor="middle" font-size="12.5" font-weight="600" fill="#FBFAF8">Achieved amount</text>
+
+      <rect x="590" y="100" width="180" height="40" fill="none" stroke="currentColor"/>
+      <text x="680" y="119" text-anchor="middle" font-size="11.5" fill="currentColor">Achieved %</text>
+      <text x="680" y="134" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">achieved ÷ committed × 100</text>
+
+      <rect x="590" y="158" width="180" height="40" fill="none" stroke="currentColor"/>
+      <text x="680" y="177" text-anchor="middle" font-size="11.5" fill="currentColor">Amount to achieve</text>
+      <text x="680" y="192" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">committed − achieved</text>
+
+      <line x1="210" y1="68" x2="298" y2="96" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar3)"/>
+      <line x1="210" y1="146" x2="298" y2="120" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar3)"/>
+      <line x1="500" y1="98" x2="588" y2="66" stroke="#6B4A35" stroke-width="1.6" marker-end="url(#ar3a)"/>
+      <line x1="680" y1="82" x2="680" y2="98" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar3)"/>
+      <path d="M770 61 L 800 61 L 800 178 L 772 178" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar3)"/>
+
+      <rect x="300" y="212" width="470" height="52" fill="none" stroke="currentColor" stroke-dasharray="4 3"/>
+      <text x="535" y="234" text-anchor="middle" font-size="11.5" fill="currentColor">Clicking the achieved figure opens the documents behind it</text>
+      <text x="535" y="252" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".7">same analytic · same period · the drill-down, again</text>
+      <line x1="680" y1="140" x2="680" y2="210" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ar3)"/>
+    </svg>
+    <figcaption><b>Achievement is computed from document lines, not journal lines</b> — because the mockup puts the analytic tag on the invoice and bill lines and describes the search in those terms. Keep it there. Tagging journal lines instead would be defensible accounting and the wrong answer to the specification we were given.</figcaption>
+  </figure>
+
+  <div class="panel">
+    <h4>Budgets have their own state machine</h4>
+    <p class="small"><span class="mono">DRAFT → CONFIRMED → REVISED → CANCELLED</span>. Revising a confirmed budget creates a <em>new</em> budget, moves the original to <span class="mono">REVISED</span>, appends “Revised” to the name, and links the two in both directions. The original is never edited — the same immutability instinct as the ledger, applied to planning.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Module map</span>
+    <h2>Where each thing lives</h2>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Layer</th><th>Modules</th><th>May write the ledger?</th></tr></thead>
+      <tbody>
+        <tr><td class="rowhead">Routers</td><td class="mono">masters · documents · payments · ledger (read-only) · reports · portal</td><td>No</td></tr>
+        <tr><td class="rowhead">Services</td><td class="mono">posting.py · payments.py · reports.py · budgets.py · rules.py</td><td><b style="color:var(--accent-ink)">posting.py only</b></td></tr>
+        <tr><td class="rowhead">Models</td><td class="mono">masters · ledger · documents · payments</td><td>—</td></tr>
+        <tr><td class="rowhead">Given</td><td class="mono">auth · rbac · pagination · errors · events · audit · csv_export</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>Team Innovatrix #645 · Urban Furniture Accounting System</p>
+  <p>Structure derived from the official problem statement and its Excalidraw flow. The account-type set, the analytic-on-document-lines rule and the budget revision chain all come from the mockup rather than the PDF, which is thinner.</p>
+</footer>
+
+</div>

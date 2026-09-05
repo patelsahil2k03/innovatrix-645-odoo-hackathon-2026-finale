@@ -1,0 +1,413 @@
+<title>Ledger Schema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#F4F3F0; --surface:#FBFAF8; --sunk:#EBE9E4;
+  --ink:#1C1A17; --muted:#6B6660; --faint:#948E86;
+  --rule:#DEDAD3; --rule-strong:#C4BEB4;
+  --accent:#6B4A35; --accent-soft:#EFE5DC;
+  --good:#2F6B4F; --good-soft:#E3EFE8;
+  --warn:#8A6114; --warn-soft:#F5EBD8;
+  --crit:#A33A2E; --crit-soft:#F7E5E2;
+  --info:#3D5A73; --info-soft:#E4EBF1;
+  --sans:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --pad:clamp(20px,5vw,60px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#171614; --surface:#1F1D1A; --sunk:#262320;
+  --ink:#EDEAE4; --muted:#A8A199; --faint:#7C756D;
+  --rule:#332F2B; --rule-strong:#463F39;
+  --accent:#C08E63; --accent-soft:#2C231C;
+  --good:#6FBF95; --good-soft:#16241D;
+  --warn:#D5A445; --warn-soft:#2A2213;
+  --crit:#DE8478; --crit-soft:#2B1815;
+  --info:#8FB0C9; --info-soft:#182229;
+}}
+:root[data-theme="dark"]{
+  --ground:#171614; --surface:#1F1D1A; --sunk:#262320;
+  --ink:#EDEAE4; --muted:#A8A199; --faint:#7C756D;
+  --rule:#332F2B; --rule-strong:#463F39;
+  --accent:#C08E63; --accent-soft:#2C231C;
+  --good:#6FBF95; --good-soft:#16241D;
+  --warn:#D5A445; --warn-soft:#2A2213;
+  --crit:#DE8478; --crit-soft:#2B1815;
+  --info:#8FB0C9; --info-soft:#182229;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1100px;margin:0 auto;padding:var(--pad)}
+h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:600;letter-spacing:-.02em}
+h1{font-size:clamp(34px,5.4vw,52px);line-height:1.04;font-weight:700}
+h2{font-size:clamp(23px,3vw,31px);line-height:1.15}
+h3{font-size:18px}h4{font-size:15px}
+p{margin:0;max-width:66ch}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+.lede{font-size:19px;line-height:1.55;color:var(--muted);max-width:60ch}
+.small{font-size:14.5px;line-height:1.6;color:var(--muted)}
+.tiny{font-size:12.5px;line-height:1.5;color:var(--faint)}
+.mono{font-family:var(--mono)}
+header.mast{display:flex;flex-direction:column;gap:20px;padding-bottom:28px;border-bottom:2px solid var(--ink)}
+.mast-meta{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--rule-strong)}
+section{display:flex;flex-direction:column;gap:22px;padding:50px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-head{display:flex;flex-direction:column;gap:9px}
+figure{margin:0;display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--rule);padding:24px}
+figure svg{max-width:100%;height:auto;display:block;color:var(--ink)}
+figcaption{font-size:13.5px;line-height:1.55;color:var(--muted);max-width:72ch}
+figcaption b{color:var(--ink);font-weight:600}
+.figscroll{overflow-x:auto}
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);background:var(--sunk);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--mono);font-size:12.5px}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:1px solid currentColor;white-space:nowrap}
+.t-new{color:var(--crit)}.t-chg{color:var(--warn)}.t-ok{color:var(--good)}
+.claim{border-left:3px solid var(--accent);background:var(--accent-soft);padding:17px 20px;display:flex;flex-direction:column;gap:8px}
+.claim p{max-width:none}.claim .eyebrow{color:var(--accent)}
+.note{border:1px solid var(--rule);border-left:3px solid var(--crit);background:var(--crit-soft);padding:16px 18px;display:flex;flex-direction:column;gap:7px}
+.note .eyebrow{color:var(--crit)}.note p{max-width:none;font-size:14.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--rule);padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.panel p{max-width:none}
+.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:var(--ink);color:var(--ground);padding:18px 20px;overflow-x:auto;white-space:pre}
+:root[data-theme="dark"] .code{background:#0C0B0A;color:#DCD8D2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .code{background:#0C0B0A;color:#DCD8D2}}
+.code b{color:#C08E63;font-weight:600}.code i{color:#8F9E86;font-style:normal}
+ul{margin:0;padding-left:19px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+li::marker{color:var(--faint)}
+code{font-family:var(--mono);font-size:13px;background:var(--sunk);padding:1px 5px}
+footer{padding:36px 0 6px;color:var(--faint);font-size:13px;display:flex;flex-direction:column;gap:6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="mast-meta">
+    <span class="eyebrow">Innovatrix #645</span><span class="dot"></span>
+    <span class="eyebrow">Urban Furniture — Accounting System</span><span class="dot"></span>
+    <span class="eyebrow">Data model</span>
+  </div>
+  <h1>Ledger Schema</h1>
+  <p class="lede">Twenty tables in four groups. Masters feed documents, documents post into the ledger, reports read the ledger — and exactly one thing in this diagram breaks that chain on purpose.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Overview</span>
+    <h2>Four groups, one direction of flow</h2>
+  </div>
+
+  <figure class="figscroll">
+    <svg viewBox="0 0 1000 470" role="img" aria-label="Master data feeds document headers and lines; posting documents creates journal entries and lines which reports aggregate; budget lines read document lines directly rather than the ledger.">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" fill="currentColor"/></marker>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" fill="#6B4A35"/></marker>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" fill="#8A6114"/></marker>
+      </defs>
+
+      <!-- MASTERS -->
+      <rect x="16" y="40" width="196" height="300" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="114" y="62" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.3" fill="currentColor" opacity=".7">MASTERS</text>
+      <g font-size="12" fill="currentColor" font-family="IBM Plex Mono, monospace">
+        <text x="34" y="90">users</text>
+        <text x="34" y="115">contacts</text>
+        <text x="34" y="140">products</text>
+        <text x="34" y="165">product_categories</text>
+        <text x="34" y="190">accounts</text>
+        <text x="34" y="215">journals</text>
+        <text x="34" y="240">analytic_accounts</text>
+      </g>
+      <line x1="30" y1="255" x2="198" y2="255" stroke="currentColor" opacity=".3"/>
+      <text x="34" y="277" font-size="10.5" fill="currentColor" opacity=".7">contacts → receivable /</text>
+      <text x="34" y="292" font-size="10.5" fill="currentColor" opacity=".7">payable account</text>
+      <text x="34" y="313" font-size="10.5" fill="currentColor" opacity=".7">products → income /</text>
+      <text x="34" y="328" font-size="10.5" fill="currentColor" opacity=".7">expense account</text>
+
+      <!-- DOCUMENTS -->
+      <rect x="286" y="40" width="216" height="300" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="394" y="62" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.3" fill="currentColor" opacity=".7">DOCUMENTS</text>
+      <g font-size="12" fill="currentColor" font-family="IBM Plex Mono, monospace">
+        <text x="304" y="90">purchase_orders</text>
+        <text x="316" y="110">└ lines</text>
+        <text x="304" y="135">vendor_bills</text>
+        <text x="316" y="155">└ lines</text>
+        <text x="304" y="180">sales_orders</text>
+        <text x="316" y="200">└ lines</text>
+        <text x="304" y="225">customer_invoices</text>
+        <text x="316" y="245">└ lines</text>
+        <text x="304" y="272">payments</text>
+      </g>
+      <line x1="300" y1="290" x2="488" y2="290" stroke="currentColor" opacity=".3"/>
+      <text x="304" y="311" font-size="10.5" fill="#8A6114" font-weight="600">every line carries an</text>
+      <text x="304" y="326" font-size="10.5" fill="#8A6114" font-weight="600">analytic_account_id</text>
+
+      <!-- LEDGER -->
+      <rect x="576" y="94" width="196" height="146" fill="none" stroke="#6B4A35" stroke-width="2"/>
+      <text x="674" y="116" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.3" fill="#6B4A35">LEDGER</text>
+      <text x="594" y="146" font-size="12.5" font-weight="600" fill="currentColor" font-family="IBM Plex Mono, monospace">journal_entries</text>
+      <text x="594" y="170" font-size="12.5" font-weight="600" fill="currentColor" font-family="IBM Plex Mono, monospace">journal_lines</text>
+      <line x1="590" y1="186" x2="758" y2="186" stroke="currentColor" opacity=".3"/>
+      <text x="594" y="207" font-size="10.5" fill="currentColor" opacity=".75">immutable once POSTED</text>
+      <text x="594" y="224" font-size="10.5" fill="currentColor" opacity=".75">Σ debit = Σ credit</text>
+
+      <!-- REPORTS -->
+      <rect x="846" y="94" width="138" height="146" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="915" y="116" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.3" fill="currentColor" opacity=".7">REPORTS</text>
+      <g font-size="11.5" fill="currentColor" opacity=".85">
+        <text x="864" y="145">Balance Sheet</text>
+        <text x="864" y="167">Profit &amp; Loss</text>
+        <text x="864" y="189">Trial Balance</text>
+        <text x="864" y="211">Budget</text>
+      </g>
+
+      <!-- BUDGET -->
+      <rect x="576" y="300" width="196" height="120" fill="none" stroke="#8A6114" stroke-width="1.6"/>
+      <text x="674" y="322" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.3" fill="#8A6114">BUDGET</text>
+      <text x="594" y="350" font-size="12.5" fill="currentColor" font-family="IBM Plex Mono, monospace">budgets</text>
+      <text x="594" y="372" font-size="12.5" fill="currentColor" font-family="IBM Plex Mono, monospace">budget_lines</text>
+      <line x1="590" y1="386" x2="758" y2="386" stroke="currentColor" opacity=".3"/>
+      <text x="594" y="406" font-size="10.5" fill="currentColor" opacity=".75">DRAFT→CONFIRMED→REVISED</text>
+
+      <!-- flows -->
+      <line x1="212" y1="150" x2="284" y2="150" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+      <text x="248" y="142" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">fills</text>
+
+      <path d="M502 180 L 540 180 L 540 160 L 574 160" fill="none" stroke="#6B4A35" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="540" y="150" text-anchor="middle" font-size="10.5" font-weight="600" fill="#6B4A35">post</text>
+
+      <line x1="772" y1="167" x2="844" y2="167" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+      <text x="808" y="159" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">Σ</text>
+
+      <path d="M502 300 L 540 300 L 540 350 L 574 350" fill="none" stroke="#8A6114" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#a3)"/>
+      <text x="537" y="392" text-anchor="middle" font-size="10.5" font-weight="600" fill="#8A6114">reads lines,</text>
+      <text x="537" y="406" text-anchor="middle" font-size="10.5" font-weight="600" fill="#8A6114">not the ledger</text>
+
+      <path d="M772 340 L 900 340 L 900 240" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a1)"/>
+    </svg>
+    <figcaption><b>The dashed amber path is the deliberate exception.</b> Budget achievement is computed from document lines, not journal lines — because the mockup puts the analytic tag on invoice and bill lines and describes the search in exactly those terms. Tagging journal lines instead would be defensible accounting and the wrong answer to the specification we were handed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Corrections</span>
+    <h2>What the mockup changed</h2>
+    <p class="small">The Excalidraw flow is considerably more specific than the PDF. These are the places where building from the PDF alone would have produced the wrong schema.</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Area</th><th>What the mockup requires</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><b>Account types</b></td><td>Eight, not five — <span class="mono">ASSET · LIABILITY · BANK · CASH · CAPITAL · INCOME · EXPENSE · OTHER_EXPENSE</span>. The P&amp;L reports Purchase Expense and Other Expense on separate lines.</td><td><span class="tag t-chg">changed</span></td></tr>
+        <tr><td><b>Analytics</b></td><td>On <em>document</em> lines, not journal lines. Income analytics come from invoice lines, expense analytics from PO and bill lines.</td><td><span class="tag t-chg">changed</span></td></tr>
+        <tr><td><b>Budget</b></td><td>A full state machine with a revision chain, and three computed fields per line.</td><td><span class="tag t-new">new</span></td></tr>
+        <tr><td><b>Sign up</b></td><td>Self-registration creating an Accountant. Login ID unique, 6–12 chars; password needs upper, lower, special, 8+.</td><td><span class="tag t-new">new</span></td></tr>
+        <tr><td><b>Product category</b></td><td>Its own table — many-to-one, creatable inline from the product form.</td><td><span class="tag t-new">new</span></td></tr>
+        <tr><td><b>Document reference</b></td><td>A user-supplied alphanumeric reference (<span class="mono">ABC-26-001</span>) separate from the generated number.</td><td><span class="tag t-new">new</span></td></tr>
+        <tr><td><b>Numbering</b></td><td><span class="mono">Bill/2026/0001</span> · <span class="mono">INV/2026/0001</span> · <span class="mono">P00001</span> · <span class="mono">S00001</span> — orders use a different format from documents.</td><td><span class="tag t-chg">changed</span></td></tr>
+        <tr><td><b>Payments</b></td><td>Raised from a document's Pay button. Direction Send/Receive, via Bank (default) or Cash, with a note.</td><td><span class="tag t-chg">changed</span></td></tr>
+        <tr><td><b>Contacts</b></td><td>Country field, and an image.</td><td><span class="tag t-chg">changed</span></td></tr>
+        <tr><td><b>Double entry</b></td><td>“Blocking warning if the debit and credit amount don't match.” Confirms the invariant.</td><td><span class="tag t-ok">confirmed</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Chart of accounts</span>
+    <h2>Eight types, and where each one surfaces</h2>
+  </div>
+
+  <figure class="figscroll">
+    <svg viewBox="0 0 940 260" role="img" aria-label="Eight account types roll up into the balance sheet as assets, liabilities and capital, or into the profit and loss statement as income and expenses.">
+      <defs><marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" fill="currentColor"/></marker></defs>
+      <text x="90" y="26" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="1.2" fill="currentColor" opacity=".7">ACCOUNT TYPE</text>
+      <g font-family="IBM Plex Mono, monospace" font-size="12" fill="currentColor">
+        <rect x="20" y="40" width="140" height="26" fill="none" stroke="currentColor"/><text x="30" y="58">ASSET</text>
+        <rect x="20" y="70" width="140" height="26" fill="none" stroke="currentColor"/><text x="30" y="88">BANK</text>
+        <rect x="20" y="100" width="140" height="26" fill="none" stroke="currentColor"/><text x="30" y="118">CASH</text>
+        <rect x="20" y="134" width="140" height="26" fill="none" stroke="currentColor"/><text x="30" y="152">LIABILITY</text>
+        <rect x="20" y="168" width="140" height="26" fill="none" stroke="currentColor"/><text x="30" y="186">CAPITAL</text>
+        <rect x="20" y="202" width="140" height="26" fill="none" stroke="currentColor"/><text x="30" y="220">INCOME</text>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="12" fill="currentColor">
+        <rect x="180" y="202" width="150" height="26" fill="none" stroke="currentColor"/><text x="190" y="220">EXPENSE</text>
+        <rect x="350" y="202" width="180" height="26" fill="none" stroke="currentColor"/><text x="360" y="220">OTHER_EXPENSE</text>
+      </g>
+
+      <rect x="600" y="40" width="150" height="120" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <text x="675" y="62" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Balance Sheet</text>
+      <text x="618" y="88" font-size="11" fill="currentColor" opacity=".8">Assets</text>
+      <text x="632" y="105" font-size="10.5" fill="currentColor" opacity=".65">Bank · Cash · Debtors</text>
+      <text x="618" y="126" font-size="11" fill="currentColor" opacity=".8">Liabilities</text>
+      <text x="632" y="143" font-size="10.5" fill="currentColor" opacity=".65">Creditors · Capital</text>
+
+      <rect x="600" y="176" width="150" height="66" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <text x="675" y="198" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Profit &amp; Loss</text>
+      <text x="618" y="220" font-size="10.5" fill="currentColor" opacity=".65">Income − Expenses</text>
+      <text x="618" y="235" font-size="10.5" fill="currentColor" opacity=".65">= Net Income</text>
+
+      <path d="M160 53 L 400 53 L 400 70 L 598 70" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M160 83 L 390 83 L 390 76 L 598 76" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M160 113 L 380 113 L 380 82 L 598 82" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M160 147 L 420 147 L 420 126 L 598 126" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M160 181 L 430 181 L 430 132 L 598 132" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M160 215 L 170 215 L 170 240 L 560 240 L 560 210 L 598 210" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M330 215 L 340 215 L 340 250 L 570 250 L 570 216 L 598 216" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+      <path d="M530 215 L 545 215 L 545 222 L 598 222" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#b1)"/>
+
+      <text x="880" y="105" text-anchor="middle" font-size="11.5" font-weight="600" fill="#6B4A35">Assets ≡</text>
+      <text x="880" y="122" text-anchor="middle" font-size="11.5" font-weight="600" fill="#6B4A35">Liab + Capital</text>
+      <line x1="752" y1="100" x2="812" y2="100" stroke="#6B4A35" stroke-width="1.4"/>
+    </svg>
+    <figcaption><b>Type is the only thing that decides where an account appears.</b> Bank and Cash are separate types rather than sub-flags, which is what lets the balance sheet list them individually without a hard-coded account-name lookup — and it is how the mockup draws them.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="eyebrow">One ambiguity to resolve with the evaluator, not guess at</span>
+    <p>The mockup's account-type dropdown lists five options while the balance-sheet notes read like sub-types (<span class="mono">Asset-Bank</span>, <span class="mono">Asset-Debtors</span>). Eight flat types satisfies both readings and keeps the reports simple. If it turns out to mean a two-level taxonomy, only the grouping query changes — no table does.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">The ledger</span>
+    <h2>Two tables, and the constraints that make them true</h2>
+  </div>
+
+  <div class="code"><b>journal_entries</b>
+  entry_number    unique   <i>Bill/2026/0001 · gapless, allocated under a row lock</i>
+  journal_id      FK       entry_date · reference
+  state           enum     DRAFT | POSTED | REVERSED
+  source_type     text     customer_invoice | vendor_bill | payment | manual
+  source_id       uuid
+  reversal_of_id  FK       <i>set on the reversing entry</i>
+  posted_at · posted_by_id
+
+  <b>UNIQUE (source_type, source_id) WHERE state != 'REVERSED'</b>
+  <i>└ the database-level guard against double posting</i>
+
+<b>journal_lines</b>
+  entry_id · account_id · analytic_account_id? · partner_id? · label
+  debit   Numeric(14,2) default 0
+  credit  Numeric(14,2) default 0
+
+  <b>CHECK (debit >= 0 AND credit >= 0)</b>          <i>no negative postings</i>
+  <b>CHECK (NOT (debit > 0 AND credit > 0))</b>      <i>a line is one-sided</i>
+  <b>CHECK (debit > 0 OR credit > 0)</b>             <i>no empty lines</i></div>
+
+  <div class="claim">
+    <span class="eyebrow">Why the balance rule is not a CHECK constraint</span>
+    <p>A CHECK cannot see sibling rows, so <code>Σ debit = Σ credit</code> is asserted in the posting service — but inside the same transaction as the insert. A failure rolls the whole posting back, so it is never possible to <em>commit</em> an unbalanced entry. The three CHECKs above catch everything a single row can get wrong; the service catches the one thing it can't.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Budget</span>
+    <h2>The revision chain</h2>
+    <p class="small">Confirmed budgets are never edited. Revising one creates a successor and links both directions — the same immutability instinct as the ledger, applied to planning.</p>
+  </div>
+
+  <figure class="figscroll">
+    <svg viewBox="0 0 900 250" role="img" aria-label="A draft budget is confirmed; revising it creates a new confirmed budget named Revised while the original moves to the revised state, with links in both directions.">
+      <defs><marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" fill="currentColor"/></marker>
+      <marker id="c2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,0 10,5 0,10" fill="#8A6114"/></marker></defs>
+
+      <rect x="20" y="70" width="150" height="60" fill="none" stroke="currentColor"/>
+      <text x="95" y="95" text-anchor="middle" font-size="12.5" fill="currentColor">January 2026</text>
+      <text x="95" y="114" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">DRAFT</text>
+
+      <rect x="250" y="70" width="170" height="60" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <text x="335" y="95" text-anchor="middle" font-size="12.5" fill="currentColor">January 2026</text>
+      <text x="335" y="114" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">CONFIRMED · ₹2,00,000</text>
+
+      <rect x="250" y="170" width="170" height="56" fill="none" stroke="#8A6114" stroke-dasharray="4 3"/>
+      <text x="335" y="194" text-anchor="middle" font-size="12.5" fill="currentColor">January 2026</text>
+      <text x="335" y="212" text-anchor="middle" font-size="11" fill="#8A6114">REVISED · superseded</text>
+
+      <rect x="560" y="70" width="200" height="60" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <text x="660" y="95" text-anchor="middle" font-size="12.5" fill="currentColor">January 2026 Revised</text>
+      <text x="660" y="114" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">CONFIRMED · ₹3,50,000</text>
+
+      <line x1="170" y1="100" x2="248" y2="100" stroke="currentColor" stroke-width="1.4" marker-end="url(#c1)"/>
+      <text x="209" y="92" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">confirm</text>
+
+      <line x1="420" y1="100" x2="558" y2="100" stroke="currentColor" stroke-width="1.4" marker-end="url(#c1)"/>
+      <text x="489" y="92" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">revise</text>
+
+      <line x1="335" y1="130" x2="335" y2="168" stroke="#8A6114" stroke-width="1.4" marker-end="url(#c2)"/>
+
+      <path d="M560 118 L 500 118 L 500 190 L 422 190" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#c1)"/>
+      <text x="500" y="212" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">revision_of</text>
+
+      <path d="M420 178 L 470 178 L 470 140 L 558 128" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#c1)"/>
+      <text x="466" y="158" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7">revised_with</text>
+
+      <text x="450" y="34" text-anchor="middle" font-size="11" fill="currentColor" opacity=".65">the original is never edited — the limit moved from ₹2,00,000 to ₹3,50,000</text>
+    </svg>
+    <figcaption><b>Both links are clickable in the UI</b>, in both directions. The successor keeps the original name with “Revised” appended, so the two are recognisable as a pair in a list without opening either.</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <div class="panel">
+      <h4>Stored per budget line</h4>
+      <ul>
+        <li><span class="mono">analytic_account_id</span></li>
+        <li><span class="mono">committed_amount</span> — the plan</li>
+      </ul>
+      <p class="tiny">That is all. Everything else is derived, so nothing can go stale.</p>
+    </div>
+    <div class="panel">
+      <h4>Computed on read</h4>
+      <ul>
+        <li><b>Achieved</b> — Σ matching document lines in the period</li>
+        <li><b>Achieved %</b> — achieved ÷ committed × 100</li>
+        <li><b>To achieve</b> — committed − achieved</li>
+      </ul>
+      <p class="tiny">Clicking the achieved figure opens the documents behind it.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Standing rules</span>
+    <h2>Applied to every table without exception</h2>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <ul>
+        <li><b>Money</b> is <code>Numeric(12,2)</code>. Never <code>Float</code> — drift shows up on screen.</li>
+        <li><b>Dates</b> are <code>DateTime(timezone=True)</code>, always UTC. Mixing <code>date.today()</code> with <code>datetime.now(UTC)</code> broke three tests on every IST machine last round.</li>
+        <li><b>Status</b> columns are Python enums with <code>native_enum=False</code>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <ul>
+        <li><b>Unique</b> on every document number, account code, contact email, and the payment idempotency key.</li>
+        <li><b>CHECK</b> for every numeric rule — <code>quantity > 0</code>, <code>unit_price >= 0</code>, <code>amount > 0</code>.</li>
+        <li><b>Index</b> every column filtered or sorted on: status, all foreign keys, all dates.</li>
+        <li><b>Archive</b>, never delete. Archived accounts reject new postings.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Team Innovatrix #645 · Urban Furniture Accounting System</p>
+  <p>Schema derived from the problem statement and its Excalidraw flow. Where the two disagree the mockup is more specific, and the differences are listed above rather than silently resolved.</p>
+</footer>
+
+</div>

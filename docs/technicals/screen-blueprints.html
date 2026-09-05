@@ -1,0 +1,536 @@
+<title>Screen Blueprints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#F4F3F0; --surface:#FBFAF8; --sunk:#EBE9E4; --raised:#FFFFFF;
+  --ink:#1C1A17; --muted:#6B6660; --faint:#948E86;
+  --rule:#DEDAD3; --rule-strong:#C4BEB4;
+  --accent:#6B4A35; --accent-soft:#EFE5DC; --accent-on:#FBFAF8;
+  --good:#2F6B4F; --good-soft:#E3EFE8;
+  --warn:#8A6114; --warn-soft:#F5EBD8;
+  --crit:#A33A2E; --crit-soft:#F7E5E2;
+  --info:#3D5A73; --info-soft:#E4EBF1;
+  --sans:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --pad:clamp(20px,5vw,60px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#171614; --surface:#1F1D1A; --sunk:#262320; --raised:#272420;
+  --ink:#EDEAE4; --muted:#A8A199; --faint:#7C756D;
+  --rule:#332F2B; --rule-strong:#463F39;
+  --accent:#C08E63; --accent-soft:#2C231C; --accent-on:#171614;
+  --good:#6FBF95; --good-soft:#16241D;
+  --warn:#D5A445; --warn-soft:#2A2213;
+  --crit:#DE8478; --crit-soft:#2B1815;
+  --info:#8FB0C9; --info-soft:#182229;
+}}
+:root[data-theme="dark"]{
+  --ground:#171614; --surface:#1F1D1A; --sunk:#262320; --raised:#272420;
+  --ink:#EDEAE4; --muted:#A8A199; --faint:#7C756D;
+  --rule:#332F2B; --rule-strong:#463F39;
+  --accent:#C08E63; --accent-soft:#2C231C; --accent-on:#171614;
+  --good:#6FBF95; --good-soft:#16241D;
+  --warn:#D5A445; --warn-soft:#2A2213;
+  --crit:#DE8478; --crit-soft:#2B1815;
+  --info:#8FB0C9; --info-soft:#182229;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:var(--pad)}
+h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:600;letter-spacing:-.02em}
+h1{font-size:clamp(34px,5.4vw,52px);line-height:1.04;font-weight:700}
+h2{font-size:clamp(23px,3vw,31px);line-height:1.15}
+h3{font-size:18px}h4{font-size:15px}
+p{margin:0;max-width:66ch}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+.lede{font-size:19px;line-height:1.55;color:var(--muted);max-width:60ch}
+.small{font-size:14.5px;line-height:1.6;color:var(--muted)}
+.tiny{font-size:12.5px;line-height:1.5;color:var(--faint)}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+header.mast{display:flex;flex-direction:column;gap:20px;padding-bottom:28px;border-bottom:2px solid var(--ink)}
+.mast-meta{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--rule-strong)}
+section{display:flex;flex-direction:column;gap:20px;padding:48px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-head{display:flex;flex-direction:column;gap:8px}
+
+/* ---- screen frame ---- */
+.screen{border:1px solid var(--rule-strong);background:var(--surface);overflow:hidden}
+.screen-cap{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:8px 12px;background:var(--sunk);border-bottom:1px solid var(--rule-strong);flex-wrap:wrap}
+.screen-cap b{font-size:12.5px;font-weight:600}
+.screen-cap span{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
+.screen-body{padding:0;overflow-x:auto}
+
+/* app chrome */
+.topbar{display:flex;align-items:center;gap:18px;padding:9px 14px;border-bottom:1px solid var(--rule);background:var(--raised);flex-wrap:wrap}
+.brand{font-weight:700;font-size:14px;letter-spacing:-.02em}
+.nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
+.nav a{font-size:12.5px;padding:5px 11px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}
+.nav a.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.tbadge{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--good);background:var(--good-soft);color:var(--good);font-size:11px;font-weight:500;white-space:nowrap}
+.tbadge .n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.who{font-size:11.5px;color:var(--muted);white-space:nowrap}
+
+.subbar{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--sunk);flex-wrap:wrap}
+.subbar .ttl{font-size:14px;font-weight:600;flex:1}
+.chip{font-size:11.5px;padding:3px 9px;border:1px solid var(--rule-strong);color:var(--muted);background:var(--surface);white-space:nowrap}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+.chip .c{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.b{font:inherit;font-size:12px;font-weight:500;padding:5px 11px;border:1px solid transparent;background:transparent;color:var(--ink);white-space:nowrap}
+.b-p{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.b-s{border-color:var(--rule-strong);background:var(--surface)}
+.b-d{border-color:var(--crit);color:var(--crit)}
+.b-g{color:var(--muted)}
+
+.pad{padding:14px}
+tab{}
+table.t{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px}
+table.t th,table.t td{text-align:left;padding:7px 11px;border-bottom:1px solid var(--rule)}
+table.t thead th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);background:var(--sunk);font-weight:600;white-space:nowrap}
+table.t td.m,table.t th.m{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tfoot td{border-top:2px solid var(--rule-strong);font-weight:600;background:var(--sunk)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:2px 7px;border:1px solid currentColor;white-space:nowrap}
+.badge .bd{width:5px;height:5px;border-radius:50%;background:currentColor}
+.s-draft{color:var(--muted)}.s-posted{color:var(--info)}.s-partial{color:var(--warn)}.s-paid{color:var(--good)}.s-canc{color:var(--crit)}.s-rev{color:var(--accent)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule)}
+.kpi{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.kpi .l{font-size:11px;color:var(--muted)}
+.kpi .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .d{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px 20px;padding:14px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld .lb{font-size:10.5px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.fld .vl{font-size:13px;padding:6px 9px;border:1px solid var(--rule-strong);background:var(--raised);min-height:31px}
+.fld .vl.sel::after{content:"▾";float:right;color:var(--faint)}
+.fld .hint{font-size:10.5px;color:var(--faint)}
+
+.kanban{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:14px}
+.kc{border:1px solid var(--rule);background:var(--raised);padding:11px;display:flex;gap:10px;align-items:flex-start}
+.kav{width:32px;height:32px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex:none}
+.kb{min-width:0;display:flex;flex-direction:column;gap:1px}
+.kn{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.km{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* t-account preview */
+.ta{border:1px solid var(--accent);margin:14px;max-width:420px}
+.ta-h{padding:7px 11px;background:var(--accent-soft);border-bottom:1px solid var(--accent);font-size:11.5px;font-weight:600;color:var(--accent)}
+.ta-b{display:grid;grid-template-columns:1fr 1fr}
+.ta-c{padding:9px 11px;display:flex;flex-direction:column;gap:5px}
+.ta-c:first-child{border-right:1px solid var(--rule-strong)}
+.ta-l{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+.ta-r{display:flex;justify-content:space-between;gap:10px;font-size:12px}
+.ta-r span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ta-f{border-top:1px solid var(--rule-strong);display:grid;grid-template-columns:1fr 1fr;background:var(--sunk);font-weight:600}
+.ta-f div{padding:6px 11px;display:flex;justify-content:space-between;font-size:12px}
+.ta-f div:first-child{border-right:1px solid var(--rule-strong)}
+.ta-f span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* modal */
+.modal{border:1px solid var(--rule-strong);background:var(--raised);max-width:400px;margin:14px}
+.modal-h{padding:9px 13px;border-bottom:1px solid var(--rule);font-size:13px;font-weight:600;display:flex;justify-content:space-between}
+.modal-f{padding:10px 13px;border-top:1px solid var(--rule);display:flex;gap:8px;justify-content:flex-end;background:var(--sunk)}
+
+/* report */
+.rep{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media (max-width:700px){.rep{grid-template-columns:1fr}}
+.repcol{display:flex;flex-direction:column;gap:6px}
+.rephd{font-size:12px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding-bottom:5px;border-bottom:1px solid var(--rule-strong)}
+.repline{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.repline span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.reptot{display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding-top:6px;margin-top:4px;border-top:2px solid var(--rule-strong)}
+.reptot span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.ann{border-left:3px solid var(--accent);background:var(--accent-soft);padding:14px 17px;display:flex;flex-direction:column;gap:6px}
+.ann p{max-width:none;font-size:14px}
+.ann .eyebrow{color:var(--accent)}
+.note{border:1px solid var(--rule);border-left:3px solid var(--crit);background:var(--crit-soft);padding:15px 17px;display:flex;flex-direction:column;gap:6px}
+.note .eyebrow{color:var(--crit)}.note p{max-width:none;font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+ul{margin:0;padding-left:19px;display:flex;flex-direction:column;gap:5px;font-size:14px}
+li::marker{color:var(--faint)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--sunk);padding:1px 5px}
+footer{padding:36px 0 6px;color:var(--faint);font-size:13px;display:flex;flex-direction:column;gap:6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="mast-meta">
+    <span class="eyebrow">Innovatrix #645</span><span class="dot"></span>
+    <span class="eyebrow">Urban Furniture — Accounting System</span><span class="dot"></span>
+    <span class="eyebrow">Screens</span>
+  </div>
+  <h1>Screen Blueprints</h1>
+  <p class="lede">Every layout below is traced from the official Excalidraw flow and rendered in the real design tokens — so what you see is what the build should produce, not an impression of it.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Navigation</span>
+    <h2>Four menus, exactly as the mockup draws them</h2>
+  </div>
+  <div class="screen">
+    <div class="screen-cap"><b>App shell</b><span>persistent across every internal screen</span></div>
+    <div class="screen-body">
+      <div class="topbar">
+        <span class="brand">▦ Ledger</span>
+        <nav class="nav">
+          <a href="#" class="on">Sales</a><a href="#">Purchase</a><a href="#">Account</a><a href="#">Report</a>
+        </nav>
+        <span class="tbadge">Trial balance <span class="n">0.00</span> ✓</span>
+        <span class="who">R. Mehta · Accountant</span>
+      </div>
+      <div class="pad">
+        <div class="grid2" style="gap:14px">
+          <div>
+            <div class="tiny" style="margin-bottom:6px">SALES</div>
+            <div class="small">Sales Order · Sale Invoice · Receipt</div>
+            <div class="tiny" style="margin-top:12px;margin-bottom:6px">PURCHASE</div>
+            <div class="small">Purchase Order · Purchase Bill · Payment</div>
+          </div>
+          <div>
+            <div class="tiny" style="margin-bottom:6px">ACCOUNT</div>
+            <div class="small">Contact · Product · Analyticals · Analytical Budget · Chart of Account · Journals · Journal Entries</div>
+            <div class="tiny" style="margin-top:12px;margin-bottom:6px">REPORT</div>
+            <div class="small">Balance Sheet · Profit and Loss · Budget Report</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ann">
+    <span class="eyebrow">Two things that must be right here</span>
+    <p>The <b>trial balance badge lives in the shell</b>, so it is on screen during every demo action — that is what makes it evidence rather than a claim. And the menu grouping is the mockup's, not ours: <b>Analyticals and Budget sit under Account</b>, not under Report, even though they feel like reporting.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Dashboard</span>
+    <h2>Status counts before detail</h2>
+  </div>
+  <div class="screen">
+    <div class="screen-cap"><b>Dashboard</b><span>landing screen after sign in</span></div>
+    <div class="screen-body">
+      <div class="kpis">
+        <div class="kpi"><span class="l">Receivables</span><span class="v">₹4,82,300</span><span class="d">12 open</span></div>
+        <div class="kpi"><span class="l">Payables</span><span class="v">₹2,10,750</span><span class="d">4 overdue</span></div>
+        <div class="kpi"><span class="l">Cash &amp; Bank</span><span class="v">₹8,94,120</span><span class="d">2 journals</span></div>
+        <div class="kpi"><span class="l">Net profit</span><span class="v">₹3,00,000</span><span class="d">income − expenses</span></div>
+      </div>
+      <div class="subbar"><span class="ttl">Sales</span><span class="chip on">All <span class="c">12</span></span><span class="chip">Confirmed <span class="c">10</span></span><span class="chip">Draft <span class="c">2</span></span><button class="b b-p">New</button></div>
+      <div class="subbar"><span class="ttl">Purchase</span><span class="chip on">All <span class="c">12</span></span><span class="chip">Confirmed <span class="c">10</span></span><span class="chip">Draft <span class="c">2</span></span><button class="b b-p">New</button></div>
+      <div class="subbar"><span class="ttl">Budget</span><span class="chip">Achieved <span class="c">3</span></span><span class="chip">Budget <span class="c">2</span></span><span class="chip">Committed <span class="c">4</span></span><button class="b b-s">Report</button></div>
+    </div>
+  </div>
+  <p class="small">The counts come from the API's <code>total</code>, never from <code>items.length</code> — that exact bug shipped last round and silently under-reported everything past page one.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Master data</span>
+    <h2>List is the default, Kanban is one click away</h2>
+    <p class="small">Required for Contact, Product and Analyticals. List view opens on load; the same records render as cards on toggle.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="screen">
+      <div class="screen-cap"><b>Contact — list</b><span>default view</span></div>
+      <div class="screen-body">
+        <div class="subbar"><button class="b b-p">New</button><span class="chip on">List</span><span class="chip">Kanban</span><span style="flex:1"></span><span class="chip">Search…</span></div>
+        <table class="t">
+          <thead><tr><th></th><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
+          <tbody>
+            <tr><td>▣</td><td>Open Wood</td><td>openwood21@example.com</td><td class="mono">+91 90900 90909</td></tr>
+            <tr><td>▣</td><td>Joey Wills</td><td>joey.wills@example.com</td><td class="mono">+91 80800 80808</td></tr>
+            <tr><td>▣</td><td>Nimesh Pathak</td><td>nimesh@example.com</td><td class="mono">+91 70700 70707</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="screen-cap"><b>Contact — Kanban</b><span>same data, card view</span></div>
+      <div class="screen-body">
+        <div class="subbar"><button class="b b-p">New</button><span class="chip">List</span><span class="chip on">Kanban</span></div>
+        <div class="kanban">
+          <div class="kc"><div class="kav">OW</div><div class="kb"><span class="kn">Open Wood</span><span class="km">openwood21@…</span><span class="km">+91 90900 90909</span></div></div>
+          <div class="kc"><div class="kav">JW</div><div class="kb"><span class="kn">Joey Wills</span><span class="km">joey.wills@…</span><span class="km">+91 80800 80808</span></div></div>
+          <div class="kc"><div class="kav">NP</div><div class="kb"><span class="kn">Nimesh Pathak</span><span class="km">nimesh@…</span><span class="km">+91 70700 70707</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen">
+    <div class="screen-cap"><b>Contact — form</b><span>opens blank on New, populated on row click</span></div>
+    <div class="screen-body">
+      <div class="subbar"><span class="ttl">Open Wood</span><button class="b b-p">Confirm</button><button class="b b-g">Back</button></div>
+      <div class="formgrid">
+        <div class="fld"><span class="lb">Contact name</span><span class="vl">Open Wood</span></div>
+        <div class="fld"><span class="lb">Email</span><span class="vl">openwood21@example.com</span><span class="hint">Must be unique</span></div>
+        <div class="fld"><span class="lb">Phone</span><span class="vl mono">+91 90900 90909</span></div>
+        <div class="fld"><span class="lb">Image</span><span class="vl">Upload…</span></div>
+        <div class="fld"><span class="lb">Street</span><span class="vl">14 Ashram Road</span></div>
+        <div class="fld"><span class="lb">City</span><span class="vl">Ahmedabad</span></div>
+        <div class="fld"><span class="lb">State</span><span class="vl">Gujarat</span></div>
+        <div class="fld"><span class="lb">Country</span><span class="vl sel">India</span></div>
+        <div class="fld"><span class="lb">Pincode</span><span class="vl mono">380009</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">The demo path</span>
+    <h2>Customer invoice — the screen everything else copies</h2>
+  </div>
+
+  <div class="screen">
+    <div class="screen-cap"><b>Customer Invoice — form</b><span>generated from a Sales Order, or created fresh</span></div>
+    <div class="screen-body">
+      <div class="subbar">
+        <span class="ttl">INV/2026/0042</span>
+        <span class="badge s-draft"><span class="bd"></span>Draft</span>
+        <span style="flex:1"></span>
+        <button class="b b-p">Confirm</button><button class="b b-s">Print</button><button class="b b-s">Send</button><button class="b b-d">Cancel</button><button class="b b-g">Back</button>
+      </div>
+      <div class="formgrid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+        <div class="fld"><span class="lb">Invoice no.</span><span class="vl mono">INV/2026/0042</span><span class="hint">Auto, +1 of last</span></div>
+        <div class="fld"><span class="lb">Invoice reference</span><span class="vl mono">ABC-26-001</span><span class="hint">Alphanumeric, yours</span></div>
+        <div class="fld"><span class="lb">SO no.</span><span class="vl mono">S00001</span></div>
+        <div class="fld"><span class="lb">Customer name</span><span class="vl sel">Nimesh Pathak</span></div>
+        <div class="fld"><span class="lb">Invoice date</span><span class="vl mono">05/09/2026</span></div>
+        <div class="fld"><span class="lb">Due date</span><span class="vl mono">20/09/2026</span></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="t" style="min-width:700px">
+          <thead><tr><th>Sr.</th><th>Product</th><th>Chart of Account</th><th>Budget Analytics</th><th class="m">Qty</th><th class="m">Unit Price</th><th class="m">Total</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Office Chair</td><td>4000 · Sales Income</td><td>Project 1</td><td class="m">3</td><td class="m">2,000.00</td><td class="m">6,000.00</td></tr>
+            <tr><td>2</td><td>Wooden Table</td><td>4000 · Sales Income</td><td>Project 1</td><td class="m">1</td><td class="m">4,000.00</td><td class="m">4,000.00</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td colspan="6">Untaxed</td><td class="m">10,000.00</td></tr>
+            <tr><td colspan="6">Tax @ 18%</td><td class="m">1,800.00</td></tr>
+            <tr><td colspan="6">Total</td><td class="m">11,800.00</td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="ta">
+        <div class="ta-h">On Confirm, this entry will post to the Sales journal</div>
+        <div class="ta-b">
+          <div class="ta-c"><span class="ta-l">Debit</span><div class="ta-r"><span>1100 Debtors</span><span>11,800.00</span></div></div>
+          <div class="ta-c"><span class="ta-l">Credit</span><div class="ta-r"><span>4000 Sales Income</span><span>10,000.00</span></div><div class="ta-r"><span>2100 Tax Payable</span><span>1,800.00</span></div></div>
+        </div>
+        <div class="ta-f"><div><span>Total</span><span>11,800.00</span></div><div><span>Total</span><span>11,800.00</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann">
+    <span class="eyebrow">The posting preview is the differentiator</span>
+    <p>Nothing in the mockup asks for it. It costs a bordered two-column div, and it makes the invisible half of this system visible on screen — the viewer sees debits equal credits <em>before</em> anything is committed, with no explanation needed.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="screen">
+      <div class="screen-cap"><b>Register payment</b><span>raised from the Pay button</span></div>
+      <div class="screen-body">
+        <div class="modal">
+          <div class="modal-h"><span>Payment</span><span class="tiny">INV/2026/0042</span></div>
+          <div class="formgrid" style="grid-template-columns:1fr 1fr;padding:12px">
+            <div class="fld"><span class="lb">Payment type</span><span class="vl sel">Receive</span></div>
+            <div class="fld"><span class="lb">Date</span><span class="vl mono">05/09/2026</span></div>
+            <div class="fld"><span class="lb">Partner</span><span class="vl">Nimesh Pathak</span></div>
+            <div class="fld"><span class="lb">Payment via</span><span class="vl sel">Bank</span></div>
+            <div class="fld"><span class="lb">Amount</span><span class="vl mono">11,800.00</span></div>
+            <div class="fld"><span class="lb">Note</span><span class="vl">UPI ref 4471</span></div>
+          </div>
+          <div class="modal-f"><button class="b b-g">Cancel</button><button class="b b-p">Pay</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen">
+      <div class="screen-cap"><b>Journal Entries</b><span>read-only — no create, no edit</span></div>
+      <div class="screen-body">
+        <table class="t" style="min-width:auto">
+          <thead><tr><th>Date</th><th>Number</th><th>Partner</th><th class="m">Total</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">Sep 1</td><td class="mono">Bill/2026/0001</td><td>Mr. Rahul</td><td class="m">30,000.00</td><td><span class="badge s-posted"><span class="bd"></span>Posted</span></td></tr>
+            <tr><td class="mono">Sep 2</td><td class="mono">INV/2026/0042</td><td>Nimesh Pathak</td><td class="m">11,800.00</td><td><span class="badge s-draft"><span class="bd"></span>Draft</span></td></tr>
+          </tbody>
+        </table>
+        <p class="tiny" style="padding:11px 14px">Entries appear here only as a side effect of confirming a document. Clicking a row opens its lines — and each line links back to the source.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Budget</span>
+    <h2>Three of the five columns are computed</h2>
+  </div>
+  <div class="screen">
+    <div class="screen-cap"><b>Budget — form</b><span>confirmed budgets are never edited, only revised</span></div>
+    <div class="screen-body">
+      <div class="subbar">
+        <span class="ttl">January 2026</span>
+        <span class="badge s-posted"><span class="bd"></span>Confirmed</span>
+        <span style="flex:1"></span>
+        <button class="b b-s">Revise</button><button class="b b-d">Cancel</button><button class="b b-g">Back</button>
+      </div>
+      <div class="formgrid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div class="fld"><span class="lb">Budget name</span><span class="vl">January 2026</span></div>
+        <div class="fld"><span class="lb">Responsible</span><span class="vl sel">Nimesh Pathak</span></div>
+        <div class="fld"><span class="lb">Start date</span><span class="vl mono">01/01/2026</span></div>
+        <div class="fld"><span class="lb">End date</span><span class="vl mono">31/01/2026</span></div>
+        <div class="fld"><span class="lb">Revised with</span><span class="vl" style="color:var(--accent)">January 2026 Revised →</span></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="t" style="min-width:660px">
+          <thead><tr><th>Analytic account</th><th>Type</th><th class="m">Committed</th><th class="m">Achieved</th><th class="m">Achieved %</th><th class="m">To achieve</th></tr></thead>
+          <tbody>
+            <tr><td>Furniture</td><td>Expense</td><td class="m">2,00,000.00</td><td class="m" style="color:var(--accent)">10,000.00</td><td class="m">5%</td><td class="m">1,90,000.00</td></tr>
+            <tr><td>Project 1</td><td>Income</td><td class="m">50,000.00</td><td class="m" style="color:var(--accent)">21,000.00</td><td class="m">42%</td><td class="m">29,000.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tiny" style="padding:11px 14px">Achieved is a link — it opens every invoice or bill carrying that analytic within the budget period.</p>
+    </div>
+  </div>
+  <div class="note">
+    <span class="eyebrow">Only one number here is stored</span>
+    <p><b>Committed</b> is entered. Achieved, Achieved % and To-achieve are all derived on read, so they can never go stale — and the revision chain means a confirmed budget's history stays intact instead of being overwritten.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Reports</span>
+    <h2>Computed from the ledger, printable, and provably balanced</h2>
+  </div>
+
+  <div class="grid2">
+    <div class="screen">
+      <div class="screen-cap"><b>Balance Sheet</b><span>as of a date</span></div>
+      <div class="screen-body">
+        <div class="subbar"><span class="ttl">2026</span><button class="b b-s">Print</button><button class="b b-g">Back</button></div>
+        <div class="rep">
+          <div class="repcol">
+            <div class="rephd">Assets</div>
+            <div class="repline"><span>Bank</span><span>6,94,120.00</span></div>
+            <div class="repline"><span>Cash</span><span>2,00,000.00</span></div>
+            <div class="repline"><span>Debtors</span><span>4,82,300.00</span></div>
+            <div class="reptot"><span>Total Asset</span><span>13,76,420.00</span></div>
+          </div>
+          <div class="repcol">
+            <div class="rephd">Liabilities</div>
+            <div class="repline"><span>Creditors</span><span>2,10,750.00</span></div>
+            <div class="repline"><span>Capital</span><span>11,65,670.00</span></div>
+            <div class="reptot"><span>Total Liability</span><span>13,76,420.00</span></div>
+          </div>
+        </div>
+        <p class="tiny" style="padding:0 16px 14px">Every figure is a link — account, then journal lines, then the document.</p>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="screen-cap"><b>Profit &amp; Loss</b><span>over a period</span></div>
+      <div class="screen-body">
+        <div class="subbar"><span class="ttl">2026</span><button class="b b-s">Print</button><button class="b b-g">Back</button></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:6px">
+          <div class="rephd">Income</div>
+          <div class="repline"><span>Income from Sales</span><span>10,000.00</span></div>
+          <div class="rephd" style="margin-top:10px">Expenses</div>
+          <div class="repline"><span>Purchase Expense</span><span>6,000.00</span></div>
+          <div class="repline"><span>Other Expense</span><span>1,000.00</span></div>
+          <div class="reptot"><span>Net Income</span><span>3,000.00</span></div>
+        </div>
+        <p class="tiny" style="padding:0 16px 14px">Purchase Expense and Other Expense are separate account types — the mockup reports them on distinct lines.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann">
+    <span class="eyebrow">The mockup states our invariant in its own words</span>
+    <p>“The Total of All asset and liability would always match.” It is written on their own canvas, not our interpretation of the requirement. The trial-balance badge in the shell is how we make that continuously visible rather than a claim made once.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Portal</span>
+    <h2>A different application, not a filtered screen</h2>
+  </div>
+  <div class="screen">
+    <div class="screen-cap"><b>Customer portal</b><span>role: User — own documents only</span></div>
+    <div class="screen-body">
+      <div class="topbar">
+        <span class="brand">▦ Ledger</span>
+        <nav class="nav"><a href="#" class="on">My Documents</a></nav>
+        <span class="who">Nimesh Pathak</span>
+      </div>
+      <table class="t" style="min-width:auto">
+        <thead><tr><th>Document</th><th>Date</th><th class="m">Amount</th><th class="m">Due</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">INV/2026/0042</td><td class="mono">05/09/2026</td><td class="m">11,800.00</td><td class="m">11,800.00</td><td><span class="badge s-posted"><span class="bd"></span>Unpaid</span></td><td><button class="b b-p">Pay</button></td></tr>
+          <tr><td class="mono">INV/2026/0031</td><td class="mono">18/08/2026</td><td class="m">24,000.00</td><td class="m">9,000.00</td><td><span class="badge s-partial"><span class="bd"></span>Partial</span></td><td><button class="b b-p">Pay</button></td></tr>
+          <tr><td class="mono">INV/2026/0018</td><td class="mono">02/08/2026</td><td class="m">7,500.00</td><td class="m">0.00</td><td><span class="badge s-paid"><span class="bd"></span>Paid</span></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="note">
+    <span class="eyebrow">The security detail worth getting right</span>
+    <p>Requesting another contact's document returns <b>404, not 403</b>. A 403 confirms the record exists, which leaks information across customers. No internal navigation appears here at all — not even disabled.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Build order</span>
+    <h2>Which screen to write first</h2>
+  </div>
+  <div class="grid2">
+    <div class="ann" style="border-left-color:var(--good);background:var(--good-soft)">
+      <span class="eyebrow" style="color:var(--good)">Do these first</span>
+      <ul>
+        <li>App shell with the four menus and the trial-balance badge</li>
+        <li>Contact list + form — the template for every other master</li>
+        <li>Customer Invoice form with lines and the posting preview</li>
+        <li>Journal Entries list + detail</li>
+        <li>Balance Sheet with drill-down</li>
+      </ul>
+      <p class="tiny">That sequence is a complete demo on its own. Everything after it is breadth.</p>
+    </div>
+    <div class="ann" style="border-left-color:var(--warn);background:var(--warn-soft)">
+      <span class="eyebrow" style="color:var(--warn)">Then, by copying</span>
+      <ul>
+        <li>Product, Analyticals — same shape as Contact</li>
+        <li>Sales Order, Purchase Order, Vendor Bill — same shape as Invoice</li>
+        <li>Kanban toggles for the three masters</li>
+        <li>Budget form and the revision chain</li>
+        <li>P&amp;L, Budget Report, the portal</li>
+      </ul>
+      <p class="tiny">Get the first invoice screen genuinely right; the rest is repetition.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Team Innovatrix #645 · Urban Furniture Accounting System</p>
+  <p>Layouts traced from the official Excalidraw flow, rendered in the Walnut design tokens. Where a screen adds something the mockup does not show — the posting preview, the trial-balance badge — it is called out as ours rather than implied to be required.</p>
+</footer>
+
+</div>

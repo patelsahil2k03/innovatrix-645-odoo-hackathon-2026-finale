@@ -155,8 +155,8 @@ innovatrix-odoo-hackathon-2026-finale/
 ├── ai_guidelines/     3 rulebooks (AI · cleanup · git)
 ├── docs/              00 playbook → 13 design FAQ, + PROBLEM_STATEMENT
 │   ├── team/          LANES.md — four lanes, reference only
-│   ├── technicals/    *(local only, gitignored)* design explorations
-│   └── full_flow/     *(local only, gitignored)* the official Excalidraw mockup
+│   ├── technicals/    system design, data model, UI system, screen blueprints
+│   └── full_flow/     the official Excalidraw mockup
 ├── backend/           FastAPI, 32 tests passing
 ├── frontend/          Next.js, build green
 ├── infra/             Postgres compose
