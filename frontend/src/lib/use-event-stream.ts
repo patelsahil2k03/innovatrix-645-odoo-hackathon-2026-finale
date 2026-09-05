@@ -42,10 +42,7 @@ export function useEventStream(
   const eventNames = Object.keys(handlers).sort().join(",");
 
   useEffect(() => {
-    if (!enabled) {
-      setConnected(false);
-      return;
-    }
+    if (!enabled) return;
 
     const source = new EventSource(`${API_BASE}/events`, { withCredentials: true });
 
@@ -76,5 +73,8 @@ export function useEventStream(
     // Re-subscribe if the SET of event names changes, or once `enabled` flips true.
   }, [eventNames, enabled]);
 
-  return connected;
+  // Gated rather than reset inside the effect: writing state from an effect body
+  // costs a second render pass, and while disabled there is no stream to be
+  // connected to regardless of what the last run left behind.
+  return enabled && connected;
 }
