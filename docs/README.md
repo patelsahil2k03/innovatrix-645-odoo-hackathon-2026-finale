@@ -21,9 +21,9 @@ expands a section of it.
 | [10_LESSONS.md](10_LESSONS.md) | **Before writing any code** — mistakes already paid for |
 | [11_AI_TOOLING.md](11_AI_TOOLING.md) | Setup, and when you need a capability you lack |
 | [12_SESSION_CONTEXT.md](12_SESSION_CONTEXT.md) | Handing this project to a new AI session |
-| [13_DESIGN_FAQ.md](13_DESIGN_FAQ.md) | **Why every decision was made** — 65 questions, short answers. Read to refresh, not memorise. |
+| [13_DESIGN_FAQ.md](13_DESIGN_FAQ.md) | **Four worked walkthroughs with real numbers**, then 30 questions on the reasoning. Read to refresh, not memorise. |
 | [team/LANES.md](team/LANES.md) | The four working lanes — reference, not assignments |
-| [technicals/](technicals/) | Decision records and deep-dives |
+| `technicals/` *(local, not tracked)* | Design explorations and decision records — gitignored, not present in a fresh clone |
 
 ---
 

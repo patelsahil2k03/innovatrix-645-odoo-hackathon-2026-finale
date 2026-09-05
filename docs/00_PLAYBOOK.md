@@ -164,12 +164,13 @@ The organizers published exactly what they score. Build directly against it.
 | *"Use Git properly; one member managing the repo is not enough"* | **Four healthy commit streams**, conventional messages, everyone pushing under their own account. Per-member contribution is scored. |
 | *"Backend APIs, data modeling, local DB"* (nice-to-have) | This is our strongest criterion. A real relational schema with CHECK constraints enforcing accounting rules at the database level, migrations, and a ledger that reports are computed from. |
 | *"Understand AI snippets, don't blindly copy-paste"* | **Every member must be able to defend any line they committed.** Our intelligence features are deterministic and cite their own rows precisely so nothing is a black box — see `PROBLEM_STATEMENT.md` §3.1. |
-| *"Plan for offline/local, don't rely on cloud"* | Local Postgres in Docker, local everything, zero cloud signups, zero new dependencies, pre-cached deps. No LLM API call anywhere on the demo path. |
+| *"Plan for offline/local, don't rely on cloud"* | Local Postgres in Docker, local everything, zero cloud signups, pre-cached deps. No model API call anywhere. Email is the one networked feature, and it is kept off the demo path — [`01_STACK.md`](01_STACK.md) §3.2. |
 
-**The criterion we should win outright** is data modelling. Most teams will store balances
-on documents; we compute every report from an immutable ledger, and the drill-down proves
-it in three clicks. Make sure that lands — it is the difference between "works" and "built
-by people who understood the domain."
+**Where this build is strongest is data modelling.** Every report is computed from an
+immutable ledger rather than from stored document balances, and the drill-down from a report
+figure to its source document is the visible consequence of that. It is worth making sure
+that path works end to end, because it is the clearest evidence that the accounting
+underneath is real.
 
 ---
 

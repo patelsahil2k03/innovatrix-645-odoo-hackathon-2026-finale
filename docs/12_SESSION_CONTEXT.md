@@ -14,8 +14,15 @@ called **TransitOps**, which lives in a sibling directory:
 `../innovatrix-odoo-hackathon-2026/`.
 
 **The problem statement is decided: Urban Furniture — Accounting System.** A double-entry
-accounting system. Two rejected alternatives (DealFlow360, PeoplePay360 HR & Payroll) and
-the reasoning are preserved in [`technicals/dealflow-vs-ledger.html`](technicals/dealflow-vs-ledger.html).
+accounting system. Two rejected alternatives (DealFlow360, PeoplePay360 HR & Payroll) and the
+reasoning behind the choice exist only as local, gitignored working material — not part of
+the tracked repository, per the internal-material rule in §2.
+
+**There are two authoritative sources for the build, not one.** The PDF and an Excalidraw
+mockup linked at its end — the mockup is considerably more specific, and where the two
+disagree it wins. See [`PROBLEM_STATEMENT.md`](PROBLEM_STATEMENT.md) §4 for every place that
+mattered; it corrected the account types, the analytic model, the budget workflow, sign-up,
+and more.
 
 **Team (4):** Sahil Patel (lead), Devasya Joshi, Gaurav Rathva, Pranjal Shah.
 **Product name: still open** — candidates in [`README.md`](README.md).
@@ -51,8 +58,12 @@ one usually given — see [`01_STACK.md`](01_STACK.md) §3.1, which records the 
 output. Money on SQLite is exact; the real problem is that `with_for_update()` compiles to
 a plain `SELECT` on SQLite, silently disabling `lock_row()`.
 
-**Zero new dependencies for the domain.** The whole problem is `Numeric`, `Enum` and
-`SUM(...) GROUP BY`. No charts library, no PDF library, no ORM extras.
+**Two new dependencies, both demanded by the mockup rather than chosen: `weasyprint` and
+`aiosmtplib`.** An earlier pass concluded PDF and email were out of scope — the mockup draws
+Print, Send and a PDF-download action, so both were reversed. Email is real SMTP, which
+cuts against the organizers' offline guidance; it is deliberately kept off the demo path and
+never allowed to block a state change — see [`01_STACK.md`](01_STACK.md) §3.2. Everything
+else in the domain is still `Numeric`, `Enum` and `SUM(...) GROUP BY`.
 
 **Docs are tracked, not gitignored** — reversing the previous project's convention, which
 caused the dead-link bug in `10_LESSONS.md` §11 and meant teammates couldn't get the
@@ -94,16 +105,19 @@ live indicator, login page with inline validation, dashboard example, typed API 
 
 ## 5. WHAT IS NOT BUILT YET
 
-**The entire accounting domain.** No models, no posting engine, no documents, no reports,
-no screens. The design is fully specified and ready to implement:
+**The entire accounting domain.** No models, no posting engine, no documents, no reports, no
+screens. The design is fully specified — corrected against the mockup, not just the PDF —
+and ready to implement:
 
 | What | Where it's specified |
 |---|---|
-| Schema, constraints, **the four posting rules** | [`03_DATA_MODEL.md`](03_DATA_MODEL.md) |
-| Endpoints and the error-code registry | [`04_API_CONTRACT.md`](04_API_CONTRACT.md) |
-| The posting engine, build order, locking | [`06_BACKEND.md`](06_BACKEND.md) |
-| Screens, money formatting, the drill-down | [`05_FRONTEND.md`](05_FRONTEND.md) |
-| The invariant test suite | [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md) |
+| Schema, eight account types, the budget revision chain, **the four posting rules** | [`03_DATA_MODEL.md`](03_DATA_MODEL.md) |
+| Endpoints, sign-up, PDF/email, and the error-code registry | [`04_API_CONTRACT.md`](04_API_CONTRACT.md) |
+| The posting engine, budget computation, PDF/email, build order, locking | [`06_BACKEND.md`](06_BACKEND.md) |
+| Screens, the four-menu nav, Kanban views, money formatting, the drill-down | [`05_FRONTEND.md`](05_FRONTEND.md) |
+| The invariant test suite, including the budget and mail-never-blocks cases | [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md) |
+| Every place the mockup changed the PDF-only design | [`PROBLEM_STATEMENT.md`](PROBLEM_STATEMENT.md) §4 |
+| Why each significant decision was made | [`13_DESIGN_FAQ.md`](13_DESIGN_FAQ.md) |
 
 **Build order is not negotiable:** ledger tables → posting engine → sales chain end to end
 → everything else. See [`06_BACKEND.md`](06_BACKEND.md) §1.
@@ -139,9 +153,10 @@ the differentiator with it.
 ```
 innovatrix-odoo-hackathon-2026-finale/
 ├── ai_guidelines/     3 rulebooks (AI · cleanup · git)
-├── docs/              00 playbook → 12 this file, + PROBLEM_STATEMENT
+├── docs/              00 playbook → 13 design FAQ, + PROBLEM_STATEMENT
 │   ├── team/          LANES.md — four lanes, reference only
-│   └── technicals/    decision records and deep-dives
+│   ├── technicals/    *(local only, gitignored)* design explorations
+│   └── full_flow/     *(local only, gitignored)* the official Excalidraw mockup
 ├── backend/           FastAPI, 32 tests passing
 ├── frontend/          Next.js, build green
 ├── infra/             Postgres compose

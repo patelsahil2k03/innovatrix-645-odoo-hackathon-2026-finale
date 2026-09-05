@@ -50,9 +50,9 @@ incognito window before submitting.**
 **Two segments people skip and shouldn't:** the live-data moment and the deliberate invalid
 submission. Both map directly onto published judging criteria, and both take under a minute.
 
-**The deliberate failure to demo** is the *edit a posted invoice* one. It is the most
-convincing thirty seconds available to us, because a system that refuses to let you rewrite
-history is unmistakably an accounting system.
+**The rejection worth showing** is *edit a posted invoice*. A system that refuses to let you
+rewrite history is unmistakably an accounting system, and thirty seconds of it says more
+than a minute of description.
 
 ---
 
