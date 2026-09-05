@@ -254,6 +254,11 @@ p  { margin: 0; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* A row's primary cell opening a drawer instead of navigating still needs to
+   read as "the link for this row" — same look as `a`, `<button>` semantics. */
+.link-btn { background: none; border: 0; padding: 0; margin: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: none; text-align: left; }
+.link-btn:hover { text-decoration: underline; }
+
 code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* Visible focus for keyboard users — an accessibility requirement, and free points. */
