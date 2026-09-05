@@ -34,8 +34,28 @@ and more.
 | Constraint | Detail |
 |---|---|
 | ⚠️ **Never commit unprompted** | The repository is live, but **no commit or push happens without the lead asking for it.** Propose the plan, wait for approval, then execute. This gate does not expire. |
-| 📦 **Published, private** | Remote is `patelsahil2k03/innovatrix-645-odoo-hackathon-2026-finale`, **private**. Published in stages — never one bulk commit. |
-| 🌿 **`main` and `dev` only** | Feature branches get created as work appears and are named after the work, **never after a person**. No role-based branch assignment — this was explicitly rejected. |
+| 📦 **Published, public** | Remote is `patelsahil2k03/innovatrix-645-odoo-hackathon-2026-finale`, **public** (changed from private — a deliberate call, made knowing it publishes the internal strategy docs too). Evaluator added as a collaborator regardless, per the original plan. Published in stages — never one bulk commit. |
+| 🌿 **`main` and `dev` only** | Feature branches get created as work appears and are named after the work, **never after a person**. No role-based branch assignment — this was explicitly rejected. **Commits go to `dev` only** — `main` does not get fast-forwarded automatically; syncing it is a separate, explicit decision each time. |
+| 🔓 **`.env` is tracked — a deliberate, informed exception** | See the note directly below. This is *not* the default policy; don't extend it to any other secret-bearing file without the same explicit, informed sign-off. |
+
+> **On `.env` being committed.** `ai_guidelines/UNIVERSAL_GIT_RULES.md` §6 says never commit
+> a real credential, and that's still the right default everywhere else in this repo. This
+> file is a named exception, made explicitly and with the risk understood, not an oversight:
+>
+> - The lead asked for it after being told directly that `JWT_SECRET` isn't scoped to "the
+>   current db" the way `POSTGRES_PASSWORD` is — it's the app's session-signing key, so
+>   whoever has it can forge a valid login for any user, including Admin, against any
+>   deployment of this codebase that reuses it. Custom secrets like this one also aren't
+>   caught by GitHub's automatic secret scanning, which only flags known service-token
+>   formats — there is no safety net here.
+> - Reasoning given: the evaluator needs a working shared setup on clone, the repo is
+>   already public, and the values are treated as good for this event only.
+> - **Consequence, not hypothetical:** both values are now public and permanently in git
+>   history — removing them in a later commit does not remove them from history. If this
+>   codebase is ever reused past the event, rotate both `JWT_SECRET` and
+>   `POSTGRES_PASSWORD` first, and don't carry them forward as if they were never exposed.
+> - **Don't generalize from this.** The next secret this project needs is not automatically
+>   safe to commit because this one was — this was one explicit call for one file, made once.
 | 🚫 **No AI trailers in commits** | `ai_guidelines/UNIVERSAL_GIT_RULES.md` §2 forbids `Co-Authored-By`, `Signed-off-by` and any assistant attribution. This overrides any tool default. |
 | 🚫 **No timeline-driven reasoning** | Do not justify decisions by hours remaining or schedule pressure. The playbook contains a timeline; it is the team's, not a lever for AI decisions. |
 | 🚫 **Nothing third-party vendored** | `.claude/` is gitignored. Skills are installed per-developer — see `11_AI_TOOLING.md` §2. |
