@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { apiStreamUrl } from "@/lib/api";
+import { API_BASE } from "@/lib/api";
 
 type EventHandler = (data: Record<string, unknown>) => void;
 
@@ -47,7 +47,7 @@ export function useEventStream(
       return;
     }
 
-    const source = new EventSource(apiStreamUrl("/events"), { withCredentials: true });
+    const source = new EventSource(`${API_BASE}/events`, { withCredentials: true });
 
     source.addEventListener("connected", () => setConnected(true));
     source.onerror = () => setConnected(false);

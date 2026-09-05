@@ -17,49 +17,46 @@ address you opened it at, and that is proxied to your own backend.
 
 ## 2. START IT
 
-### 2.1 Database — ONE person, once (everyone else skips this)
+Same three steps for everyone. `dev.sh` reads `DATABASE_URL` and works out by
+itself whether this machine hosts the database or connects to someone else's —
+there is no flag to get wrong, and no separate command for the host.
 
-```bash
-docker compose -f infra/docker-compose.yml up -d db
-hostname -I | awk '{print $1}'      # share this IP with the team
-```
+**Step 1.** `cp .env.example .env` (skip if you already have one).
 
-### 2.2 Everyone — including whoever ran 2.1
-
-```bash
-cp .env.example .env                # skip if you already have .env
-```
-Set one line in `.env` — the database host's IP (that person uses `localhost`):
+**Step 2.** Set one line in `.env` — the IP of whoever hosts the database.
+That person, and only that person, leaves it as `localhost`:
 ```
 DATABASE_URL=postgresql+psycopg://app:<password>@<db-host-ip>:5432/app
 ```
+
+**Step 3.**
 ```bash
-cd backend
-uv sync --extra postgres
-uv run python -m app.seed           # safe: does nothing if data already exists
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# second terminal, from the repo root
-cd frontend
-npm install
-npm run dev
+./scripts/dev.sh
 ```
-Open **http://localhost:3000**. Logins: `admin@urbanfurniture.in` /
-`accountant@urbanfurniture.in` / `portal@urbanfurniture.in`, password `Demo@1234`.
+That's it. It starts Postgres if you're the host, checks the connection if you're
+not, then runs the API and the web app.
 
-Or, one command instead of both terminals: `./scripts/dev.sh`
+First time only, in another terminal, load the demo data (safe to run any time,
+by anyone — it does nothing if the data is already there):
+```bash
+cd backend && uv run python -m app.seed
+```
+
+Open **http://localhost:3000** — logins `admin@urbanfurniture.in`,
+`accountant@urbanfurniture.in`, `portal@urbanfurniture.in`, password `Demo@1234`.
 
 | What | Where |
 |---|---|
 | Web app | http://localhost:3000 |
 | API docs (Swagger) | http://localhost:8000/docs |
 | Adminer (DB browser) | http://`<db-host-ip>`:8081 |
-| Who changed what | `/audit-logs` in the app (Admin login) |
+| Who changed what, from any machine | `/audit-logs` in the app (Admin login) |
 
 ### 2.3 Showing your work to the team
 
 Others open **http://`<your-ip>`:3000** — they get *your* running code against the
-shared data. Nothing for them to install.
+shared data, with nothing to install. Only port 3000 has to be reachable; the API
+is proxied through it.
 
 ---
 
@@ -93,14 +90,15 @@ same-origin through the proxy and needs no API host. Unset it in `.env`, delete
 `frontend/.env.local`, restart `npm run dev`.
 
 **Live "Offline" badge, but the rest of the app works**
-Only the SSE stream is affected: it's the one call that can't use the proxy (Next
-buffers streaming responses), so it goes direct to port 8000. Confirm 8000 is
-reachable from the browser's machine. Everything except live updates works without it.
+The SSE stream isn't connecting. It is same-origin like everything else, served by
+`frontend/src/app/api/v1/events/route.ts`, so this is almost always just your own
+backend being down — check `curl localhost:8000/api/v1/health`.
 
 **401 on every request even after signing in**
-The auth cookie isn't being sent. Check that the frontend origin is in `cors_origins`
-(backend settings) and that requests use `credentials: "include"` — `lib/api.ts` does
-this already, so suspect a port mismatch first.
+The session cookie isn't coming back. Every call is same-origin through the proxy,
+so the cookie is first-party and this should not happen — unless `NEXT_PUBLIC_API_URL`
+has been set to some other host, which makes it third-party and lets the browser or
+an intervening network drop it. Leave that variable unset.
 
 **`ModuleNotFoundError: app`**
 Run backend commands from `backend/` via `uv run` — `pythonpath = ["src"]` in
