@@ -43,7 +43,83 @@ Demo logins are printed by the seed script. Default password: `Demo@1234`.
 
 ---
 
-## 2. COMMON PROBLEMS
+## 2. SHARED TEAM DATABASE
+
+One person hosts Postgres; everyone else points their own `.env` at that machine's IP
+instead of running a second copy. This is what makes "when I do `docker compose down` the
+data shouldn't be lost" true for the whole team, not just for the host.
+
+### 2.1 Host it (one person, once)
+
+```bash
+docker compose -f infra/docker-compose.yml up -d db
+docker compose -f infra/docker-compose.yml ps        # wait for "healthy"
+hostname -I | awk '{print $1}'                       # the IP to give everyone
+```
+
+`down` (bare, no flags) never touches the data — `pgdata` is a named volume, and only
+`down -v` / `down --volumes` or `docker volume rm hackathon_pgdata` destroy it. Never run
+either of those against a database anyone else is using.
+
+### 2.2 Everyone else connects to it
+
+In your **own** `.env`, replace `localhost` with the host's IP:
+```bash
+DATABASE_URL=postgresql+psycopg://app:app@<host-ip>:5432/app
+```
+Then run the backend as normal (`uv run uvicorn app.main:app --reload`) — no local Postgres,
+no local migration, just point at the shared one.
+
+### 2.3 Test it actually works — before assuming it does
+
+Venue and office wifi sometimes enable **AP client isolation**, which blocks exactly this
+kind of device-to-device connection on purpose. Test it the moment everyone's on the same
+network, don't wait to discover it's broken mid-build:
+
+```bash
+nc -zv <host-ip> 5432                    # Windows: Test-NetConnection <host-ip> -Port 5432
+```
+
+- **Connects** → you're done, use the network as-is.
+- **"Connection refused"** → the network is fine; check the container is actually healthy
+  on the host's side (§2.1), and that the host's own firewall allows it:
+  `sudo ufw allow 5432/tcp` (Ubuntu).
+- **Times out / hangs** → that's the isolation signature — the packet never arrived. Stop
+  debugging Postgres and go straight to the fallback below.
+
+### 2.4 Fallback: a phone hotspot
+
+A phone's hotspot is a NAT you control, and unlike a lot of venue wifi it doesn't isolate
+its own clients from each other by default. If §2.3 times out:
+
+1. One person turns on their phone's hotspot (Android: Tethering. iPhone: Personal Hotspot).
+2. Everyone — including whoever hosts Postgres — joins **that** hotspot instead of venue wifi.
+3. Re-run `hostname -I` on the hosting machine; you'll get a new IP (usually `192.168.x.x`).
+   That's the address everyone now uses in step 2.2.
+
+The phone hosting the hotspot doesn't have to be the same person running Postgres.
+
+### 2.5 Migrations — one person runs them, against the shared instance
+
+Everyone's `DATABASE_URL` points at the same database, so **only one person runs
+`alembic upgrade head`** — whoever is actively working on the schema, typically on the
+backend feature branch. Everyone else only ever reads and writes rows; running a second,
+uncoordinated `alembic revision --autogenerate` against a database someone else is also
+migrating is how two migration histories diverge. If the schema needs to change, say so in
+the group chat first, the same as any other contract change (`04_API_CONTRACT.md` §5).
+
+### 2.6 Looking at the data without a Postgres client
+
+```bash
+docker compose -f infra/docker-compose.yml --profile adminer up -d adminer
+```
+Then open `http://<host-ip>:8081`, system **PostgreSQL**, server `db`, user/password from
+`.env` (`app`/`app` by default), database `app`. It isn't started by the plain `up -d db`
+command — bring it up explicitly only when someone actually wants to browse the tables.
+
+---
+
+## 3. COMMON PROBLEMS
 
 **Port already in use / frontend starts on 3001**
 A leftover process is holding the port, and the port change then breaks CORS in
@@ -85,7 +161,7 @@ Also confirm `SIMULATOR_ENABLED=true` in `.env` if you expect data to move on it
 
 ---
 
-## 2.1 ACCOUNTING-SPECIFIC PROBLEMS
+## 3.1 ACCOUNTING-SPECIFIC PROBLEMS
 
 **`Trial balance` badge is red / the balance sheet doesn't balance**
 Something wrote `journal_lines` outside `services/posting.py`. That is the only permitted
@@ -128,7 +204,7 @@ separate step: `npm run lint`.
 
 ---
 
-## 3. BEFORE THE DEMO
+## 4. BEFORE THE DEMO
 
 ```bash
 ./scripts/demo-reset.sh --yes    # clean, deterministic data
@@ -139,7 +215,7 @@ Then walk the full demo path once, in the browser, before recording.
 
 ---
 
-## 4. RESET EVERYTHING
+## 5. RESET EVERYTHING
 
 ```bash
 rm -rf backend/.venv backend/app.db frontend/node_modules frontend/.next
