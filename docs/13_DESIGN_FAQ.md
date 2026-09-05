@@ -44,7 +44,7 @@ about to write:
 ```
 Debit                          Credit
 1100 Debtors      11,800.00    4000 Sales Income     10,000.00
-                                2100 Tax Payable       1,800.00
+                                2100 Output Tax        1,800.00
 ──────────────────────────    ──────────────────────────────
 Total             11,800.00    Total                 11,800.00
 ```
@@ -97,21 +97,27 @@ sets `po_id`), or a bill raised directly with `po_id = null` — the mockup show
 back-link on the bill screen **only when one exists**; a fresh bill hides it entirely rather
 than showing an empty field.
 
-**3. Post.** `POST /vendor-bills/{id}/post`:
+**3. Post.** `POST /vendor-bills/{id}/post`, tax at 18% again:
 
 ```
 Dr  5000 Purchase Expense    10,000.00
-    Cr  2000 Creditors                   10,000.00
+Dr  1200 Input Tax             1,800.00
+    Cr  2000 Creditors                   11,800.00
 ```
 
-One line per product category if they map to different expense accounts; one Creditors
-credit for the total either way.
+One `Purchase Expense` line per product category if they map to different expense accounts;
+one `Input Tax` line for the total tax; one `Creditors` credit for the grand total.
+
+> **Input Tax, not Purchase Expense, absorbs the tax.** It's a separate asset account, not
+> part of the cost — treating vendor tax as an expense would overstate the P&L's expense
+> line by exactly the amount that's actually recoverable. This is the mirror of Walkthrough
+> A crediting `Output Tax` rather than `Sales Income`.
 
 **4. Payment — sent, not received.** `direction: SEND`, journal `Bank`:
 
 ```
-Dr  2000 Creditors     10,000.00
-    Cr  1010 Bank                   10,000.00
+Dr  2000 Creditors     11,800.00
+    Cr  1010 Bank                   11,800.00
 ```
 
 **The only two things that differ from a sale:** which side of Debtors/Creditors moves, and
@@ -177,8 +183,8 @@ in `journal_entries` is what would catch it even if the lock discipline were som
 original entry. It writes a second one:
 
 ```
-original (still POSTED, still there):     Dr Debtors 11,800  Cr Sales 10,000  Cr Tax 1,800
-reversal (new entry, reversal_of = orig): Dr Sales 10,000  Dr Tax 1,800  Cr Debtors 11,800
+original (still POSTED, still there):     Dr Debtors 11,800  Cr Sales 10,000  Cr Output Tax 1,800
+reversal (new entry, reversal_of = orig): Dr Sales 10,000  Dr Output Tax 1,800  Cr Debtors 11,800
 ```
 
 Both entries exist permanently. Net effect on every account: zero. The trial balance never

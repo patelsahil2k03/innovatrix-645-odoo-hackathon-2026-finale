@@ -308,6 +308,8 @@ asserted.
 | `EMAIL_TAKEN` | 409 | Sign-up email already exists | `routers/auth.py` |
 | `WEAK_PASSWORD` | 422 | Fails the length or character-class rules | `schemas/auth.py` |
 | `MAIL_NOT_CONFIGURED` | 422 | `Send` called with no SMTP host configured | `services/mail.py` |
+| `EMPTY_DOCUMENT` | 422 | Confirm/post attempted with zero lines | `services/rules.py` |
+| `CANNOT_CANCEL_WITH_PAYMENTS` | 409 | Cancel attempted on a document with `amount_paid > 0` | `services/rules.py` |
 
 `fields` keys match request body field names exactly, so the UI drops each message
 straight into the matching input.

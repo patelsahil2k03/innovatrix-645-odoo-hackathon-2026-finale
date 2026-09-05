@@ -323,8 +323,8 @@ footer{padding:38px 0 6px;color:var(--faint);font-size:13px;display:flex;flex-di
     <table>
       <thead><tr><th>Document</th><th>Debit</th><th>Credit</th><th>Account comes from</th></tr></thead>
       <tbody>
-        <tr><td class="rowhead"><b>Customer invoice</b></td><td class="mono">Debtors — total</td><td class="mono">Sales Income — untaxed<br>Tax Payable — tax</td><td class="small">contact.receivable · product.income</td></tr>
-        <tr><td class="rowhead"><b>Vendor bill</b></td><td class="mono">Purchase Expense — per line</td><td class="mono">Creditors — total</td><td class="small">product.expense · contact.payable</td></tr>
+        <tr><td class="rowhead"><b>Customer invoice</b></td><td class="mono">Debtors — total</td><td class="mono">Sales Income — untaxed<br>Output Tax — tax</td><td class="small">contact.receivable · product.income</td></tr>
+        <tr><td class="rowhead"><b>Vendor bill</b></td><td class="mono">Purchase Expense — untaxed<br>Input Tax — tax</td><td class="mono">Creditors — total</td><td class="small">product.expense · contact.payable</td></tr>
         <tr><td class="rowhead"><b>Payment received</b></td><td class="mono">Bank / Cash — amount</td><td class="mono">Debtors — amount</td><td class="small">journal.default_debit</td></tr>
         <tr><td class="rowhead"><b>Payment sent</b></td><td class="mono">Creditors — amount</td><td class="mono">Bank / Cash — amount</td><td class="small">journal.default_credit</td></tr>
       </tbody>
