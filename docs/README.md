@@ -21,32 +21,9 @@ expands a section of it.
 | [10_LESSONS.md](10_LESSONS.md) | **Before writing any code** — mistakes already paid for |
 | [11_AI_TOOLING.md](11_AI_TOOLING.md) | Setup, and when you need a capability you lack |
 | [12_SESSION_CONTEXT.md](12_SESSION_CONTEXT.md) | Handing this project to a new AI session |
+| [13_DESIGN_FAQ.md](13_DESIGN_FAQ.md) | **Why every decision was made** — 65 questions, short answers. Read to refresh, not memorise. |
 | [team/LANES.md](team/LANES.md) | The four working lanes — reference, not assignments |
 | [technicals/](technicals/) | Decision records and deep-dives |
-
----
-
-## ⏳ Open decision — the project name
-
-**Undecided.** `Urban Furniture Accounting System` is the problem statement's title, not our
-product name. The name goes in the repo README, the app header, and the pitch, so it wants
-deciding before the UI header is built — but not before.
-
-**Brief:** should feel connected to urban furniture, be understandable to someone who
-knows nothing about accounting or joinery, and be easy to say out loud in a presentation.
-
-| Candidate | The idea | Watch out for |
-|---|---|---|
-| **UrbanLedger** | Plainest option. Says exactly what it is, zero explanation needed. | Safe to the point of forgettable |
-| **Workbench** | A workbench is where furniture gets made — and "a workbench for your books". Warm, ordinary word everyone knows. | Slightly generic in software (many dev tools use it) |
-| **Khaata** | खाता — the Indian word for an account book. Every judge in the room reads it instantly, and it *is* the domain. | Only resonates with an Indian audience |
-| **Bahi** | बही — the traditional Indian ledger book, which was itself double-entry. Culturally rooted and conceptually exact. | Less familiar to younger/urban audiences than Khaata |
-| **Timber** | Furniture material. Short, warm, brandable, easy to say. | No accounting hint at all |
-| **Dovetail** | A dovetail joint interlocks two pieces so they can't pull apart — exactly what a debit and credit do. | Needs one sentence of explanation; obscure if you don't know joinery |
-
-**Do not use:** `Tally` — TallyPrime is *the* dominant accounting brand in India and the
-collision would read as derivative. Also avoid `Ledger` alone (hardware-wallet company) and
-`Square` (Block).
 
 ---
 
