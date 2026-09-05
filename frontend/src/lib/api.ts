@@ -414,9 +414,16 @@ export interface ProfitAndLossReport {
   date_from: string;
   date_to: string;
   income: ReportGroup;
-  expense: ReportGroup;
-  other_expense: ReportGroup;
+  expenses: ReportGroup;
+  other_expenses: ReportGroup;
   net_profit: number;
+}
+export interface DashboardKpisReport {
+  receivables: number;
+  payables: number;
+  cash: number;
+  net_profit: number;
+  is_balanced: boolean;
 }
 export interface TrialBalanceRow {
   account_code: string;
@@ -436,14 +443,18 @@ export interface BudgetReportRow {
   analytic_account_id: string;
   analytic_account: string;
   type: AnalyticType;
-  planned: number;
-  actual: number;
-  variance: number;
+  committed_amount: number;
+  achieved_amount: number;
+  achieved_pct: number;
+  amount_to_achieve: number;
 }
 export interface BudgetReport {
   budget_id: string;
   budget_name: string;
-  rows: BudgetReportRow[];
+  lines: BudgetReportRow[];
+  total_committed: number;
+  total_achieved: number;
+  total_to_achieve: number;
 }
 
 /* ── The client ─────────────────────────────────────────────────────────────
@@ -562,6 +573,7 @@ export const api = {
       get<ProfitAndLossReport>("/reports/profit-and-loss", { date_from: dateFrom, date_to: dateTo }),
     trialBalance: (asOf?: string) => get<TrialBalanceReport>("/reports/trial-balance", { as_of: asOf }),
     budget: (budgetId: string) => get<BudgetReport>("/reports/budget", { budget_id: budgetId }),
+    kpis: () => get<DashboardKpisReport>("/reports/kpis"),
     exportUrl: (name: string, params?: ListParams) => `${API_BASE}/reports/${name}/export${buildQuery(params)}`,
     pdfUrl: (name: string, params?: ListParams) => `${API_BASE}/reports/${name}/pdf${buildQuery(params)}`,
   },

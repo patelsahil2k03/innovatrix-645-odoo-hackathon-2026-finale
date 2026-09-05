@@ -40,7 +40,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "→ api  http://localhost:8000/docs"
-(cd backend && uv sync --quiet && uv run uvicorn app.main:app --reload --port 8000) &
+(cd backend && uv sync --extra postgres --quiet && uv run uvicorn app.main:app --reload --port 8000) &
 
 echo "→ web  http://localhost:3000"
 (cd frontend && { [ -d node_modules ] || npm install; }; npm run dev) &

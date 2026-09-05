@@ -78,8 +78,8 @@ export default function ProfitAndLossPage() {
             <div className="grid-2">
               <GroupTable group={data.income} />
               <div className="stack">
-                <GroupTable group={data.expense} />
-                <GroupTable group={data.other_expense} />
+                <GroupTable group={data.expenses} />
+                <GroupTable group={data.other_expenses} />
               </div>
             </div>
             <div className="kpi-grid">

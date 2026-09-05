@@ -1,11 +1,10 @@
 "use client";
 
 /**
- * Dashboard KPI tiles — Receivables, Payables, Cash, Net Profit. Computed once
- * from the two reports on load, then kept live from the `kpi.refresh` SSE
- * payload (04_API_CONTRACT.md §3.10) without a refetch — the most convincing
- * proof that a number is "changing live, from our database" (02_ARCHITECTURE.md
- * §5). A .tsx file only renders what this hook returns.
+ * Dashboard KPI tiles — Receivables, Payables, Cash, Net Profit. Read once from
+ * `GET /reports/kpis` on load (04_API_CONTRACT.md §4: "tiles need a value before
+ * the first event arrives"), then kept live from the `kpi.refresh` SSE payload
+ * (§3.10) without a refetch. A .tsx file only renders what this hook returns.
  */
 
 import { useEffect, useState } from "react";
@@ -20,15 +19,6 @@ export interface DashboardKpis {
   netProfit: number | null;
   loading: boolean;
   error: string | null;
-}
-
-const RECEIVABLE_CODES = ["1100"];
-const PAYABLE_CODES = ["2000"];
-const CASH_CODES = ["1000", "1010"];
-
-function sumByCode(rows: { account_code: string; balance: number }[] | undefined, codes: string[]): number {
-  if (!rows) return 0;
-  return rows.filter((row) => codes.includes(row.account_code)).reduce((sum, row) => sum + row.balance, 0);
 }
 
 export function useDashboardKpis(): DashboardKpis {
@@ -46,16 +36,13 @@ export function useDashboardKpis(): DashboardKpis {
 
     async function load() {
       try {
-        const [balanceSheet, profitAndLoss] = await Promise.all([
-          api.reports.balanceSheet(),
-          api.reports.profitAndLoss(),
-        ]);
+        const kpis = await api.reports.kpis();
         if (cancelled) return;
         setState({
-          receivables: sumByCode(balanceSheet.assets.rows, RECEIVABLE_CODES),
-          payables: sumByCode(balanceSheet.liabilities.rows, PAYABLE_CODES),
-          cash: sumByCode(balanceSheet.assets.rows, CASH_CODES),
-          netProfit: profitAndLoss.net_profit,
+          receivables: kpis.receivables,
+          payables: kpis.payables,
+          cash: kpis.cash,
+          netProfit: kpis.net_profit,
           loading: false,
           error: null,
         });

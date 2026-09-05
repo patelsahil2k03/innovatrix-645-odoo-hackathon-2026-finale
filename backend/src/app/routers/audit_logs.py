@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.pagination import PageParams, page_params, paginate
-from app.core.rbac import get_current_user
+from app.core.rbac import require_admin
 from app.models.auth import User
 from app.models.system import AuditLog
 from app.schemas.common import ORMModel, Page
@@ -26,13 +26,9 @@ class AuditLogOut(ORMModel):
 def list_audit_logs(
     params: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_admin),
 ) -> dict:
-    """Who did what, when.
-
-    ★ Gate this to your admin-equivalent role once the PS names its roles:
-        _: User = Depends(require_roles("Administrator"))
-    """
+    """Who did what, when. Admin only — 04_API_CONTRACT.md §2."""
     return paginate(
         db,
         select(AuditLog),

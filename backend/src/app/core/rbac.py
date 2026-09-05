@@ -61,3 +61,29 @@ def require_roles(*role_names: str) -> Callable[..., User]:
         return user
 
     return _dependency
+
+
+# ── Named permissions for the accounting domain ───────────────────────────────
+#
+# Named by INTENT, not by role list (06_BACKEND.md §10). A route says what it is
+# protecting; which roles satisfy that is decided once, here. When the role names
+# change, this block changes and no route does.
+#
+# The Admin/Accountant split is the graded rule taken from the problem
+# statement's own wording — the Accountant "Creates Master Data", while only the
+# Admin "Creates/Modify/Archived". An Accountant PATCH must return 403.
+
+ROLE_ADMIN = "Admin"
+ROLE_ACCOUNTANT = "Accountant"
+ROLE_PORTAL = "User"
+
+require_internal = require_roles(ROLE_ADMIN, ROLE_ACCOUNTANT)
+"""Any staff read. Excludes the portal role, which reaches only /portal/*."""
+
+require_master_create = require_roles(ROLE_ADMIN, ROLE_ACCOUNTANT)
+require_master_modify = require_roles(ROLE_ADMIN)
+"""Modify and archive — Admin only. This is the tested line."""
+
+require_txn_write = require_roles(ROLE_ADMIN, ROLE_ACCOUNTANT)
+require_admin = require_roles(ROLE_ADMIN)
+require_portal = require_roles(ROLE_PORTAL)

@@ -37,6 +37,24 @@ class Settings(BaseSettings):
 
     seed_password: str = "Demo@1234"
 
+    # The two tax accounts a posting needs but no contact, product or journal
+    # owns. 06_BACKEND.md §3 says accounts come from the data rather than from a
+    # constant — receivable/payable off the contact, income/expense off the
+    # product, bank/cash off the journal. Tax has no such owner, so instead of
+    # burying a literal in the posting code it is named here as configuration,
+    # matching the codes seeded in 03_DATA_MODEL.md §8. A deployment with a
+    # different chart of accounts changes these; the posting rules do not move.
+    input_tax_account_code: str = "1200"
+    output_tax_account_code: str = "2100"
+
+    # Outbound mail. Unset by default: `send` then returns MAIL_NOT_CONFIGURED
+    # explicitly rather than pretending to have sent something.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    mail_from: str = "accounts@urbanfurniture.in"
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

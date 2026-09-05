@@ -42,7 +42,7 @@ export default function BudgetReportPage() {
             loading={report.loading}
             error={report.error}
             data={report.data}
-            isEmpty={(r) => r.rows.length === 0}
+            isEmpty={(r) => r.lines.length === 0}
             emptyTitle="No lines on this budget"
             onRetry={report.reload}
           >
@@ -59,16 +59,16 @@ export default function BudgetReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.rows.map((row) => {
-                      const overBudget = row.variance < 0;
+                    {data.lines.map((row) => {
+                      const overBudget = row.amount_to_achieve < 0;
                       return (
                         <tr key={row.analytic_account_id}>
                           <td>{row.analytic_account}</td>
                           <td>{humanize(row.type)}</td>
-                          <td className="num">{money(row.planned)}</td>
-                          <td className="num">{money(row.actual)}</td>
+                          <td className="num">{money(row.committed_amount)}</td>
+                          <td className="num">{money(row.achieved_amount)}</td>
                           <td className="num" style={overBudget ? { color: "var(--danger)", fontWeight: 700 } : undefined}>
-                            {overBudget ? "−" : "+"}{money(Math.abs(row.variance))}
+                            {overBudget ? "−" : "+"}{money(Math.abs(row.amount_to_achieve))}
                           </td>
                         </tr>
                       );

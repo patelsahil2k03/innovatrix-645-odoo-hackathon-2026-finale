@@ -10,11 +10,12 @@ Posting these into the ledger is `services/posting.py`'s job, not this file's.
 
 import enum
 
-from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Numeric, String
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.masters import Contact, Product
 
 
 def _line_checks(table: str) -> tuple[CheckConstraint, ...]:
@@ -88,8 +89,9 @@ class PurchaseOrder(UUIDMixin, TimestampMixin, Base):
     tax_total: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     total: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
 
+    vendor: Mapped[Contact] = relationship(lazy="joined")
     lines: Mapped[list["PurchaseOrderLine"]] = relationship(
-        back_populates="order", cascade="all, delete-orphan"
+        back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -112,6 +114,7 @@ class PurchaseOrderLine(UUIDMixin, Base):
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     tax_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0, nullable=False)
 
+    product: Mapped[Product] = relationship(lazy="joined")
     order: Mapped[PurchaseOrder] = relationship(back_populates="lines")
 
 
@@ -139,8 +142,15 @@ class VendorBill(UUIDMixin, TimestampMixin, Base):
     amount_paid: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     journal_entry_id: Mapped[str | None] = mapped_column(ForeignKey("journal_entries.id"))
 
+    # Mail is best-effort and never blocks a posting (docs/06_BACKEND.md §7). A
+    # failure records itself here instead of raising, so the UI can report "sent"
+    # or "not sent" honestly — the document is already posted by then.
+    last_sent_at: Mapped[object | None] = mapped_column(DateTime(timezone=True))
+    last_send_error: Mapped[str | None] = mapped_column(String(200))
+
+    vendor: Mapped[Contact] = relationship(lazy="joined")
     lines: Mapped[list["VendorBillLine"]] = relationship(
-        back_populates="bill", cascade="all, delete-orphan"
+        back_populates="bill", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -163,6 +173,7 @@ class VendorBillLine(UUIDMixin, Base):
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     tax_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0, nullable=False)
 
+    product: Mapped[Product] = relationship(lazy="joined")
     bill: Mapped[VendorBill] = relationship(back_populates="lines")
 
 
@@ -186,8 +197,9 @@ class SalesOrder(UUIDMixin, TimestampMixin, Base):
     tax_total: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     total: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
 
+    customer: Mapped[Contact] = relationship(lazy="joined")
     lines: Mapped[list["SalesOrderLine"]] = relationship(
-        back_populates="order", cascade="all, delete-orphan"
+        back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -210,6 +222,7 @@ class SalesOrderLine(UUIDMixin, Base):
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     tax_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0, nullable=False)
 
+    product: Mapped[Product] = relationship(lazy="joined")
     order: Mapped[SalesOrder] = relationship(back_populates="lines")
 
 
@@ -237,8 +250,15 @@ class CustomerInvoice(UUIDMixin, TimestampMixin, Base):
     amount_paid: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     journal_entry_id: Mapped[str | None] = mapped_column(ForeignKey("journal_entries.id"))
 
+    # Mail is best-effort and never blocks a posting (docs/06_BACKEND.md §7). A
+    # failure records itself here instead of raising, so the UI can report "sent"
+    # or "not sent" honestly — the document is already posted by then.
+    last_sent_at: Mapped[object | None] = mapped_column(DateTime(timezone=True))
+    last_send_error: Mapped[str | None] = mapped_column(String(200))
+
+    customer: Mapped[Contact] = relationship(lazy="joined")
     lines: Mapped[list["CustomerInvoiceLine"]] = relationship(
-        back_populates="invoice", cascade="all, delete-orphan"
+        back_populates="invoice", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -261,4 +281,5 @@ class CustomerInvoiceLine(UUIDMixin, Base):
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     tax_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0, nullable=False)
 
+    product: Mapped[Product] = relationship(lazy="joined")
     invoice: Mapped[CustomerInvoice] = relationship(back_populates="lines")
