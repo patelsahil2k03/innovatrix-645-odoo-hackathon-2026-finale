@@ -32,7 +32,10 @@ spec**, not current fact.
 
 - [ ] `backend/` — FastAPI app factory, settings, DB session, error envelope, bcrypt auth,
       JWT + RBAC, pagination helper, SSE hub, audit middleware, seed framework
-- [ ] `frontend/` — Next.js app shell, design tokens, auth context, API client, UI primitives
+- [ ] `frontend/` — Next.js app shell, design tokens, auth context, API client, UI
+      primitives, per the existing hooks-based pattern. State-management library is
+      **on hold** — see `../RULES.md` §8. Components stay presentational either way: no
+      business logic inline in `.tsx`.
 - [ ] `scripts/dev.sh`, `demo-reset.sh`, `verify-sse.sh`
 - [ ] `infra/` Postgres compose file
 - [ ] Confirm both run end to end from a fresh clone, per the root README's quick start

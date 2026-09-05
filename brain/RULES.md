@@ -47,8 +47,41 @@ order, always. A pre-lock check is a check against a value that may already be s
 - KPI totals read the API's `total`, never `items.length`.
 - Every search box is debounced before it enters a fetch's dependency list.
 
-## 8 · Explicitly told to remember
+## 8 · Frontend architecture — components & state
+- **One shared component per UI element.** Every reusable piece (button, input, card, table
+  row, whatever) lives once under `frontend/src/components/ui/` — extends the primitives
+  already named in `docs/05_FRONTEND.md` §3. A page never hand-rolls a second version of
+  something that already exists there; add it to `components/ui/` first, then use it.
+- ⚠️ **State management: ON HOLD, 2026-09-05.** Redux was proposed, then paused the same
+  day — *"do not add redux for now."* Do **not** install `@reduxjs/toolkit` or
+  `react-redux`, do not treat Redux as decided. `docs/02_ARCHITECTURE.md` §7 /
+  `docs/05_FRONTEND.md` §5's existing hooks-based pattern (`useFetch`, `usePagedRows`)
+  stands until a replacement is actually decided.
+- **No business logic inside `.tsx` files — this part stands regardless of the mechanism.**
+  A component may only: read an already-computed value, render markup, call/dispatch an
+  action. Every calculation and every branch with business meaning — is this invoice
+  overdue, is this budget over plan, which totals to show, which button to disable and why
+  — lives outside the component: in a hook, a context reducer, or a future state layer.
+  Never inline in JSX or in the component function body.
+- **Whatever the eventual state layer is, it decides; the component only renders the
+  decision.** If a `.tsx` file needs an `if` to decide something a user would call "a rule,"
+  that logic is in the wrong file.
+
+## 9 · Explicitly told to remember
 Append every future "remember this" here, verbatim, dated, in the user's own words.
 Append-only — never let one quietly drop when this file is otherwise edited.
 
-*(none yet)*
+### 2026-09-05
+> "for FE make common component for core component and use only this component and also
+> use redux for state management and also handle all data flow and condition reducer only —
+> don't want any UI logic in tsx file, only redux file can understand what things we need
+> to pass to the UI and how UI react, so all data changes and make simplify as per UI
+> requirement, send only all calculation only for reducer"
+
+See §8 above for the structured rule this became.
+
+### 2026-09-05 (later same day)
+> "do not add redux for now"
+
+The Redux part of the rule above is paused, not deleted — see §8's "ON HOLD" note. The
+component-reuse and no-business-logic-in-`.tsx` principles still stand.
