@@ -68,10 +68,111 @@ export const nonNegativeNumber = (label: string) =>
 
 export const loginSchema = z.object({ email, password });
 
-// ★ ADD YOUR DOMAIN SCHEMAS HERE. Mirror the server's rules exactly — if the API
-//   rejects it, the UI should have said so first.
-//
-// export const orderSchema = z.object({
-//   reference: required("Reference").max(32),
-//   quantity: positiveNumber("Quantity"),
-// });
+// Every rule below mirrors docs/03_DATA_MODEL.md / docs/04_API_CONTRACT.md exactly —
+// if the API would reject it, the client says so first.
+
+/** §3.0: login_id unique 6–12 chars; password >8 chars with lower+upper+special. */
+export const signupSchema = z.object({
+  login_id: z
+    .string()
+    .trim()
+    .min(6, "Login ID must be 6–12 characters")
+    .max(12, "Login ID must be 6–12 characters"),
+  email,
+  full_name: required("Full name"),
+  password: z
+    .string()
+    .min(9, "Password must be more than 8 characters")
+    .regex(/[a-z]/, "Password needs a lowercase letter")
+    .regex(/[A-Z]/, "Password needs an uppercase letter")
+    .regex(/[^A-Za-z0-9]/, "Password needs a special character"),
+});
+
+export const contactSchema = z.object({
+  name: required("Name").max(120),
+  type: z.enum(["CUSTOMER", "VENDOR", "BOTH"]),
+  email: z.string().trim().email("Enter a valid email address").optional().or(z.literal("")),
+  mobile: z.string().max(20).optional().or(z.literal("")),
+  address_street: z.string().max(180).optional().or(z.literal("")),
+  address_city: z.string().max(80).optional().or(z.literal("")),
+  address_state: z.string().max(80).optional().or(z.literal("")),
+  address_country: z.string().max(80).optional().or(z.literal("")),
+  address_pincode: z.string().max(10).optional().or(z.literal("")),
+});
+
+export const productSchema = z.object({
+  name: required("Name").max(160),
+  type: z.enum(["GOODS", "SERVICE", "COMBO"]),
+  sales_price: nonNegativeNumber("Sales price"),
+  cost_price: nonNegativeNumber("Cost price"),
+  category_id: required("Category"),
+  sales_tax_pct: z.coerce
+    .number({ message: "Tax % must be a number" })
+    .min(0, "Tax % cannot be negative")
+    .max(100, "Tax % cannot exceed 100"),
+});
+
+export const accountSchema = z.object({
+  code: required("Code").max(20),
+  name: required("Name").max(120),
+  type: z.enum([
+    "ASSET",
+    "BANK",
+    "CASH",
+    "LIABILITY",
+    "CAPITAL",
+    "INCOME",
+    "EXPENSE",
+    "OTHER_EXPENSE",
+  ]),
+});
+
+export const journalSchema = z.object({
+  name: required("Name").max(80),
+  type: z.enum(["SALES", "PURCHASE", "BANK", "CASH", "MISC"]),
+});
+
+export const analyticAccountSchema = z.object({
+  name: required("Name").max(120),
+  type: z.enum(["INCOME", "EXPENSE"]),
+});
+
+/** Shared by every order/bill/invoice line editor — CHECK (quantity > 0),
+ *  CHECK (unit_price >= 0) mirrored client-side. */
+export const documentLineSchema = z.object({
+  product_id: required("Product"),
+  analytic_account_id: z.string().optional().nullable(),
+  quantity: positiveNumber("Quantity"),
+  unit_price: nonNegativeNumber("Unit price"),
+  tax_pct: nonNegativeNumber("Tax %"),
+});
+
+/** EMPTY_DOCUMENT: confirming/posting with zero lines is rejected server-side too. */
+export const documentLinesSchema = z
+  .array(documentLineSchema)
+  .min(1, "Add at least one line before saving");
+
+export const paymentSchema = z.object({
+  journal_id: required("Journal"),
+  amount: positiveNumber("Amount"),
+  payment_date: required("Payment date"),
+  note: z.string().max(200).optional().or(z.literal("")),
+});
+
+export const budgetLineSchema = z.object({
+  analytic_account_id: required("Analytic account"),
+  committed_amount: nonNegativeNumber("Committed amount"),
+});
+
+export const budgetSchema = z
+  .object({
+    name: required("Name").max(120),
+    period_start: required("Period start"),
+    period_end: required("Period end"),
+    responsible_id: z.string().optional().nullable(),
+    lines: z.array(budgetLineSchema).min(1, "Add at least one budget line"),
+  })
+  .refine((value) => new Date(value.period_end) > new Date(value.period_start), {
+    message: "Period end must be after period start",
+    path: ["period_end"],
+  });

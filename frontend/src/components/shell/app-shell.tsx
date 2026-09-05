@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 
 import { LogOutIcon, MoonIcon, SunIcon } from "@/components/icons";
 import { Sidebar } from "@/components/shell/sidebar";
+import { TrialBalanceBadge } from "@/components/shell/trial-balance-badge";
 import { useAuth } from "@/lib/auth-context";
 import { useEventStream } from "@/lib/use-event-stream";
 import {
@@ -47,9 +48,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="app-main">
         <header className="topbar">
-          <span className="live-dot" data-live={live}>
-            {live ? "Live" : "Offline"}
-          </span>
+          <div className="row">
+            <span className="live-dot" data-live={live}>
+              {live ? "Live" : "Offline"}
+            </span>
+            <TrialBalanceBadge />
+          </div>
 
           <div className="row">
             <button
