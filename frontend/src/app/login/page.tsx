@@ -8,11 +8,18 @@ import { Field } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth-context";
 import { formMessageFrom, loginSchema, validate, type FieldErrors } from "@/lib/validation";
 
-/** Seeded demo accounts — the three roles from PROBLEM_STATEMENT.md §2. */
+/** Seeded demo accounts — the three roles from PROBLEM_STATEMENT.md §2.
+ *
+ *  These must match what `app/seed/` actually writes. The portal address is
+ *  `portal@`, not `customer@`: the portal user is a login that *points at* a
+ *  customer contact, it is not the contact's own email. This button filled a
+ *  non-existent address, so the one role a reviewer is most likely to try —
+ *  the customer portal — failed to sign in with correct-looking credentials.
+ *  `docs/08_RUNBOOK.md` had it right; only this list was wrong. */
 const DEMO_ACCOUNTS = [
   { email: "admin@urbanfurniture.in", label: "Admin" },
   { email: "accountant@urbanfurniture.in", label: "Accountant" },
-  { email: "customer@urbanfurniture.in", label: "User (portal)" },
+  { email: "portal@urbanfurniture.in", label: "User (portal)" },
 ];
 const DEMO_PASSWORD = "Demo@1234";
 
