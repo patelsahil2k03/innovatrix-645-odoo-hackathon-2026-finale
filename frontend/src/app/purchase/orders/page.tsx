@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -43,18 +44,17 @@ export default function PurchaseOrdersPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Order" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Purchase Orders</h1>
-          <p>Confirm an order, then create the bill from it — or raise a bill fresh.</p>
-        </div>
-        {can.record(user?.role.name) ? (
+      <PageHeading
+        image="/img/tabs/purchase-order.webp"
+        title="Purchase Orders"
+        subtitle="Confirm an order, then create the bill from it — or raise a bill fresh."
+        action={can.record(user?.role.name) ? (
           <Link href="/purchase/orders/new" className="btn btn-primary">
             <PlusIcon size={14} />
             New purchase order
           </Link>
         ) : null}
-      </div>
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search purchase orders" placeholder="Search by number or reference" />
 

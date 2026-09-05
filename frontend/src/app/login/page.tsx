@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -53,6 +54,13 @@ export default function LoginPage() {
 
   return (
     <div className="auth-screen">
+      {/* Sits above the card, both centred, so the form stays where a sign-in
+          form belongs — the middle of the screen. A side panel pushed it off to
+          one edge. Hidden on small screens by CSS rather than dropped here, so
+          the form keeps the whole viewport on a phone. */}
+      <aside className="auth-art" aria-hidden="true">
+        <Image src="/img/scene/login.webp" alt="" width={1400} height={554} priority unoptimized />
+      </aside>
       <div className="auth-card">
         <div style={{ textAlign: "center" }}>
           <h1>Sign in</h1>

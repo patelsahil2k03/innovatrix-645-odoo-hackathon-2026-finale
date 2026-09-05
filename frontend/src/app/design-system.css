@@ -978,3 +978,81 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .kpi-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .kpi-link .kpi-value { color: var(--text); }
 
+/* Brand mark. Replaces the old plain dot, which said nothing about the
+   business. Sized to the wordmark's cap height so the two sit on one optical
+   line rather than the mark floating above it. */
+.sidebar-brand .brand-mark { color: var(--accent); flex: none; }
+
+/* ── Page-head illustration ────────────────────────────────────────────────
+   The tab artwork. Sized at 112px because the drawings carry real joinery
+   detail that stops reading below roughly 120 — at the 64 first tried, the
+   workbench was a blue smudge and the craft in the artwork was wasted.
+
+   No card, no border, no shadow (DESIGN.md Don'ts): the drawing sits directly
+   on the page ground. Its own generous white margin already separates it from
+   the title, so a frame would only add a box nobody asked for. */
+.page-head-main { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+.page-head-art {
+  width: 112px;
+  height: 112px;
+  flex: none;
+  object-fit: contain;
+  /* The art is drawn on white. On the dark theme that is a lit tile punched
+     into a dark screen, so it is inverted instead — hue-rotate puts the blue
+     back where it started, leaving light-blue linework on dark ground. One
+     filter, rather than a second set of files to keep in step. */
+  mix-blend-mode: multiply;
+}
+:root[data-theme="dark"] .page-head-art {
+  filter: invert(1) hue-rotate(180deg);
+  /* `screen` and not `normal`: inverting turns the drawing's white ground
+     BLACK, which on a near-black page reads as a distinctly darker rectangle
+     floating behind the furniture. Screen leaves black completely transparent
+     and only lightens where the linework is, so the box disappears and the
+     lines sit directly on the page. */
+  mix-blend-mode: screen;
+}
+@media (max-width: 720px) {
+  /* On a narrow screen the heading has to earn its height back. */
+  .page-head-art { width: 72px; height: 72px; }
+}
+
+/* ── Auth + error artwork ──────────────────────────────────────────────────
+   The workshop elevation sits ABOVE the sign-in card, not beside it: the
+   drawing is a wide 2.5:1 elevation, which fills a banner and letterboxes
+   badly in a tall side panel — and a side panel shoves the form off to one
+   edge when a sign-in form belongs dead centre.
+
+   Below 720px it is removed from the layout rather than shrunk. The drawing is
+   full of fine linework, and at phone width it is an illegible smear stealing
+   the height the form needs. */
+.auth-art { display: none; }
+
+@media (min-width: 720px) {
+  .auth-art {
+    display: block;
+    width: 100%;
+    /* A touch wider than the 420px card so the drawing has room to breathe,
+       while staying narrow enough to read as one centred column with it. */
+    max-width: 480px;
+    margin-bottom: calc(var(--s-2) * -1);
+  }
+  .auth-art img { width: 100%; height: auto; display: block; }
+}
+
+/* The art is drawn on white; on --surface-2 that is a bright slab, and on the
+   dark theme worse. multiply drops the white on light, invert+screen drops the
+   black on dark. Same trick as .page-head-art. */
+.auth-art img, .notfound-art { mix-blend-mode: multiply; }
+:root[data-theme="dark"] .auth-art img,
+:root[data-theme="dark"] .notfound-art {
+  filter: invert(1) hue-rotate(180deg);
+  mix-blend-mode: screen;
+}
+
+.notfound-art {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+  object-fit: contain;
+}

@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -46,18 +47,17 @@ export default function CustomerInvoicesPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Sales" }, { label: "Sale Invoice" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Sale Invoices</h1>
-          <p>Post an invoice to write it into the ledger.</p>
-        </div>
-        {can.record(user?.role.name) ? (
+      <PageHeading
+        image="/img/tabs/sale-invoice.webp"
+        title="Sale Invoices"
+        subtitle="Post an invoice to write it into the ledger."
+        action={can.record(user?.role.name) ? (
           <Link href="/sales/invoices/new" className="btn btn-primary">
             <PlusIcon size={14} />
             New invoice
           </Link>
         ) : null}
-      </div>
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search invoices" placeholder="Search by number or reference" />
 

@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -43,18 +44,17 @@ export default function SalesOrdersPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Sales" }, { label: "Sales Order" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Sales Orders</h1>
-          <p>Confirm an order, then create the invoice from it.</p>
-        </div>
-        {can.record(user?.role.name) ? (
+      <PageHeading
+        image="/img/tabs/sales-order.webp"
+        title="Sales Orders"
+        subtitle="Confirm an order, then create the invoice from it."
+        action={can.record(user?.role.name) ? (
           <Link href="/sales/orders/new" className="btn btn-primary">
             <PlusIcon size={14} />
             New sales order
           </Link>
         ) : null}
-      </div>
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search sales orders" placeholder="Search by number or reference" />
 

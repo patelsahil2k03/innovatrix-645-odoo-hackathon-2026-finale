@@ -7,6 +7,9 @@
 # teammate and the evaluator get a working shared-database connection on clone,
 # for the duration of this event only.
 backend/.env
+# API keys for image generation etc. Never committed — the key lives here
+# instead of .env precisely so it cannot ride along with the tracked .env.
+.secrets/
 .env.local
 .env.*.local
 *.key
@@ -77,3 +80,11 @@ Thumbs.db
 # are not documents, and do not belong in the submission.
 *_SESSION_NOTES.md
 scratch/
+
+# ---- Source artwork ----
+# The full-size renders the UI images were derived from. Kept on disk so the
+# WebP set can be regenerated at another size, but never committed: they are
+# ~3 MB of originals whose 260 KB processed output is what the app actually
+# ships (frontend/public/img/). Root-anchored so it cannot swallow a .jpg that
+# genuinely belongs to the app.
+/*.jpg
