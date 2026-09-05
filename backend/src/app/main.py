@@ -17,6 +17,7 @@ from app.core.errors import install_error_handlers
 from app.core.events import hub
 from app.core.settings import get_settings
 from app.routers import (
+    analytics,
     audit_logs,
     auth,
     budgets,
@@ -110,6 +111,8 @@ def create_app() -> FastAPI:
     app.include_router(budgets.router, prefix=prefix)
     app.include_router(ledger.router, prefix=prefix)
     app.include_router(reports.router, prefix=prefix)
+    # Same ledger as reports, reshaped for the charts screen.
+    app.include_router(analytics.router, prefix=prefix)
     app.include_router(portal.router, prefix=prefix)
     # Print / PDF / Send. Last, because its document routes are deliberately
     # generic and must not shadow anything more specific above them.

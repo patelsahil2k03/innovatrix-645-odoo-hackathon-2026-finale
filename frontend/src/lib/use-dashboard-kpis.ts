@@ -18,6 +18,9 @@ export interface DashboardKpis {
   payables: number | null;
   cash: number | null;
   netProfit: number | null;
+  /** Control account behind each tile — empty until the first load resolves. */
+  receivableAccountIds: string[];
+  payableAccountIds: string[];
   loading: boolean;
   error: string | null;
 }
@@ -29,6 +32,8 @@ export function useDashboardKpis(): DashboardKpis {
     payables: null,
     cash: null,
     netProfit: null,
+    receivableAccountIds: [],
+    payableAccountIds: [],
     loading: true,
     error: null,
   });
@@ -46,6 +51,8 @@ export function useDashboardKpis(): DashboardKpis {
           payables: kpis.payables,
           cash: kpis.cash,
           netProfit: kpis.net_profit,
+          receivableAccountIds: kpis.receivable_account_ids ?? [],
+          payableAccountIds: kpis.payable_account_ids ?? [],
           loading: false,
           error: null,
         });
