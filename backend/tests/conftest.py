@@ -1,18 +1,30 @@
-"""Shared fixtures for the domain test suite.
+"""Test fixtures.
 
-Uses an in-memory SQLite engine so these tests need no external database and
-run in well under a second — they exist to pin the *schema*, not to prove
-PostgreSQL parity (that's what `alembic upgrade head` against a real Postgres
-in CI/the demo environment is for).
+Environment is configured BEFORE any app module is imported, because settings are
+cached and the SQLAlchemy engine is built at import time.
 """
 
+import os
+import pathlib
+import tempfile
 from datetime import date
 
-import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session
+_TEST_DB = pathlib.Path(tempfile.gettempdir()) / "hackathon_boilerplate_test.db"
+if _TEST_DB.exists():
+    _TEST_DB.unlink()
 
-from app.models import (
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
+os.environ["SIMULATOR_ENABLED"] = "false"
+os.environ["JWT_SECRET"] = "test-only-secret"
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import select  # noqa: E402
+
+from app.core.database import SessionLocal, engine  # noqa: E402
+from app.core.settings import get_settings  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models import (  # noqa: E402
     Account,
     AnalyticAccount,
     Base,
@@ -21,77 +33,108 @@ from app.models import (
     Product,
     ProductCategory,
 )
-from app.models.enums import AccountType, AnalyticType, ContactType, JournalType, ProductType
+from app.models.masters import AnalyticType, ContactType, ProductType  # noqa: E402
+from app.seed.seed import seed_all  # noqa: E402
+
+settings = get_settings()
 
 
-@pytest.fixture()
-def engine():
-    eng = create_engine("sqlite+pysqlite:///:memory:")
+@pytest.fixture(scope="session", autouse=True)
+def _database() -> None:
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_all(db)
+    finally:
+        db.close()
+    yield
+    Base.metadata.drop_all(bind=engine)
 
-    @event.listens_for(eng, "connect")
-    def _enable_fk(dbapi_conn, _):
-        dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
-    Base.metadata.create_all(eng)
-    return eng
-
-
-@pytest.fixture()
-def db(engine):
-    session = Session(engine)
+@pytest.fixture
+def db():
+    session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
 
 
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(app)
+
+
+@pytest.fixture
+def admin_client(client: TestClient) -> TestClient:
+    """Client with the auth cookie already set (Administrator)."""
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@urbanfurniture.in", "password": settings.seed_password},
+    )
+    assert response.status_code == 200, response.text
+    return client
+
+
+@pytest.fixture
+def second_user_client() -> TestClient:
+    """A signed-in client distinct from admin_client — for scoping tests, not
+    permission tests. Logs in as the seeded Accountant."""
+    c = TestClient(app)
+    response = c.post(
+        "/api/v1/auth/login",
+        json={"email": "accountant@urbanfurniture.in", "password": settings.seed_password},
+    )
+    assert response.status_code == 200, response.text
+    return c
+
+
+# ---------------------------------------------------------------------------
+# Accounting-domain fixtures.
+#
+# The Chart of Accounts and the four Journals are already seeded once per test
+# session by `seed_all()` above (see app/seed/seed.py) — these fixtures fetch
+# that seeded data by code/name rather than inserting a second copy, which
+# would collide with the seed's own UNIQUE constraints. Contacts, products and
+# analytic accounts are NOT seeded (docs/03_DATA_MODEL.md §8 marks them ★ —
+# each feature's own domain data), so those fixtures create fresh rows; the
+# per-test `db` session above rolls back anything not explicitly committed, so
+# repeated inserts across tests never collide.
+# ---------------------------------------------------------------------------
+
+_ACCOUNT_CODES = {
+    "cash": "1000",
+    "bank": "1010",
+    "debtors": "1100",
+    "input_tax": "1200",
+    "creditors": "2000",
+    "output_tax": "2100",
+    "capital": "3000",
+    "sales_income": "4000",
+    "purchase_expense": "5000",
+    "other_expense": "5100",
+}
+
+
 @pytest.fixture()
-def chart_of_accounts(db):
-    """The minimal Chart of Accounts from docs/03_DATA_MODEL.md §8 — nothing can post without it."""
-    accounts = {
-        "cash": Account(code="1000", name="Cash", type=AccountType.CASH),
-        "bank": Account(code="1010", name="Bank", type=AccountType.BANK),
-        "debtors": Account(code="1100", name="Debtors", type=AccountType.ASSET),
-        "input_tax": Account(code="1200", name="Input Tax", type=AccountType.ASSET),
-        "creditors": Account(code="2000", name="Creditors", type=AccountType.LIABILITY),
-        "output_tax": Account(code="2100", name="Output Tax", type=AccountType.LIABILITY),
-        "capital": Account(code="3000", name="Capital", type=AccountType.CAPITAL),
-        "sales_income": Account(code="4000", name="Sales Income", type=AccountType.INCOME),
-        "purchase_expense": Account(code="5000", name="Purchase Expense", type=AccountType.EXPENSE),
-        "other_expense": Account(code="5100", name="Other Expense", type=AccountType.OTHER_EXPENSE),
+def chart_of_accounts(db) -> dict[str, Account]:
+    by_code = {a.code: a for a in db.execute(select(Account)).scalars().all()}
+    return {label: by_code[code] for label, code in _ACCOUNT_CODES.items()}
+
+
+@pytest.fixture()
+def journals(db) -> dict[str, Journal]:
+    by_name = {j.name: j for j in db.execute(select(Journal)).scalars().all()}
+    return {
+        "sales": by_name["Sales"],
+        "purchase": by_name["Purchase"],
+        "bank": by_name["Bank"],
+        "cash": by_name["Cash"],
     }
-    db.add_all(accounts.values())
-    db.flush()
-    return accounts
 
 
 @pytest.fixture()
-def journals(db, chart_of_accounts):
-    sales = Journal(
-        name="Sales",
-        type=JournalType.SALES,
-        default_debit_account_id=chart_of_accounts["debtors"].id,
-        default_credit_account_id=chart_of_accounts["sales_income"].id,
-    )
-    purchase = Journal(
-        name="Purchase",
-        type=JournalType.PURCHASE,
-        default_debit_account_id=chart_of_accounts["purchase_expense"].id,
-        default_credit_account_id=chart_of_accounts["creditors"].id,
-    )
-    bank = Journal(
-        name="Bank",
-        type=JournalType.BANK,
-        default_debit_account_id=chart_of_accounts["bank"].id,
-        default_credit_account_id=chart_of_accounts["bank"].id,
-    )
-    db.add_all([sales, purchase, bank])
-    db.flush()
-    return {"sales": sales, "purchase": purchase, "bank": bank}
-
-
-@pytest.fixture()
-def customer(db, chart_of_accounts):
+def customer(db, chart_of_accounts) -> Contact:
     contact = Contact(
         name="Test Customer",
         type=ContactType.CUSTOMER,
@@ -104,7 +147,7 @@ def customer(db, chart_of_accounts):
 
 
 @pytest.fixture()
-def vendor(db, chart_of_accounts):
+def vendor(db, chart_of_accounts) -> Contact:
     contact = Contact(
         name="Test Vendor",
         type=ContactType.VENDOR,
@@ -117,7 +160,7 @@ def vendor(db, chart_of_accounts):
 
 
 @pytest.fixture()
-def product(db, chart_of_accounts):
+def product(db, chart_of_accounts) -> Product:
     category = ProductCategory(name="Furniture")
     db.add(category)
     db.flush()
@@ -137,7 +180,7 @@ def product(db, chart_of_accounts):
 
 
 @pytest.fixture()
-def analytic_accounts(db):
+def analytic_accounts(db) -> dict[str, AnalyticAccount]:
     income = AnalyticAccount(name="Project Alpha - Sales", type=AnalyticType.INCOME)
     expense = AnalyticAccount(name="Project Alpha - Costs", type=AnalyticType.EXPENSE)
     db.add_all([income, expense])
@@ -148,15 +191,3 @@ def analytic_accounts(db):
 @pytest.fixture()
 def today() -> date:
     return date(2026, 9, 5)
-
-
-@pytest.fixture()
-def client():
-    """FastAPI TestClient — skips cleanly until app/main.py exists (docs/02_ARCHITECTURE.md)."""
-    main = pytest.importorskip(
-        "app.main", reason="pending: app/main.py — FastAPI app factory not built yet"
-    )
-    from fastapi.testclient import TestClient
-
-    with TestClient(main.app) as test_client:
-        yield test_client

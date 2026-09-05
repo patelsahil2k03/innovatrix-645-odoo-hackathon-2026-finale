@@ -23,6 +23,21 @@ def _skip(module, note):
     return pytest.importorskip(module, reason=f"pending: {note}")
 
 
+def _skip_unless_route_exists(method: str, path: str, note: str) -> None:
+    """For endpoints on a router module that already exists (app.routers.auth is
+    real today) but doesn't yet have this specific route — importorskip on the
+    module would wrongly let the test run and hit a live 404. Check the actual
+    FastAPI route table instead."""
+    from app.main import app as fastapi_app
+
+    for route in fastapi_app.routes:
+        if getattr(route, "path", None) == path and method.upper() in getattr(
+            route, "methods", set()
+        ):
+            return
+    pytest.skip(reason=f"pending: {note}")
+
+
 # ---------------------------------------------------------------------------
 # Rule 3 — posted entry cannot be edited or deleted
 # ---------------------------------------------------------------------------
@@ -270,17 +285,15 @@ def test_confirmed_purchase_order_bills_successfully(db, vendor, today):
 # ---------------------------------------------------------------------------
 
 
-def test_accountant_cannot_patch_a_contact(client):
-    resp = client.patch(
-        "/api/v1/contacts/some-id", json={"name": "x"}, headers={"Authorization": "Bearer accountant-token"}
-    )
+def test_accountant_cannot_patch_a_contact(second_user_client):
+    _skip("app.routers.masters", "app/routers/masters.py — contacts router (RBAC-gated)")
+    resp = second_user_client.patch("/api/v1/contacts/some-id", json={"name": "x"})
     assert resp.status_code == 403
 
 
-def test_admin_can_patch_a_contact(client):
-    resp = client.patch(
-        "/api/v1/contacts/some-id", json={"name": "x"}, headers={"Authorization": "Bearer admin-token"}
-    )
+def test_admin_can_patch_a_contact(admin_client):
+    _skip("app.routers.masters", "app/routers/masters.py")
+    resp = admin_client.patch("/api/v1/contacts/some-id", json={"name": "x"})
     assert resp.status_code == 200
 
 
@@ -290,16 +303,14 @@ def test_admin_can_patch_a_contact(client):
 
 
 def test_portal_user_gets_404_on_another_contacts_invoice(client):
-    resp = client.get(
-        "/api/v1/portal/invoices/not-mine", headers={"Authorization": "Bearer contact-a-token"}
-    )
+    _skip("app.routers.portal", "app/routers/portal.py — data-scoped portal endpoints")
+    resp = client.get("/api/v1/portal/invoices/not-mine")
     assert resp.status_code == 404  # not 403 — a 403 would confirm the record exists
 
 
 def test_portal_user_sees_own_invoice(client):
-    resp = client.get(
-        "/api/v1/portal/invoices/mine", headers={"Authorization": "Bearer contact-a-token"}
-    )
+    _skip("app.routers.portal", "app/routers/portal.py")
+    resp = client.get("/api/v1/portal/invoices/mine")
     assert resp.status_code == 200
 
 
@@ -438,6 +449,9 @@ def test_archived_contacts_existing_invoices_still_post(db, customer, product, t
 
 
 def test_signup_rejects_a_weak_password(client):
+    _skip_unless_route_exists(
+        "POST", "/api/v1/auth/signup", "app/routers/auth.py — self-registration endpoint"
+    )
     resp = client.post(
         "/api/v1/auth/signup",
         json={"login_id": "newuser1", "email": "new@example.test", "password": "weak"},
@@ -447,6 +461,7 @@ def test_signup_rejects_a_weak_password(client):
 
 
 def test_signup_rejects_a_taken_login_id(client):
+    _skip_unless_route_exists("POST", "/api/v1/auth/signup", "app/routers/auth.py")
     payload = {"login_id": "taken01", "email": "a@example.test", "password": "Str0ng!Pass"}
     client.post("/api/v1/auth/signup", json=payload)
     resp = client.post(
@@ -457,6 +472,7 @@ def test_signup_rejects_a_taken_login_id(client):
 
 
 def test_valid_signup_creates_an_accountant(client):
+    _skip_unless_route_exists("POST", "/api/v1/auth/signup", "app/routers/auth.py")
     resp = client.post(
         "/api/v1/auth/signup",
         json={"login_id": "gooduser1", "email": "good@example.test", "password": "Str0ng!Pass"},

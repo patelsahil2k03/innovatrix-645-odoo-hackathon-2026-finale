@@ -21,7 +21,9 @@ from app.models import (
     JournalLine,
     Payment,
 )
-from app.models.enums import AccountType, ContactType, EntryState, PaymentDirection
+from app.models.ledger import EntryState
+from app.models.masters import AccountType, ContactType
+from app.models.payments import PaymentDirection
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +304,7 @@ def test_document_line_rejects_zero_quantity(db, chart_of_accounts, customer, pr
     db.flush()
     db.add(
         CustomerInvoiceLine(
-            document_id=invoice.id,
+            invoice_id=invoice.id,
             product_id=product.id,
             account_id=chart_of_accounts["sales_income"].id,
             quantity=0,
@@ -323,7 +325,7 @@ def test_document_line_rejects_negative_unit_price(db, chart_of_accounts, custom
     db.flush()
     db.add(
         CustomerInvoiceLine(
-            document_id=invoice.id,
+            invoice_id=invoice.id,
             product_id=product.id,
             account_id=chart_of_accounts["sales_income"].id,
             quantity=1,

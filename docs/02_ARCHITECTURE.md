@@ -67,12 +67,13 @@ The generic `domain.py` placeholders get replaced by named accounting modules:
 src/app/
 ├── models/
 │   ├── base.py       ← Base, UUIDMixin, TimestampMixin  (given)
-│   ├── auth.py       ← User, Role                        (given)
+│   ├── auth.py       ← User, Role   (given, +login_id/contact_id for sign-up/portal)
 │   ├── system.py     ← AuditLog, Notification            (given)
-│   ├── masters.py    ← Contact · Product · Account · Journal · AnalyticAccount
-│   ├── ledger.py     ← ★ JournalEntry · JournalLine      THE CORE
-│   ├── documents.py  ← PurchaseOrder · VendorBill · SalesOrder · CustomerInvoice
-│   └── payments.py   ← Payment · PaymentAllocation
+│   ├── masters.py    ← Contact · ProductCategory · Product · Account · Journal · AnalyticAccount
+│   ├── ledger.py     ← ★ NumberSequence · JournalEntry · JournalLine   THE CORE
+│   ├── documents.py  ← PurchaseOrder · VendorBill · SalesOrder · CustomerInvoice (+lines)
+│   ├── payments.py   ← Payment — one payment settles one document, no allocation table
+│   └── budgets.py    ← Budget · BudgetLine — the revision chain
 ├── schemas/          ← one module per models file, same names
 ├── routers/
 │   ├── health.py auth.py events.py notifications.py      (given)

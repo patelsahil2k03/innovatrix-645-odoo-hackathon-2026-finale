@@ -1,18 +1,9 @@
-"""Import every model here — Alembic autogenerate only sees what's imported."""
+"""Import every model here so Alembic autogenerate and Base.metadata see them all."""
 
-from .base import Base
-from .masters import (
-    Account,
-    AnalyticAccount,
-    Budget,
-    BudgetLine,
-    Contact,
-    Journal,
-    Product,
-    ProductCategory,
-)
-from .ledger import JournalEntry, JournalLine
-from .documents import (
+from app.models.auth import Role, User
+from app.models.base import Base
+from app.models.budgets import Budget, BudgetLine
+from app.models.documents import (
     CustomerInvoice,
     CustomerInvoiceLine,
     PurchaseOrder,
@@ -22,27 +13,42 @@ from .documents import (
     VendorBill,
     VendorBillLine,
 )
-from .payments import Payment
+from app.models.ledger import JournalEntry, JournalLine, NumberSequence
+from app.models.masters import (
+    Account,
+    AnalyticAccount,
+    Contact,
+    Journal,
+    Product,
+    ProductCategory,
+)
+from app.models.payments import Payment
+from app.models.system import AuditLog, Notification
 
 __all__ = [
     "Base",
-    "Account",
-    "AnalyticAccount",
-    "Budget",
-    "BudgetLine",
+    "Role",
+    "User",
+    "AuditLog",
+    "Notification",
     "Contact",
-    "Journal",
     "Product",
     "ProductCategory",
+    "Account",
+    "Journal",
+    "AnalyticAccount",
+    "NumberSequence",
     "JournalEntry",
     "JournalLine",
-    "CustomerInvoice",
-    "CustomerInvoiceLine",
     "PurchaseOrder",
     "PurchaseOrderLine",
-    "SalesOrder",
-    "SalesOrderLine",
     "VendorBill",
     "VendorBillLine",
+    "SalesOrder",
+    "SalesOrderLine",
+    "CustomerInvoice",
+    "CustomerInvoiceLine",
     "Payment",
+    "Budget",
+    "BudgetLine",
 ]
