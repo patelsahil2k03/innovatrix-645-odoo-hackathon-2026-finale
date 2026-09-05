@@ -49,15 +49,36 @@ failure never blocks research.
 
 ---
 
-## 2. VENDORED INTO THIS REPO (`.claude/skills/`)
+## 2. INSTALL THESE YOURSELF — nothing is vendored
 
-These are committed so **every teammate gets them automatically on clone**, without
-installing anything:
+`.claude/` is **gitignored**. Skills are installed per-developer rather than committed,
+for two reasons: they are third-party content this team does not own the right to
+redistribute, and `tailwind-4-docs` in particular ships a docs snapshot its own author
+marks *source-available but not open-source*, explicitly not to be bundled.
 
-- `web-design-guidelines` — UI review
-- `design-taste-frontend` — anti-slop design direction
-- `tailwind-4-docs` — Tailwind v4 reference (v4 differs enough from v3 that models
-  routinely produce v3 syntax)
+So each person installs their own. The registry resolves the exact package slug:
+
+```bash
+npx skills find <name>                    # resolve the slug for a skill
+npx skills add <owner/repo@skill> -g -y   # install it globally
+```
+
+**The short list worth having before you start**, with the source repo to confirm you're
+installing the right one (full rationale in §1):
+
+| Skill | Source repo | Why you want it |
+|---|---|---|
+| `to-spec` | `mattpocock/skills` | Problem statement → written spec. The highest-value one here. |
+| `domain-modeling` | `mattpocock/skills` | Spec → entities, terminology, relationships |
+| `resolving-merge-conflicts` | `mattpocock/skills` | The failure in `10_LESSONS.md` §1, directly |
+| `code-review` | `mattpocock/skills` | Structured diff review |
+| `design-taste-frontend` | `leonxlnx/taste-skill` | Anti-slop design direction |
+| `web-design-guidelines` | `vercel-labs/agent-skills` | UI and accessibility review before a merge |
+| `tailwind-4-docs` | see `npx skills find` | v4 differs enough from v3 that models routinely emit v3 syntax |
+| `webapp-testing` | `anthropics/skills` | Drives a real browser to verify the UI works |
+
+Verify what a skill actually is before trusting it — §3 is a worked example of why
+install counts are not evidence.
 
 ---
 

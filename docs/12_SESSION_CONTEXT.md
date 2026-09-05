@@ -135,11 +135,12 @@ innovatrix-odoo-hackathon-2026-finale/
 ├── backend/           FastAPI, 32 tests passing
 ├── frontend/          Next.js, build green
 ├── infra/             optional Postgres compose
-├── scripts/           dev.sh · demo-reset.sh · verify-sse.sh
-└── .claude/skills/    3 skills vendored for teammates
+└── scripts/           dev.sh · demo-reset.sh · verify-sse.sh
 ```
 
-12 AI skills are installed globally on the lead's machine — inventory, rationale and
+AI skills are **not** vendored — `.claude/` is gitignored, since the skills are
+third-party content and one of them is explicitly source-available-but-not-open-source.
+Each person installs their own; the short list, the install commands, the rationale and
 the explicit *not installed* list are in `11_AI_TOOLING.md`.
 
 ---
