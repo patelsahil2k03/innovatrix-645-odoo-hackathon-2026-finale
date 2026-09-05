@@ -1,0 +1,18 @@
+# 🟢 Done — index
+
+> One file per completed unit of work, newest first below. Open only the file(s) you
+> actually need — checking whether X is done means reading this table, not every file here.
+
+| Date | What | File |
+|---|---|---|
+| 2026-09-05 | Documentation & planning — full spec written and tracked in `docs/` | [`2026-09-05-docs-and-planning.md`](2026-09-05-docs-and-planning.md) |
+
+**New entry?** Move the line from `../pending/INDEX.md` (delete it there), create
+`YYYY-MM-DD-short-slug.md` here using the template below, add its row above, newest first.
+
+```
+### What
+### Why / how
+### Verified
+### Touches
+```
