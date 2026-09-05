@@ -70,3 +70,9 @@ Thumbs.db
 # are not documents, and do not belong in the submission.
 *_SESSION_NOTES.md
 scratch/
+
+# ---- Internal working artifacts ----
+# Design explorations, decision records and visual deep-dives. Useful to the
+# team, but they are our own deliberation, not part of the submission.
+docs/technicals/
+docs/full_flow/

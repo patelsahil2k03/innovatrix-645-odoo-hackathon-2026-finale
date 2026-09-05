@@ -55,11 +55,7 @@ Every posted invoice, bill and payment emits one immutable, balanced journal ent
 every report is an aggregation over the ledger. That is what separates an accounting system
 from an invoice list with a balance sheet drawn on top.
 
-Full statement, triage, business rules and the explicit scope cut:
-[`docs/PROBLEM_STATEMENT.md`](docs/PROBLEM_STATEMENT.md).
-
-> The product name is still open — candidates and the shortlist are in
-> [`docs/README.md`](docs/README.md).
+Full statement, data model and API contract: [`docs/`](docs/README.md).
 
 ## Tech Stack
 
