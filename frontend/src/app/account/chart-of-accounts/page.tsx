@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import Link from "next/link";
+import { Suspense, useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
@@ -9,16 +10,16 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
-import { SkeletonTable } from "@/components/ui/skeleton";
+import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AccountForm, accountToFormValues } from "@/components/forms/account-form";
 import { PlusIcon } from "@/components/icons";
-import { api, type Account, type AccountCreate } from "@/lib/api";
+import { api, type AccountCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import { useDrawer } from "@/lib/use-drawer";
+import { useDrawerParam } from "@/lib/use-drawer-param";
 import { useFetch } from "@/lib/use-fetch";
 import { useToast } from "@/lib/toast-context";
 import { humanize } from "@/lib/format";
@@ -27,8 +28,17 @@ import { can } from "@/lib/roles";
 const PAGE_SIZE = 20;
 
 export default function ChartOfAccountsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChartOfAccountsPageInner />
+    </Suspense>
+  );
+}
+
+function ChartOfAccountsPageInner() {
   const { user } = useAuth();
   const toast = useToast();
+  const panel = useDrawerParam();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<string | null>("code");
@@ -47,31 +57,34 @@ export default function ChartOfAccountsPage() {
   const canRecord = can.record(user?.role.name);
   const canManage = can.manageMasterData(user?.role.name);
 
-  // Create and edit each open in the same right-side drawer instead of a
-  // page navigation, so working the Chart of Accounts stays on one screen.
-  const createDrawer = useDrawer();
-  const [editing, setEditing] = useState<Account | null>(null);
+  // Fetched by id rather than read off the currently loaded page, so
+  // `?open=<id>` stays a real, reloadable link regardless of search/sort/page.
+  const editingId = panel.openId;
+  const editingAccount = useFetch(
+    () => (editingId ? api.accounts.get(editingId) : Promise.resolve(null)),
+    [editingId],
+  );
 
   async function handleCreate(values: AccountCreate) {
     await api.accounts.create(values);
     toast.success("Account created");
-    createDrawer.closeDrawer();
+    panel.close();
     accounts.reload();
   }
 
   async function handleUpdate(values: AccountCreate) {
-    if (!editing) return;
-    await api.accounts.update(editing.id, values);
+    if (!editingId) return;
+    await api.accounts.update(editingId, values);
     toast.success("Account updated");
-    setEditing(null);
+    panel.close();
     accounts.reload();
   }
 
   const archiveAction = useConfirmAction(async () => {
-    if (!editing) return;
-    await api.accounts.archive(editing.id);
+    if (!editingId) return;
+    await api.accounts.archive(editingId);
     toast.success("Account archived");
-    setEditing(null);
+    panel.close();
     accounts.reload();
   });
 
@@ -84,10 +97,10 @@ export default function ChartOfAccountsPage() {
           <p>The general ledger&apos;s accounts — pre-configured, rarely added to.</p>
         </div>
         {canRecord ? (
-          <button type="button" className="btn btn-primary" onClick={createDrawer.openDrawer}>
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New account
-          </button>
+          </Link>
         ) : null}
       </div>
 
@@ -119,11 +132,7 @@ export default function ChartOfAccountsPage() {
                   {pageData.items.map((account) => (
                     <tr key={account.id}>
                       <td className="mono">{account.code}</td>
-                      <td>
-                        <button type="button" className="link-btn" onClick={() => setEditing(account)}>
-                          {account.name}
-                        </button>
-                      </td>
+                      <td><Link href={panel.hrefFor(account.id)}>{account.name}</Link></td>
                       <td>{humanize(account.type)}</td>
                       <td>{account.is_archived ? <StatusBadge status="archived" /> : <StatusBadge status="active" />}</td>
                     </tr>
@@ -139,43 +148,51 @@ export default function ChartOfAccountsPage() {
         ) : null}
       </div>
 
-      <Drawer open={createDrawer.open} onClose={createDrawer.closeDrawer} title="New account" width={35}>
+      <Drawer open={panel.isNew} onClose={panel.close} title="New account">
         <AccountForm onSubmit={handleCreate} submitLabel="Create account" />
       </Drawer>
 
       <Drawer
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        title={editing ? `${editing.code} — ${editing.name}` : "Account"}
-        width={35}
+        open={panel.openId !== null}
+        onClose={panel.close}
+        title={editingAccount.data ? `${editingAccount.data.code} — ${editingAccount.data.name}` : "Account"}
+       
         footer={
-          editing && canManage && !editing.is_archived ? (
+          editingAccount.data && canManage && !editingAccount.data.is_archived ? (
             <button type="button" className="btn btn-danger" onClick={archiveAction.request}>
               Archive
             </button>
           ) : null
         }
       >
-        {editing ? (
-          <>
-            <StatusBadge status={editing.is_archived ? "archived" : "active"} />
-            {!canManage ? (
-              <div className="alert alert-info">Only an Admin can modify or archive master data.</div>
-            ) : null}
-            {editing.is_archived ? (
-              <div className="alert alert-info">
-                Archiving never touches history — postings already made to this account stay exactly
-                as they were and still appear in every report covering their period.
-              </div>
-            ) : null}
-            <AccountForm
-              initial={accountToFormValues(editing)}
-              onSubmit={handleUpdate}
-              submitLabel="Save changes"
-              readOnly={!canManage || editing.is_archived}
-            />
-          </>
-        ) : null}
+        <AsyncState
+          loading={editingAccount.loading}
+          error={editingAccount.error}
+          data={editingAccount.data}
+          onRetry={editingAccount.reload}
+          skeleton={<SkeletonCard lines={3} />}
+        >
+          {(data) => (
+            <>
+              <StatusBadge status={data.is_archived ? "archived" : "active"} />
+              {!canManage ? (
+                <div className="alert alert-info">Only an Admin can modify or archive master data.</div>
+              ) : null}
+              {data.is_archived ? (
+                <div className="alert alert-info">
+                  Archiving never touches history — postings already made to this account stay exactly
+                  as they were and still appear in every report covering their period.
+                </div>
+              ) : null}
+              <AccountForm
+                initial={accountToFormValues(data)}
+                onSubmit={handleUpdate}
+                submitLabel="Save changes"
+                readOnly={!canManage || data.is_archived}
+              />
+            </>
+          )}
+        </AsyncState>
       </Drawer>
 
       <ConfirmDialog
@@ -189,9 +206,9 @@ export default function ChartOfAccountsPage() {
         confirmLabel="Archive account"
         pendingLabel="Archiving…"
         description={
-          editing ? (
+          editingAccount.data ? (
             <p>
-              {editing.code} — {editing.name} will no longer appear in pickers for new document
+              {editingAccount.data.code} — {editingAccount.data.name} will no longer appear in pickers for new document
               lines. Postings already made to it stay exactly as they are and still appear
               in every report covering their period, but there is no way to unarchive it
               from the app yet.

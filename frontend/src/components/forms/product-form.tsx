@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Create/edit form shared by /account/products/new and /account/products/[id].
- * Category is creatable inline (03_DATA_MODEL.md §2); income/expense accounts
+ * Create/edit form shared by the New-product and edit-product drawers on
+ * /account/products. Category is creatable inline (03_DATA_MODEL.md §2); income/expense accounts
  * are what a sale/purchase of this product posts against.
  */
 

@@ -1,27 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { Drawer } from "@/components/ui/drawer";
+import { Field } from "@/components/ui/field";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PaymentModal } from "@/components/forms/payment-modal";
 import { PlusIcon } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { useDrawerParam } from "@/lib/use-drawer-param";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
+import { round2 } from "@/lib/use-document-lines";
 import { date, money } from "@/lib/format";
 import { can } from "@/lib/roles";
 
 const PAGE_SIZE = 20;
 
 export default function PurchasePaymentsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PurchasePaymentsPageInner />
+    </Suspense>
+  );
+}
+
+function PurchasePaymentsPageInner() {
   const { user } = useAuth();
+  const toast = useToast();
+  const panel = useDrawerParam();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -37,6 +54,21 @@ export default function PurchasePaymentsPage() {
     setPage(1);
   }, []);
 
+  // ── New payment drawer — pick an open bill, then register against it ────
+  const [billId, setBillId] = useState("");
+  const [payOpen, setPayOpen] = useState(false);
+
+  const bills = useFetch(() => api.vendorBills.list({ page_size: 100, sort: "-bill_date" }), []);
+  const payable = (bills.data?.items ?? []).filter((bill) => bill.status === "POSTED" || bill.status === "PARTIAL");
+  const selected = payable.find((bill) => bill.id === billId);
+  const remaining = selected ? round2(selected.total - selected.amount_paid) : 0;
+
+  function closeNewPayment() {
+    setBillId("");
+    setPayOpen(false);
+    panel.close();
+  }
+
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Purchase" }, { label: "Payment" }]} />
@@ -46,7 +78,7 @@ export default function PurchasePaymentsPage() {
           <p>Payments sent against vendor bills.</p>
         </div>
         {can.record(user?.role.name) ? (
-          <Link href="/purchase/payments/new" className="btn btn-primary">
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New payment
           </Link>
@@ -92,6 +124,53 @@ export default function PurchasePaymentsPage() {
           <Pagination page={payments.data.page} pages={payments.data.pages} total={payments.data.total} pageSize={PAGE_SIZE} onPageChange={setPage} />
         ) : null}
       </div>
+
+      <Drawer open={panel.isNew} onClose={closeNewPayment} title="New payment">
+        <p style={{ fontSize: "var(--t-sm)", color: "var(--text-muted)" }}>
+          Register a payment against an open vendor bill.
+        </p>
+        <div className="card stack">
+          <Field label="Bill" required>
+            {(props) => (
+              <select {...props} className="select" value={billId} onChange={(event) => setBillId(event.target.value)}>
+                <option value="">Select a bill…</option>
+                {payable.map((bill) => (
+                  <option key={bill.id} value={bill.id}>
+                    {bill.number} — {bill.vendor_name ?? "—"} — due {money(round2(bill.total - bill.amount_paid))}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+
+          {selected ? (
+            <div className="row-between">
+              <span>
+                <StatusBadge status={selected.status} /> · Total {money(selected.total)} · Paid {money(selected.amount_paid)} ·
+                Due {date(selected.due_date)}
+              </span>
+              <button type="button" className="btn btn-primary" onClick={() => setPayOpen(true)}>
+                Register payment of {money(remaining)}
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {selected ? (
+          <PaymentModal
+            open={payOpen}
+            onClose={() => setPayOpen(false)}
+            billId={selected.id}
+            direction="SEND"
+            remainingBalance={remaining}
+            onSuccess={() => {
+              toast.success("Payment registered");
+              payments.reload();
+              closeNewPayment();
+            }}
+          />
+        ) : null}
+      </Drawer>
     </AppShell>
   );
 }

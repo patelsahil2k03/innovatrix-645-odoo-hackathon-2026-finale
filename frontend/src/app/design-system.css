@@ -56,6 +56,14 @@
   --danger:   #b3261e;  --danger-soft:  #fce8e6;  --danger-border:  #f0b4ae;
   --info:     #0b5f87;  --info-soft:    #e0f0f8;  --info-border:    #a8d3e6;
 
+  /* Chart categorical slots — fixed order, never cycled or reassigned per
+     chart. Validated (script in the dataviz skill) against this surface for
+     CVD-safe adjacent pairs; distinct from the status hues above so a chart
+     series never impersonates a badge state. */
+  --chart-1: #2a78d6;  /* blue */
+  --chart-2: #eb6834;  /* orange */
+  --chart-3: #1baf7a;  /* aqua */
+
   /* ── Space: a 4px scale. Use these, never arbitrary px. ────────────────── */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
@@ -210,6 +218,10 @@
     --danger:  #ff7a70;  --danger-soft: #351617;  --danger-border: #63292a;
     --info:    #6cc4ea;  --info-soft:   #0c2a36;  --info-border:   #1c4f63;
 
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+
     --shadow-sm: 0 1px 2px #0007;
     --shadow-md: 0 1px 3px #0008, 0 8px 24px -12px #000a;
     --shadow-lg: 0 24px 48px -24px #000c;
@@ -292,11 +304,6 @@ p  { margin: 0; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-/* A row's primary cell opening a drawer instead of navigating still needs to
-   read as "the link for this row" — same look as `a`, `<button>` semantics. */
-.link-btn { background: none; border: 0; padding: 0; margin: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: none; text-align: left; }
-.link-btn:hover { text-decoration: underline; }
-
 code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* Visible focus for keyboard users — an accessibility requirement, and free points. */
@@ -338,7 +345,11 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .row { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
 .stack { display: flex; flex-direction: column; gap: var(--s-3); }
-.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-4); }
+/* align-items: start — a grid row's default stretch would force a short card
+   to match its taller sibling's height, leaving dead space inside it (e.g.
+   a one-row report group beside a two-card stack). Every other .grid-2 use
+   is same-height form fields, so this is a no-op there. */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-4); align-items: start; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-4); }
 
 @media (max-width: 860px) {
@@ -528,8 +539,40 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .badge-neutral { background: var(--surface-3);   color: var(--text-muted); border-color: var(--border); }
 
 /* A dot alongside the colour, so status is never conveyed by hue alone
-   (colour-blind users, and an accessibility reviewer, both notice). */
+   (colour-blind users, and an accessibility reviewer, both notice). Badges
+   that carry a real icon (.badge-icon, e.g. StatusBadge) use that instead of
+   the dot — the icon already does this job, and better. */
 .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.badge-icon::before { content: none; }
+.badge-icon svg { flex: none; }
+
+/* ═══ CHARTS — horizontal bar ════════════════════════════════════════════
+   Plain HTML/CSS bars, no charting dependency (same call as .donut-wrap).
+   Mark spec: <=24px thick, 4px rounded tip, square baseline, 2px surface
+   gap between grouped bars. Value is always a direct label — nothing here
+   is gated behind hover. */
+
+.hbar-chart { display: flex; flex-direction: column; gap: var(--s-4); }
+.hbar-row { display: flex; align-items: center; gap: var(--s-3); }
+.hbar-name {
+  flex: 0 0 132px; font-size: var(--t-sm); color: var(--text-muted); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hbar-bars { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hbar-track { flex: 1; background: var(--surface-3); border-radius: var(--radius-full); overflow: hidden; }
+.hbar-fill {
+  height: 22px; border-radius: 0 4px 4px 0; transition: filter 0.15s ease;
+  display: flex; align-items: center;
+}
+.hbar-row:hover .hbar-fill { filter: brightness(1.08); }
+.hbar-value {
+  flex: 0 0 auto; min-width: 92px; text-align: right;
+  font-size: var(--t-sm); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
+}
+
+.hbar-legend { display: flex; gap: var(--s-4); margin-bottom: var(--s-2); }
+.hbar-legend-item { display: flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-muted); font-weight: 600; }
+.hbar-legend-swatch { width: 12px; height: 4px; border-radius: var(--radius-full); flex: none; }
 
 /* ═══ KPI TILES ══════════════════════════════════════════════════════════ */
 
@@ -844,8 +887,8 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
    Plain SVG, no charting dependency — the swept angle is data, not a token, so
    it's the one place a numeric value is computed inline rather than a CSS var. */
 
-.donut-wrap { display: inline-flex; align-items: center; gap: var(--s-2); }
-.donut-label { font-size: var(--t-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.donut-wrap { display: inline-flex; align-items: center; }
+.donut-label { font-variant-numeric: tabular-nums; }
 
 /* ═══ COMBOBOX-WITH-INLINE-CREATE (product category, 03_DATA_MODEL.md §2) ══ */
 

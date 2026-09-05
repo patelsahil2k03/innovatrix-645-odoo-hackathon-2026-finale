@@ -4,6 +4,7 @@ import { memo, useCallback, useState, type ChangeEvent } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { CategoryBarChart } from "@/components/ui/bar-chart";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { Field } from "@/components/ui/field";
@@ -100,6 +101,16 @@ export default function ProfitAndLossPage() {
       >
         {(data) => (
           <>
+            <div className="card">
+              <div className="card-head"><span className="card-title">Income vs. expenses</span></div>
+              <CategoryBarChart
+                items={[
+                  { label: "Income", value: data.income.total, colorVar: "var(--chart-1)" },
+                  { label: "Expenses", value: data.expenses.total, colorVar: "var(--chart-2)" },
+                  { label: "Other expenses", value: data.other_expenses.total, colorVar: "var(--chart-3)" },
+                ]}
+              />
+            </div>
             <div className="grid-2">
               <GroupTable group={data.income} />
               <div className="stack">

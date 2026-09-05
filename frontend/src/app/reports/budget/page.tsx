@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useState, type ChangeEvent } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { GroupedBarChart } from "@/components/ui/bar-chart";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -60,38 +61,53 @@ export default function BudgetReportPage() {
       </div>
 
       {budgetId ? (
-        <div className="card">
-          <AsyncState
-            loading={report.loading}
-            error={report.error}
-            data={report.data}
-            isEmpty={(r) => r.lines.length === 0}
-            emptyTitle="No lines on this budget"
-            onRetry={report.reload}
-            skeleton={<SkeletonTable rows={5} columns={5} />}
-          >
-            {(data) => (
-              <div className="table-scroll">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Analytic account</th>
-                      <th>Type</th>
-                      <th style={{ textAlign: "right" }}>Planned</th>
-                      <th style={{ textAlign: "right" }}>Actual</th>
-                      <th style={{ textAlign: "right" }}>Variance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.lines.map((row) => (
-                      <BudgetReportRowView key={row.analytic_account_id} row={row} />
-                    ))}
-                  </tbody>
-                </table>
+        <AsyncState
+          loading={report.loading}
+          error={report.error}
+          data={report.data}
+          isEmpty={(r) => r.lines.length === 0}
+          emptyTitle="No lines on this budget"
+          onRetry={report.reload}
+          skeleton={<SkeletonTable rows={5} columns={5} />}
+        >
+          {(data) => (
+            <>
+              <div className="card">
+                <div className="card-head"><span className="card-title">Committed vs. achieved, by analytic account</span></div>
+                <GroupedBarChart
+                  series={[
+                    { label: "Committed", colorVar: "var(--chart-1)" },
+                    { label: "Achieved", colorVar: "var(--chart-3)" },
+                  ]}
+                  rows={data.lines.map((row) => ({
+                    label: row.analytic_account,
+                    values: [row.committed_amount, row.achieved_amount],
+                  }))}
+                />
               </div>
-            )}
-          </AsyncState>
-        </div>
+              <div className="card">
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Analytic account</th>
+                        <th>Type</th>
+                        <th style={{ textAlign: "right" }}>Planned</th>
+                        <th style={{ textAlign: "right" }}>Actual</th>
+                        <th style={{ textAlign: "right" }}>Variance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.lines.map((row) => (
+                        <BudgetReportRowView key={row.analytic_account_id} row={row} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </AsyncState>
       ) : null}
     </AppShell>
   );

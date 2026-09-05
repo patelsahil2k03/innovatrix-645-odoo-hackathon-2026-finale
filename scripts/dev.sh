@@ -12,6 +12,20 @@
 #                                       the connection is checked before booting
 set -euo pipefail
 
+# A user added to the `docker` group after their session started won't see it
+# reflected in `id`/`groups` until they log out and back in — `docker` then
+# fails with "permission denied ... docker.sock" no matter how this script is
+# invoked. If that's exactly the situation (group exists, we're a member, but
+# the current session doesn't have it active), transparently re-exec under
+# `sg docker` instead of making every teammate do this by hand. No-op on any
+# machine where that isn't the case (no docker group, already active, etc).
+if command -v sg >/dev/null 2>&1 \
+  && getent group docker >/dev/null 2>&1 \
+  && id -nG "$USER" 2>/dev/null | grep -qw docker \
+  && ! id -nG 2>/dev/null | grep -qw docker; then
+  exec sg docker -c "$(printf '%q ' "$0" "$@")"
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -42,12 +56,16 @@ case "$DB_URL" in
           export DATABASE_URL="$DB_URL"
         else
           echo "→ this machine hosts the database — starting postgres…"
-          docker compose -f infra/docker-compose.yml up -d db
+          # --env-file is required: compose otherwise looks for .env next to
+          # infra/docker-compose.yml, not here, and silently falls back to the
+          # "app"/"app" default credentials instead of the real ones below.
+          docker compose --env-file .env -f infra/docker-compose.yml up -d db
           until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
             sleep 1
           done
+          DB_PORT="$(grep -E '^POSTGRES_PORT=' .env | tail -1 | cut -d= -f2-)"
           echo "→ postgres healthy. Teammates connect with:"
-          echo "     DATABASE_URL=…@$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost"):5432/app"
+          echo "     DATABASE_URL=…@$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost"):${DB_PORT:-5432}/app"
         fi
         ;;
       *)

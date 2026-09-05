@@ -27,16 +27,17 @@ interface DrawerProps {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  /** Percentage of viewport width the drawer covers on desktop — set per
-   *  call-site based on how much content it holds. Clamped to 30-80.
-   *  Defaults to 40. Always full-width below the 640px breakpoint. */
+  /** Percentage of viewport width the drawer covers on desktop. Every
+   *  drawer in the app uses 60 — a single fixed width, not a per-form
+   *  choice. Clamped to 30-80. Always full-width below the 640px breakpoint. */
   width?: number;
 }
 
-export function Drawer({ open, title, onClose, children, footer, width = 40 }: DrawerProps) {
+export function Drawer({ open, title, onClose, children, footer, width = 60 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const restoreFocusTo = useRef<HTMLElement | null>(null);
   const titleId = useId();
+  const closeTipId = useId();
   const widthPct = Math.min(80, Math.max(30, width));
 
   const handleKeyDown = useCallback(
@@ -104,9 +105,18 @@ export function Drawer({ open, title, onClose, children, footer, width = 40 }: D
         aria-labelledby={titleId}
         style={{ "--drawer-w": `${widthPct}vw` } as React.CSSProperties}
       >
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close">
+        <button
+          type="button"
+          className="drawer-close"
+          onClick={onClose}
+          aria-label="Close"
+          aria-describedby={closeTipId}
+        >
           <CloseIcon size={16} />
         </button>
+        <span role="tooltip" id={closeTipId} className="drawer-close-tip">
+          Close <kbd>Esc</kbd>
+        </span>
         <div className="drawer-head">
           <h3 id={titleId} className="card-title">{title}</h3>
         </div>
