@@ -24,7 +24,7 @@ export function Pagination({ page, pages, total, pageSize, onPageChange }: Pagin
       </span>
       <div className="row" style={{ gap: 6 }}>
         <button
-          type="button" className="btn btn-sm"
+          type="button" className="btn btn-icon"
           onClick={() => onPageChange(page - 1)} disabled={page <= 1}
           aria-label="Previous page"
         >
@@ -32,7 +32,7 @@ export function Pagination({ page, pages, total, pageSize, onPageChange }: Pagin
         </button>
         <span className="pagination-info" aria-live="polite">Page {page} of {pages}</span>
         <button
-          type="button" className="btn btn-sm"
+          type="button" className="btn btn-icon"
           onClick={() => onPageChange(page + 1)} disabled={page >= pages}
           aria-label="Next page"
         >

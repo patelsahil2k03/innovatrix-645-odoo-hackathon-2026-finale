@@ -54,9 +54,9 @@ export default function LoginPage() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div>
-          <h1 style={{ fontSize: "var(--t-xl)" }}>Sign in</h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "var(--t-sm)", marginTop: 4 }}>
+        <div style={{ textAlign: "center" }}>
+          <h1>Sign in</h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "var(--t-md)", fontWeight: 400, marginTop: "var(--s-2)" }}>
             Urban Furniture Accounting — use a demo account below, or enter your credentials.
           </p>
         </div>

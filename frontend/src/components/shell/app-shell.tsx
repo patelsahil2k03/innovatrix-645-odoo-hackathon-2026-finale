@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="row">
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-icon"
               onClick={toggleTheme}
               aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             >

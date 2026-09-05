@@ -22,8 +22,16 @@ before purchase starts. See `../../docs/06_BACKEND.md` §1. Move a line to `../d
 moment it's built **and verified** — a test passes, or you clicked it in the browser — not
 because it compiles.
 
-⚠️ **Re-verified 2026-09-05.** `backend/` + `frontend/` exist and pass (32 backend tests,
-frontend build green) — full detail in `../done/2026-09-05-platform-and-schema-verified.md`.
+🔴 **STALE — flagged 2026-09-05, later same day.** `git log` and `backend/README.md` show a
+full backend merge since the table below was last written (`services/posting.py`, every
+router, `feat: implement core accounting, sales, and purchase modules...`). The phase table
+below likely understates what's built. Don't trust it — re-run `git log --oneline` and
+`ls backend/src/app/{services,routers}` before picking up backend work. See
+`../done/2026-09-05-design-full-apple-aesthetic.md`'s closing note.
+
+⚠️ **Re-verified 2026-09-05 (superseded by the flag above).** `backend/` + `frontend/` exist
+and pass (32 backend tests, frontend build green) — full detail in
+`../done/2026-09-05-platform-and-schema-verified.md`.
 **The entire domain schema is already migrated** (all 24 tables, CHECK/UNIQUE constraints,
 the partial-unique double-posting guard) — but every phase below is still schema-only until
 its ✅ box says otherwise. Don't assume a router, service or screen exists just because its
