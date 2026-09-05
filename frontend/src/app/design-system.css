@@ -381,6 +381,11 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 100ms ease;
   white-space: nowrap;
 }
+/* A button rendered as a <Link> is still an <a>, so the global
+   `a:hover { text-decoration: underline }` was underlining the label of every
+   link-button in the app — "New sales order", "View all", "Back to dashboard".
+   A button is a button whatever element it happens to be. */
+.btn, .btn:hover, .btn:focus { text-decoration: none; }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
 .btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
