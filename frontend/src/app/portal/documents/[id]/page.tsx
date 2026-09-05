@@ -4,6 +4,8 @@ import Link from "next/link";
 import { use, useState } from "react";
 
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DownloadIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
@@ -26,9 +28,16 @@ export default function PortalDocumentDetailPage({ params }: { params: Promise<{
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "My Documents", href: "/portal/documents" }, { label: doc.data?.number ?? "…" }]} />
       <p style={{ fontSize: "var(--t-sm)" }}><Link href="/portal/documents">← My Documents</Link></p>
 
-      <AsyncState loading={doc.loading} error={doc.error} data={doc.data} onRetry={doc.reload}>
+      <AsyncState
+        loading={doc.loading}
+        error={doc.error}
+        data={doc.data}
+        onRetry={doc.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => {
           const invoice = isInvoice(data);
           const remaining = round2(data.total - data.amount_paid);

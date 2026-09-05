@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
@@ -89,6 +90,7 @@ export default function NewCustomerInvoicePage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Sales" }, { label: "Sale Invoice", href: "/sales/invoices" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New sale invoice</h1>

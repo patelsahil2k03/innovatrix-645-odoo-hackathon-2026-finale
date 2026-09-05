@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PlusIcon } from "@/components/icons";
@@ -31,8 +33,14 @@ export default function ChartOfAccountsPage() {
     [page, debouncedSearch, sort],
   );
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Chart of Account" }]} />
       <div className="page-head">
         <div>
           <h1>Chart of Accounts</h1>
@@ -46,7 +54,7 @@ export default function ChartOfAccountsPage() {
         ) : null}
       </div>
 
-      <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search accounts" placeholder="Search by code or name" />
+      <SearchInput value={search} onChange={handleSearchChange} label="Search accounts" placeholder="Search by code or name" />
 
       <div className="card">
         <AsyncState
@@ -57,6 +65,7 @@ export default function ChartOfAccountsPage() {
           emptyTitle="No accounts yet"
           emptyHint="The Chart of Accounts must be seeded before anything can post."
           onRetry={accounts.reload}
+          skeleton={<SkeletonTable rows={6} columns={4} />}
         >
           {(pageData) => (
             <div className="table-scroll">

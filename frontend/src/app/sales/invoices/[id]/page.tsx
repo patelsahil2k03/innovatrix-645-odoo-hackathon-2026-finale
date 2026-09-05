@@ -5,9 +5,11 @@ import { use, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { Modal } from "@/components/ui/modal";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon } from "@/components/icons";
@@ -93,7 +95,20 @@ export default function CustomerInvoiceDetailPage({ params }: { params: Promise<
 
   return (
     <AppShell>
-      <AsyncState loading={invoice.loading} error={invoice.error} data={invoice.data} onRetry={invoice.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Sales" },
+          { label: "Sale Invoice", href: "/sales/invoices" },
+          { label: invoice.data?.number ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={invoice.loading}
+        error={invoice.error}
+        data={invoice.data}
+        onRetry={invoice.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => {
           const customer = contacts.data?.items.find((c) => c.id === data.customer_id);
           const receivableAccount = customer?.receivable_account_id ? accountsById[customer.receivable_account_id] : undefined;

@@ -8,7 +8,14 @@
  *
  * Purely presentational: every number comes from lib/use-document-lines.ts.
  * This component renders rows and calls back; it never computes a total.
+ *
+ * Each row is its own memoized component: `updateLine`/`selectProduct` in
+ * use-document-lines.ts only replace the *edited* line's object in the array,
+ * so every other row keeps the same reference — React.memo lets those rows
+ * skip re-rendering entirely when one line changes.
  */
+
+import { memo, useCallback, useMemo, type ChangeEvent } from "react";
 
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { money } from "@/lib/format";
@@ -35,9 +42,175 @@ interface LineItemsEditorProps {
   readOnly?: boolean;
 }
 
-export function LineItemsEditor({
+interface LineItemRowProps {
+  line: DraftLine;
+  product: Product | undefined;
+  analyticAccountName: string | undefined;
+  products: Product[];
+  analyticAccounts: AnalyticAccount[];
+  error?: LineFieldErrors;
+  onRemove: (key: string) => void;
+  onUpdate: (key: string, patch: Partial<DocumentLine>) => void;
+  onSelectProduct: (key: string, productId: string) => void;
+  removeDisabled: boolean;
+  readOnly?: boolean;
+}
+
+const LineItemRow = memo(function LineItemRow({
+  line, product, analyticAccountName, products, analyticAccounts, error,
+  onRemove, onUpdate, onSelectProduct, removeDisabled, readOnly,
+}: LineItemRowProps) {
+  const amounts = lineAmounts(line);
+
+  const handleSelectProduct = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => onSelectProduct(line.key, event.target.value),
+    [line.key, onSelectProduct],
+  );
+  const handleAnalyticChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) =>
+      onUpdate(line.key, { analytic_account_id: event.target.value || null }),
+    [line.key, onUpdate],
+  );
+  const handleQuantityChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) =>
+      onUpdate(line.key, { quantity: Number(event.target.value) }),
+    [line.key, onUpdate],
+  );
+  const handleUnitPriceChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) =>
+      onUpdate(line.key, { unit_price: Number(event.target.value) }),
+    [line.key, onUpdate],
+  );
+  const handleTaxPctChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) =>
+      onUpdate(line.key, { tax_pct: Number(event.target.value) }),
+    [line.key, onUpdate],
+  );
+  const handleRemove = useCallback(() => onRemove(line.key), [line.key, onRemove]);
+
+  return (
+    <tr>
+      <td>
+        {readOnly ? (
+          product?.name ?? line.product_name ?? "—"
+        ) : (
+          <>
+            <select
+              className="select"
+              aria-label="Product"
+              aria-invalid={Boolean(error?.product_id)}
+              value={line.product_id}
+              onChange={handleSelectProduct}
+            >
+              <option value="">Select a product…</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            {error?.product_id ? (
+              <span className="field-error" role="alert">{error.product_id}</span>
+            ) : null}
+          </>
+        )}
+      </td>
+      <td>
+        {readOnly ? (
+          analyticAccountName ?? "—"
+        ) : (
+          <select
+            className="select"
+            aria-label="Analytical account"
+            value={line.analytic_account_id ?? ""}
+            onChange={handleAnalyticChange}
+          >
+            <option value="">—</option>
+            {analyticAccounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        )}
+      </td>
+      <td className="num">
+        {readOnly ? line.quantity : (
+          <input
+            className="input tabular"
+            style={{ textAlign: "right" }}
+            type="number"
+            min={0}
+            step="0.01"
+            aria-label="Quantity"
+            aria-invalid={Boolean(error?.quantity)}
+            value={line.quantity}
+            onChange={handleQuantityChange}
+          />
+        )}
+      </td>
+      <td className="num">
+        {readOnly ? money(line.unit_price) : (
+          <input
+            className="input tabular"
+            style={{ textAlign: "right" }}
+            type="number"
+            min={0}
+            step="0.01"
+            aria-label="Unit price"
+            aria-invalid={Boolean(error?.unit_price)}
+            value={line.unit_price}
+            onChange={handleUnitPriceChange}
+          />
+        )}
+      </td>
+      <td className="num">
+        {readOnly ? `${line.tax_pct}%` : (
+          <input
+            className="input tabular"
+            style={{ textAlign: "right" }}
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            aria-label="Tax percent"
+            aria-invalid={Boolean(error?.tax_pct)}
+            value={line.tax_pct}
+            onChange={handleTaxPctChange}
+          />
+        )}
+      </td>
+      <td className="num">{money(amounts.untaxed)}</td>
+      {readOnly ? null : (
+        <td>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={handleRemove}
+            disabled={removeDisabled}
+            aria-label="Remove line"
+          >
+            <TrashIcon size={14} />
+          </button>
+        </td>
+      )}
+    </tr>
+  );
+});
+
+export const LineItemsEditor = memo(function LineItemsEditor({
   lines, products, analyticAccounts, errors, onAdd, onRemove, onUpdate, onSelectProduct, totals, readOnly,
 }: LineItemsEditorProps) {
+  const productsById = useMemo(() => {
+    const map = new Map<string, Product>();
+    for (const p of products) map.set(p.id, p);
+    return map;
+  }, [products]);
+
+  const analyticNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const a of analyticAccounts) map.set(a.id, a.name);
+    return map;
+  }, [analyticAccounts]);
+
+  const removeDisabled = lines.length <= 1;
+
   return (
     <div className="stack">
       <div className="table-wrap">
@@ -55,118 +228,24 @@ export function LineItemsEditor({
               </tr>
             </thead>
             <tbody>
-              {lines.map((line) => {
-                const lineError = errors?.[line.key];
-                const amounts = lineAmounts(line);
-                const product = products.find((p) => p.id === line.product_id);
-
-                return (
-                  <tr key={line.key}>
-                    <td>
-                      {readOnly ? (
-                        product?.name ?? line.product_name ?? "—"
-                      ) : (
-                        <>
-                          <select
-                            className="select"
-                            aria-label="Product"
-                            aria-invalid={Boolean(lineError?.product_id)}
-                            value={line.product_id}
-                            onChange={(event) => onSelectProduct(line.key, event.target.value)}
-                          >
-                            <option value="">Select a product…</option>
-                            {products.map((p) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                          {lineError?.product_id ? (
-                            <span className="field-error" role="alert">{lineError.product_id}</span>
-                          ) : null}
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {readOnly ? (
-                        analyticAccounts.find((a) => a.id === line.analytic_account_id)?.name ?? "—"
-                      ) : (
-                        <select
-                          className="select"
-                          aria-label="Analytical account"
-                          value={line.analytic_account_id ?? ""}
-                          onChange={(event) =>
-                            onUpdate(line.key, { analytic_account_id: event.target.value || null })
-                          }
-                        >
-                          <option value="">—</option>
-                          {analyticAccounts.map((a) => (
-                            <option key={a.id} value={a.id}>{a.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td className="num">
-                      {readOnly ? line.quantity : (
-                        <input
-                          className="input tabular"
-                          style={{ textAlign: "right" }}
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          aria-label="Quantity"
-                          aria-invalid={Boolean(lineError?.quantity)}
-                          value={line.quantity}
-                          onChange={(event) => onUpdate(line.key, { quantity: Number(event.target.value) })}
-                        />
-                      )}
-                    </td>
-                    <td className="num">
-                      {readOnly ? money(line.unit_price) : (
-                        <input
-                          className="input tabular"
-                          style={{ textAlign: "right" }}
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          aria-label="Unit price"
-                          aria-invalid={Boolean(lineError?.unit_price)}
-                          value={line.unit_price}
-                          onChange={(event) => onUpdate(line.key, { unit_price: Number(event.target.value) })}
-                        />
-                      )}
-                    </td>
-                    <td className="num">
-                      {readOnly ? `${line.tax_pct}%` : (
-                        <input
-                          className="input tabular"
-                          style={{ textAlign: "right" }}
-                          type="number"
-                          min={0}
-                          max={100}
-                          step="0.01"
-                          aria-label="Tax percent"
-                          aria-invalid={Boolean(lineError?.tax_pct)}
-                          value={line.tax_pct}
-                          onChange={(event) => onUpdate(line.key, { tax_pct: Number(event.target.value) })}
-                        />
-                      )}
-                    </td>
-                    <td className="num">{money(amounts.untaxed)}</td>
-                    {readOnly ? null : (
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => onRemove(line.key)}
-                          disabled={lines.length <= 1}
-                          aria-label="Remove line"
-                        >
-                          <TrashIcon size={14} />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
+              {lines.map((line) => (
+                <LineItemRow
+                  key={line.key}
+                  line={line}
+                  product={productsById.get(line.product_id)}
+                  analyticAccountName={
+                    line.analytic_account_id ? analyticNameById.get(line.analytic_account_id) : undefined
+                  }
+                  products={products}
+                  analyticAccounts={analyticAccounts}
+                  error={errors?.[line.key]}
+                  onRemove={onRemove}
+                  onUpdate={onUpdate}
+                  onSelectProduct={onSelectProduct}
+                  removeDisabled={removeDisabled}
+                  readOnly={readOnly}
+                />
+              ))}
             </tbody>
           </table>
         </div>
@@ -189,4 +268,4 @@ export function LineItemsEditor({
       </div>
     </div>
   );
-}
+});

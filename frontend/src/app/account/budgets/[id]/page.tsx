@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { use, useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
@@ -21,25 +23,26 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const router = useRouter();
   const { user } = useAuth();
   const budget = useFetch(() => api.budgets.get(id), [id]);
+  const { reload: reloadBudget } = budget;
   const [working, setWorking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const canRecord = can.record(user?.role.name);
 
-  async function handleConfirm() {
+  const handleConfirm = useCallback(async () => {
     setWorking(true);
     setActionError(null);
     try {
       await api.budgets.confirm(id);
-      budget.reload();
+      reloadBudget();
     } catch (error) {
       setActionError(formMessageFrom(error));
     } finally {
       setWorking(false);
     }
-  }
+  }, [id, reloadBudget]);
 
-  async function handleRevise() {
+  const handleRevise = useCallback(async () => {
     setWorking(true);
     setActionError(null);
     try {
@@ -49,24 +52,37 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       setActionError(formMessageFrom(error));
       setWorking(false);
     }
-  }
+  }, [id, router]);
 
-  async function handleCancel() {
+  const handleCancel = useCallback(async () => {
     setWorking(true);
     setActionError(null);
     try {
       await api.budgets.cancel(id);
-      budget.reload();
+      reloadBudget();
     } catch (error) {
       setActionError(formMessageFrom(error));
     } finally {
       setWorking(false);
     }
-  }
+  }, [id, reloadBudget]);
 
   return (
     <AppShell>
-      <AsyncState loading={budget.loading} error={budget.error} data={budget.data} onRetry={budget.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Analytical Budget", href: "/account/budgets" },
+          { label: budget.data?.name ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={budget.loading}
+        error={budget.error}
+        data={budget.data}
+        onRetry={budget.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => (
           <>
             <div className="page-head">

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PlusIcon } from "@/components/icons";
@@ -33,8 +35,14 @@ export default function SalesOrdersPage() {
   );
   useEventStream({ "document.posted": () => orders.reload() }, !!user);
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Sales" }, { label: "Sales Order" }]} />
       <div className="page-head">
         <div>
           <h1>Sales Orders</h1>
@@ -48,7 +56,7 @@ export default function SalesOrdersPage() {
         ) : null}
       </div>
 
-      <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search sales orders" placeholder="Search by number or reference" />
+      <SearchInput value={search} onChange={handleSearchChange} label="Search sales orders" placeholder="Search by number or reference" />
 
       <div className="card">
         <AsyncState
@@ -58,6 +66,7 @@ export default function SalesOrdersPage() {
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="No sales orders yet"
           onRetry={orders.reload}
+          skeleton={<SkeletonTable rows={6} columns={5} />}
         >
           {(pageData) => (
             <div className="table-scroll">

@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { BudgetDonut } from "@/components/ui/budget-donut";
 import { KanbanGrid } from "@/components/ui/kanban";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ViewToggle, type ListView } from "@/components/ui/view-toggle";
 import { PlusIcon } from "@/components/icons";
@@ -34,8 +36,32 @@ export default function BudgetsPage() {
     [page, debouncedSearch],
   );
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const rowsWithAggregate = useMemo(
+    () => (budgets.data?.items ?? []).map((budget) => ({ budget, aggregate: aggregateBudgetLines(budget.lines) })),
+    [budgets.data],
+  );
+
+  const kanbanItems = useMemo(
+    () =>
+      rowsWithAggregate.map(({ budget, aggregate }) => ({
+        id: budget.id,
+        title: budget.name,
+        subtitle: `${date(budget.period_start)} – ${date(budget.period_end)}`,
+        meta: budget.responsible_name ?? undefined,
+        href: `/account/budgets/${budget.id}`,
+        badge: <BudgetDonut achievedPct={aggregate.achievedPct} size={32} />,
+      })),
+    [rowsWithAggregate],
+  );
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Analytical Budget" }]} />
       <div className="page-head">
         <div>
           <h1>Analytical Budget</h1>
@@ -50,7 +76,7 @@ export default function BudgetsPage() {
       </div>
 
       <div className="row-between">
-        <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search budgets" />
+        <SearchInput value={search} onChange={handleSearchChange} label="Search budgets" />
         <ViewToggle value={view} onChange={setView} />
       </div>
 
@@ -62,8 +88,9 @@ export default function BudgetsPage() {
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="No budgets yet"
           onRetry={budgets.reload}
+          skeleton={<SkeletonTable rows={6} columns={5} />}
         >
-          {(pageData) =>
+          {() =>
             view === "list" ? (
               <div className="table-scroll">
                 <table className="data-table">
@@ -71,35 +98,20 @@ export default function BudgetsPage() {
                     <tr><th>Name</th><th>Period</th><th>Responsible</th><th>State</th><th>Achieved</th></tr>
                   </thead>
                   <tbody>
-                    {pageData.items.map((budget) => {
-                      const aggregate = aggregateBudgetLines(budget.lines);
-                      return (
-                        <tr key={budget.id}>
-                          <td><Link href={`/account/budgets/${budget.id}`}>{budget.name}</Link></td>
-                          <td>{date(budget.period_start)} – {date(budget.period_end)}</td>
-                          <td>{budget.responsible_name ?? "—"}</td>
-                          <td><StatusBadge status={budget.state} /></td>
-                          <td><BudgetDonut achievedPct={aggregate.achievedPct} /></td>
-                        </tr>
-                      );
-                    })}
+                    {rowsWithAggregate.map(({ budget, aggregate }) => (
+                      <tr key={budget.id}>
+                        <td><Link href={`/account/budgets/${budget.id}`}>{budget.name}</Link></td>
+                        <td>{date(budget.period_start)} – {date(budget.period_end)}</td>
+                        <td>{budget.responsible_name ?? "—"}</td>
+                        <td><StatusBadge status={budget.state} /></td>
+                        <td><BudgetDonut achievedPct={aggregate.achievedPct} /></td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <KanbanGrid
-                items={pageData.items.map((budget) => {
-                  const aggregate = aggregateBudgetLines(budget.lines);
-                  return {
-                    id: budget.id,
-                    title: budget.name,
-                    subtitle: `${date(budget.period_start)} – ${date(budget.period_end)}`,
-                    meta: budget.responsible_name ?? undefined,
-                    href: `/account/budgets/${budget.id}`,
-                    badge: <BudgetDonut achievedPct={aggregate.achievedPct} size={32} />,
-                  };
-                })}
-              />
+              <KanbanGrid items={kanbanItems} />
             )
           }
         </AsyncState>

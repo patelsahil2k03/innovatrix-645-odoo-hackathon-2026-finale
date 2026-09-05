@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { JournalForm } from "@/components/forms/journal-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type JournalCreate } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function NewJournalPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Journals", href: "/account/journals" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New journal</h1>

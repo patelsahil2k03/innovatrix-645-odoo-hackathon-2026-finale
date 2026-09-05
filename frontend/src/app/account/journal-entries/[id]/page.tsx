@@ -6,6 +6,8 @@ import { Suspense, use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
@@ -33,7 +35,20 @@ function JournalEntryDetailInner({ params }: { params: Promise<{ id: string }> }
 
   return (
     <AppShell>
-      <AsyncState loading={entry.loading} error={entry.error} data={entry.data} onRetry={entry.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Journal Entries", href: "/account/journal-entries" },
+          { label: entry.data?.entry_number ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={entry.loading}
+        error={entry.error}
+        data={entry.data}
+        onRetry={entry.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => {
           const totalDebit = data.lines.reduce((sum, line) => sum + line.debit, 0);
           const totalCredit = data.lines.reduce((sum, line) => sum + line.credit, 0);

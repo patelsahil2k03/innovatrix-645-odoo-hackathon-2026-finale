@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
@@ -85,6 +86,7 @@ export default function NewVendorBillPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Bill", href: "/purchase/bills" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New vendor bill</h1>

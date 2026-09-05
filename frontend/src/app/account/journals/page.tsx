@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PlusIcon } from "@/components/icons";
 import { api } from "@/lib/api";
@@ -29,8 +31,14 @@ export default function JournalsPage() {
     [page, debouncedSearch],
   );
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Journals" }]} />
       <div className="page-head">
         <div>
           <h1>Journals</h1>
@@ -44,7 +52,7 @@ export default function JournalsPage() {
         ) : null}
       </div>
 
-      <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search journals" />
+      <SearchInput value={search} onChange={handleSearchChange} label="Search journals" />
 
       <div className="card">
         <AsyncState
@@ -54,6 +62,7 @@ export default function JournalsPage() {
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="No journals yet"
           onRetry={journals.reload}
+          skeleton={<SkeletonTable rows={6} columns={3} />}
         >
           {(pageData) => (
             <div className="table-scroll">

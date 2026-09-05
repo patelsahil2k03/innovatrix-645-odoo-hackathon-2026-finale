@@ -4,7 +4,9 @@ import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AccountForm, accountToFormValues } from "@/components/forms/account-form";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -35,7 +37,20 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <AppShell>
-      <AsyncState loading={account.loading} error={account.error} data={account.data} onRetry={account.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Chart of Account", href: "/account/chart-of-accounts" },
+          { label: account.data ? `${account.data.code} ${account.data.name}` : "…" },
+        ]}
+      />
+      <AsyncState
+        loading={account.loading}
+        error={account.error}
+        data={account.data}
+        onRetry={account.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => (
           <>
             <div className="page-head">

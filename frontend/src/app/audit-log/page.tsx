@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
@@ -31,8 +33,14 @@ export default function AuditLogPage() {
     [page, debouncedSearch, sort],
   );
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Dashboard", href: "/" }, { label: "Audit log" }]} />
       <div className="page-head">
         <div>
           <h1>Audit log</h1>
@@ -42,7 +50,7 @@ export default function AuditLogPage() {
 
       <SearchInput
         value={search}
-        onChange={(value) => { setSearch(value); setPage(1); }}
+        onChange={handleSearchChange}
         label="Search audit log"
         placeholder="Search by action or entity"
       />
@@ -56,6 +64,7 @@ export default function AuditLogPage() {
           emptyTitle="Nothing logged yet"
           emptyHint="Every accepted or rejected write shows up here as soon as it happens."
           onRetry={logs.reload}
+          skeleton={<SkeletonTable rows={6} columns={6} />}
         >
           {(pageData) => (
             <div className="table-scroll">

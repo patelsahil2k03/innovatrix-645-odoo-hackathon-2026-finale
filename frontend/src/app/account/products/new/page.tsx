@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProductForm } from "@/components/forms/product-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ProductCreate } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function NewProductPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Product", href: "/account/products" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New product</h1>

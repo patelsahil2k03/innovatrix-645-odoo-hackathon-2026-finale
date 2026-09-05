@@ -4,7 +4,9 @@ import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AnalyticAccountForm, analyticAccountToFormValues } from "@/components/forms/analytic-account-form";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -35,7 +37,20 @@ export default function AnalyticAccountDetailPage({ params }: { params: Promise<
 
   return (
     <AppShell>
-      <AsyncState loading={row.loading} error={row.error} data={row.data} onRetry={row.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Analyticals", href: "/account/analyticals" },
+          { label: row.data?.name ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={row.loading}
+        error={row.error}
+        data={row.data}
+        onRetry={row.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => (
           <>
             <div className="page-head">

@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { AnalyticAccountForm } from "@/components/forms/analytic-account-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type AnalyticAccountCreate } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function NewAnalyticAccountPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Analyticals", href: "/account/analyticals" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New analytic account</h1>

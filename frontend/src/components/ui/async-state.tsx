@@ -1,5 +1,7 @@
 "use client";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 /**
  * Renders the four states every data view has: loading, error, empty, and content.
  *
@@ -16,20 +18,20 @@ interface AsyncStateProps<T> {
   emptyTitle?: string;
   emptyHint?: string;
   onRetry?: () => void;
+  /** Shape of the loading placeholder — a `<SkeletonTable>`, `<SkeletonCard>`, etc. from `components/ui/skeleton`. Defaults to three generic bars. */
+  skeleton?: React.ReactNode;
   children: (data: T) => React.ReactNode;
 }
 
 export function AsyncState<T>({
   loading, error, data, isEmpty, emptyTitle = "Nothing here yet",
-  emptyHint, onRetry, children,
+  emptyHint, onRetry, skeleton, children,
 }: AsyncStateProps<T>) {
   if (loading) {
     return (
       <div className="stack" aria-busy="true" aria-live="polite">
         <span className="sr-only">Loading…</span>
-        {[0, 1, 2].map((row) => (
-          <div key={row} className="skeleton" style={{ height: 44 }} />
-        ))}
+        {skeleton ?? [0, 1, 2].map((row) => <Skeleton key={row} height={44} />)}
       </div>
     );
   }

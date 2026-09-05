@@ -1,21 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState, type ChangeEvent } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
-import { api } from "@/lib/api";
+import { SkeletonTable } from "@/components/ui/skeleton";
+import { api, type BudgetReportRow } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { humanize, money } from "@/lib/format";
+
+const BudgetReportRowView = memo(function BudgetReportRowView({ row }: { row: BudgetReportRow }) {
+  const overBudget = row.amount_to_achieve < 0;
+  return (
+    <tr>
+      <td>{row.analytic_account}</td>
+      <td>{humanize(row.type)}</td>
+      <td className="num">{money(row.committed_amount)}</td>
+      <td className="num">{money(row.achieved_amount)}</td>
+      <td className="num" style={overBudget ? { color: "var(--danger)", fontWeight: 700 } : undefined}>
+        {overBudget ? "−" : "+"}{money(Math.abs(row.amount_to_achieve))}
+      </td>
+    </tr>
+  );
+});
 
 export default function BudgetReportPage() {
   const [budgetId, setBudgetId] = useState("");
   const budgets = useFetch(() => api.budgets.list({ page_size: 100, sort: "-period_start" }), []);
   const report = useFetch(() => (budgetId ? api.reports.budget(budgetId) : Promise.resolve(null)), [budgetId]);
+  const handleBudgetChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => setBudgetId(event.target.value),
+    [],
+  );
+  const budgetOptions = useMemo(() => budgets.data?.items ?? [], [budgets.data]);
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Report" }, { label: "Budget Report" }]} />
       <div className="page-head">
         <div>
           <h1>Budget Report</h1>
@@ -26,9 +49,9 @@ export default function BudgetReportPage() {
       <div className="card">
         <Field label="Budget" required>
           {(props) => (
-            <select {...props} className="select" value={budgetId} onChange={(event) => setBudgetId(event.target.value)}>
+            <select {...props} className="select" value={budgetId} onChange={handleBudgetChange}>
               <option value="">Select a budget…</option>
-              {(budgets.data?.items ?? []).map((budget) => (
+              {budgetOptions.map((budget) => (
                 <option key={budget.id} value={budget.id}>{budget.name}</option>
               ))}
             </select>
@@ -45,6 +68,7 @@ export default function BudgetReportPage() {
             isEmpty={(r) => r.lines.length === 0}
             emptyTitle="No lines on this budget"
             onRetry={report.reload}
+            skeleton={<SkeletonTable rows={5} columns={5} />}
           >
             {(data) => (
               <div className="table-scroll">
@@ -59,20 +83,9 @@ export default function BudgetReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.lines.map((row) => {
-                      const overBudget = row.amount_to_achieve < 0;
-                      return (
-                        <tr key={row.analytic_account_id}>
-                          <td>{row.analytic_account}</td>
-                          <td>{humanize(row.type)}</td>
-                          <td className="num">{money(row.committed_amount)}</td>
-                          <td className="num">{money(row.achieved_amount)}</td>
-                          <td className="num" style={overBudget ? { color: "var(--danger)", fontWeight: 700 } : undefined}>
-                            {overBudget ? "−" : "+"}{money(Math.abs(row.amount_to_achieve))}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {data.lines.map((row) => (
+                      <BudgetReportRowView key={row.analytic_account_id} row={row} />
+                    ))}
                   </tbody>
                 </table>
               </div>

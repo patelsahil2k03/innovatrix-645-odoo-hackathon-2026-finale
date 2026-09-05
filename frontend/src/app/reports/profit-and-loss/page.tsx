@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useCallback, useState, type ChangeEvent } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { Field } from "@/components/ui/field";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { DownloadIcon } from "@/components/icons";
 import { api, type ReportGroup } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -13,7 +15,7 @@ import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 import { money } from "@/lib/format";
 
-function GroupTable({ group }: { group: ReportGroup }) {
+const GroupTable = memo(function GroupTable({ group }: { group: ReportGroup }) {
   return (
     <div className="card">
       <div className="card-head"><span className="card-title">{group.label}</span></div>
@@ -44,12 +46,20 @@ function GroupTable({ group }: { group: ReportGroup }) {
       </div>
     </div>
   );
-}
+});
 
 export default function ProfitAndLossPage() {
   const { user } = useAuth();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const handleDateFromChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value),
+    [],
+  );
+  const handleDateToChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value),
+    [],
+  );
   const report = useFetch(
     () =>
       user
@@ -61,6 +71,7 @@ export default function ProfitAndLossPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Report" }, { label: "Profit and Loss" }]} />
       <div className="page-head">
         <div>
           <h1>Profit and Loss</h1>
@@ -73,14 +84,20 @@ export default function ProfitAndLossPage() {
 
       <div className="card row">
         <Field label="From">
-          {(props) => <input {...props} className="input" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />}
+          {(props) => <input {...props} className="input" type="date" value={dateFrom} onChange={handleDateFromChange} />}
         </Field>
         <Field label="To">
-          {(props) => <input {...props} className="input" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />}
+          {(props) => <input {...props} className="input" type="date" value={dateTo} onChange={handleDateToChange} />}
         </Field>
       </div>
 
-      <AsyncState loading={report.loading} error={report.error} data={report.data} onRetry={report.reload}>
+      <AsyncState
+        loading={report.loading}
+        error={report.error}
+        data={report.data}
+        onRetry={report.reload}
+        skeleton={<SkeletonCard lines={6} />}
+      >
         {(data) => (
           <>
             <div className="grid-2">

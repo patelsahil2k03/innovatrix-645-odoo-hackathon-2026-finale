@@ -12,11 +12,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
-import { ChevronDown, HomeIcon, ShieldIcon } from "@/components/icons";
+import { ChevronDown, HomeIcon, LogOutIcon, MoonIcon, ShieldIcon, SunIcon } from "@/components/icons";
+import { TrialBalanceBadge } from "@/components/shell/trial-balance-badge";
 import { useAuth } from "@/lib/auth-context";
+import { useEventStream } from "@/lib/use-event-stream";
 import { canSeeNavItem } from "@/lib/roles";
+import {
+  getThemeServerSnapshot,
+  getThemeSnapshot,
+  setTheme,
+  subscribeToTheme,
+  type Theme,
+} from "@/lib/theme";
 
 interface NavItem {
   href: string;
@@ -124,7 +133,29 @@ function NavGroupSection({
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  // Theme lives in localStorage (an external store), so read it with
+  // useSyncExternalStore rather than useState + useEffect.
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    getThemeSnapshot,
+    getThemeServerSnapshot,
+  );
+
+  const live = useEventStream(
+    {
+      "kpi.refresh": () => {
+        /* pages subscribe to what they care about; the shell only shows connectivity */
+      },
+    },
+    !!user, // /events requires a session — don't connect (and 401-loop) before one exists
+  );
+
+  function toggleTheme() {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(next); // subscribers are notified, so the snapshot updates
+  }
 
   const visibleGroups = GROUPS.map((group) => ({
     ...group,
@@ -181,6 +212,40 @@ export function Sidebar() {
           </Link>
         </div>
       ) : null}
+
+      <div className="sidebar-foot">
+        <div className="sidebar-foot-row">
+          <div className="sidebar-foot-scroll">
+            {user ? (
+              <span className="sidebar-user-name" title={`${user.full_name} · ${user.role.name}`}>
+                {user.full_name}
+              </span>
+            ) : null}
+            <span className="live-dot" data-live={live} role="img" aria-label={live ? "Live" : "Offline"} title={live ? "Live" : "Offline"} />
+            <TrialBalanceBadge />
+          </div>
+          {user ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon btn-icon-sm"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              >
+                {theme === "dark" ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon btn-icon-sm"
+                onClick={logout}
+                aria-label="Sign out"
+              >
+                <LogOutIcon size={16} />
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
     </nav>
   );
 }

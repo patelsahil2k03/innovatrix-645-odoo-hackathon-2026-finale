@@ -5,9 +5,11 @@ import { use, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { Modal } from "@/components/ui/modal";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon } from "@/components/icons";
@@ -90,7 +92,20 @@ export default function VendorBillDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <AppShell>
-      <AsyncState loading={bill.loading} error={bill.error} data={bill.data} onRetry={bill.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Purchase" },
+          { label: "Purchase Bill", href: "/purchase/bills" },
+          { label: bill.data?.number ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={bill.loading}
+        error={bill.error}
+        data={bill.data}
+        onRetry={bill.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => {
           const vendor = contacts.data?.items.find((c) => c.id === data.vendor_id);
           const payableAccount = vendor?.payable_account_id ? accountsById[vendor.payable_account_id] : undefined;

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentModal } from "@/components/forms/payment-modal";
@@ -29,6 +30,7 @@ export default function NewPurchasePaymentPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Payment", href: "/purchase/payments" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New payment</h1>

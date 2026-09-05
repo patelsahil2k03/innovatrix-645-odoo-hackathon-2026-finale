@@ -4,7 +4,9 @@ import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { JournalForm, journalToFormValues } from "@/components/forms/journal-form";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -35,7 +37,20 @@ export default function JournalDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <AppShell>
-      <AsyncState loading={journal.loading} error={journal.error} data={journal.data} onRetry={journal.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Journals", href: "/account/journals" },
+          { label: journal.data?.name ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={journal.loading}
+        error={journal.error}
+        data={journal.data}
+        onRetry={journal.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => (
           <>
             <div className="page-head">

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -69,6 +70,7 @@ export default function NewPurchaseOrderPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Order", href: "/purchase/orders" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New purchase order</h1>

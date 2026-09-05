@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { AccountForm } from "@/components/forms/account-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type AccountCreate } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function NewAccountPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Chart of Account", href: "/account/chart-of-accounts" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New account</h1>

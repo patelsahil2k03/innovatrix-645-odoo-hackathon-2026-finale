@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PlusIcon } from "@/components/icons";
@@ -36,8 +38,14 @@ export default function CustomerInvoicesPage() {
     "payment.registered": () => invoices.reload(),
   });
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Sales" }, { label: "Sale Invoice" }]} />
       <div className="page-head">
         <div>
           <h1>Sale Invoices</h1>
@@ -51,7 +59,7 @@ export default function CustomerInvoicesPage() {
         ) : null}
       </div>
 
-      <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search invoices" placeholder="Search by number or reference" />
+      <SearchInput value={search} onChange={handleSearchChange} label="Search invoices" placeholder="Search by number or reference" />
 
       <div className="card">
         <AsyncState
@@ -61,6 +69,7 @@ export default function CustomerInvoicesPage() {
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="No invoices yet"
           onRetry={invoices.reload}
+          skeleton={<SkeletonTable rows={6} columns={7} />}
         >
           {(pageData) => (
             <div className="table-scroll">

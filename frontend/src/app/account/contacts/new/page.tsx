@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ContactForm } from "@/components/forms/contact-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ContactCreate } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function NewContactPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Contact", href: "/account/contacts" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New contact</h1>

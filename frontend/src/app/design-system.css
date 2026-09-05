@@ -359,6 +359,8 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   width: 36px; height: 36px; padding: 0; border-radius: var(--radius-full);
   flex: none;
 }
+/* Smaller variant — the sidebar footer's single row has no room for the full 36px hit target. */
+.btn-icon-sm { width: 28px; height: 28px; }
 
 /* ═══ FORMS ══════════════════════════════════════════════════════════════ */
 
@@ -493,11 +495,13 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .kpi-value { font-size: var(--t-xl); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .kpi-sub { font-size: var(--t-xs); color: var(--text-faint); }
 
-/* ═══ SIDEBAR / TOPBAR ═══════════════════════════════════════════════════
+/* ═══ SIDEBAR ════════════════════════════════════════════════════════════
    Sidebar follows the light/dark theme like every other surface — same
    --surface/--text tokens as a card, so it repaints for free on theme flip.
-   Topbar = Apple's sub-nav-frosted: translucent + backdrop-blur, floating
-   over the page rather than a flat bar. */
+   No separate topbar in the authenticated shell — live status, the trial
+   balance badge, theme toggle and user/sign-out all live in the sidebar's
+   own footer instead (see .sidebar-foot below). The portal shell keeps its
+   own .portal-topbar — that's a different, unrelated surface. */
 
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-3); position: sticky; top: 0; height: 100vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
 .sidebar::-webkit-scrollbar { display: none; }
@@ -522,16 +526,31 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .nav-item[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 600; }
 
-.topbar {
-  height: var(--topbar-h);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-translucent);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
-  padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20;
+/* Pinned to the bottom of the sidebar's own scroll area (sticky, not fixed —
+   it scrolls back into flow on the mobile single-column layout where the
+   sidebar has no fixed height). Sits below the nav; margin-top:auto pushes
+   it down when nav content is short, sticky keeps it in view once the nav
+   list scrolls. */
+.sidebar-foot {
+  margin-top: auto; position: sticky; bottom: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: var(--s-3) var(--s-1) 0; display: flex; flex-direction: column; gap: var(--s-3);
 }
-@media (max-width: 860px) { .topbar { padding: 0 var(--s-3); } }
+/* One row, no wrap. Name + live dot + trial balance sit in their own
+   scrollable segment (.sidebar-foot-scroll) so a long "trial balance off by
+   ₹X" reading never pushes the theme/sign-out buttons out of reach — those
+   two stay pinned at the row's end, always visible, never scrolled away. */
+.sidebar-foot-row { display: flex; align-items: center; gap: var(--s-2); flex-wrap: nowrap; }
+.sidebar-foot-scroll {
+  display: flex; align-items: center; gap: var(--s-2); min-width: 0; flex: 1 1 auto;
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.sidebar-foot-scroll::-webkit-scrollbar { display: none; }
+.sidebar-user-name {
+  flex: none; font-size: var(--t-sm); font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 92px;
+}
 
 .live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-muted); }
 .live-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }

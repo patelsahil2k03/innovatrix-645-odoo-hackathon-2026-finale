@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentModal } from "@/components/forms/payment-modal";
@@ -33,6 +34,7 @@ export default function NewReceiptPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Sales" }, { label: "Receipt", href: "/sales/receipts" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New receipt</h1>
