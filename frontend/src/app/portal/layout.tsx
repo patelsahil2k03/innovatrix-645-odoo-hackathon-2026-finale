@@ -7,7 +7,7 @@
  * deliberately does not reuse <AppShell>/<Sidebar>.
  */
 
-import { LogOutIcon } from "@/components/icons";
+import { LogOutIcon, LogoMark } from "@/components/icons";
 import { useAuth } from "@/lib/auth-context";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="portal-shell">
       <header className="portal-topbar">
         <div className="sidebar-brand" style={{ padding: 0 }}>
-          <span className="dot" />
+          <LogoMark size={18} className="brand-mark" />
           <span>Urban Furniture — My Account</span>
         </div>
         {user ? (
