@@ -14,7 +14,7 @@ Deterministic on `Gen(42)`: the demo you rehearse is the demo you present.
 """
 
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -48,6 +48,19 @@ from app.services import documents as doc_svc
 from app.services import payments as pay_svc
 
 logger = logging.getLogger(__name__)
+
+# How far back seeded trading runs. Twelve gives the analytics screens a full
+# year-on-year series; the budget period below is derived from it so planned and
+# achieved always cover the same window.
+MONTHS_OF_HISTORY = 12
+
+# Relative trading volume per month, oldest first. Broadly growing, because a
+# flat series makes every trend chart pointless — but with two deliberate dips
+# (indices 3 and 7). A monotonic climb reads as generated data at a glance;
+# real trade has quiet months, and a chart that shows one is more convincing
+# than a perfect diagonal. The final month is the current, partial one, so it
+# is weighted low on purpose rather than looking like a collapse.
+MONTH_WEIGHTS: tuple[int, ...] = (6, 8, 10, 6, 11, 13, 15, 9, 17, 19, 21, 10)
 
 CATEGORIES = ["Seating", "Tables", "Storage", "Bedroom", "Office", "Services"]
 
@@ -288,6 +301,44 @@ def seed_transactions(
     }
     today = utc_now().date()
 
+    def trading_date(index: int, total: int) -> date:
+        """Spread a document across a 12-month window instead of the last 75 days.
+
+        Two properties the old `today - randint(1, 75)` could not give us, both
+        of which the analytics screens depend on:
+
+        * **Every month is populated.** The month bucket is derived from the
+          document's index rather than drawn at random, so a 12-point trend line
+          never has a hole in it — a random draw over a small N reliably leaves
+          gaps, and a gap reads as "the query is broken" rather than "trade was
+          quiet".
+        * **The business grows.** The exponent bends an even spread toward
+          recent months, so revenue trends upward across the year instead of
+          being flat noise. A flat series makes every trend chart pointless.
+        """
+        # Walk MONTH_WEIGHTS proportionally: a document's position in the run
+        # decides its month, so the shape of the year is the weight table above
+        # rather than whatever the RNG happens to produce over a small N.
+        share = (index + 0.5) / total if total else 0.0
+        target = share * sum(MONTH_WEIGHTS)
+        running = 0
+        month_index = len(MONTH_WEIGHTS) - 1
+        for position, weight in enumerate(MONTH_WEIGHTS):
+            running += weight
+            if target <= running:
+                month_index = position
+                break
+        months_ago = (len(MONTH_WEIGHTS) - 1) - month_index
+        anchor = today.replace(day=1) - timedelta(days=int(months_ago * 30.44))
+        # The jitter has to stop at today, and clamping the *result* is not the
+        # same thing: in the current month a 0-27 day jitter overshoots on most
+        # draws, and every overshoot lands on today, stacking a spike there that
+        # dwarfs every real month on the trend chart. Bound the range instead.
+        latest = min((today - anchor).days, 27)
+        if latest < 0:
+            return today
+        return anchor + timedelta(days=gen.rng.randint(0, latest))
+
     def lines(pool, tags, count: int) -> list:
         return [
             _ns(
@@ -303,7 +354,7 @@ def seed_transactions(
 
     # ── Sales: 40 orders, most invoiced, most of those paid ───────────────────
     for i in range(40):
-        order_date = today - timedelta(days=gen.rng.randint(1, 75))
+        order_date = trading_date(i, 40)
         order = doc_svc.create_sales_order(
             db,
             _ns(
@@ -324,7 +375,17 @@ def seed_transactions(
             continue
 
         invoice = doc_svc.create_invoice_from_so(db, order.id)
-        invoice.due_date = order_date + timedelta(days=30)
+        # `create_invoice_from_so` dates the invoice today, which is right for a
+        # real user raising one now and wrong for seeded history: without this
+        # every seeded invoice carries the same date, the ledger stacks a year of
+        # trade onto one day, and every date-filtered report and trend chart
+        # shows a single spike. The entry posts on `invoice_date`, so it has to
+        # be set before posting, not after.
+        # min(..., today): order_date is already clamped to today, and adding a
+        # few days would push it back into the future — where a posted document
+        # must never sit, or "as of today" figures stop matching the ledger.
+        invoice.invoice_date = min(order_date + timedelta(days=gen.rng.randint(0, 6)), today)
+        invoice.due_date = invoice.invoice_date + timedelta(days=30)
         db.commit()
         counts["customer_invoices"] += 1
 
@@ -348,7 +409,7 @@ def seed_transactions(
 
     # ── Purchases: 30 orders, most billed and paid ────────────────────────────
     for i in range(30):
-        order_date = today - timedelta(days=gen.rng.randint(1, 75))
+        order_date = trading_date(i, 30)
         order = doc_svc.create_purchase_order(
             db,
             _ns(
@@ -369,7 +430,10 @@ def seed_transactions(
             continue
 
         bill = doc_svc.create_bill_from_po(db, order.id)
-        bill.due_date = order_date + timedelta(days=30)
+        # Same reason as the invoice above: the service dates a new bill today,
+        # which would stack every seeded purchase onto one ledger date.
+        bill.bill_date = min(order_date + timedelta(days=gen.rng.randint(0, 6)), today)
+        bill.due_date = bill.bill_date + timedelta(days=30)
         db.commit()
         counts["vendor_bills"] += 1
 
@@ -394,8 +458,19 @@ def seed_transactions(
 
 def _pay(db: Session, *, gen: Gen, actor_id, amount, when, invoice_id=None, bill_id=None):
     """Register one payment through the payment service, split across Bank and
-    Cash so both journals carry real activity."""
+    Cash so both journals carry real activity.
+
+    `when` is clamped to today. Callers derive it as `document date + a few
+    days`, which lands in the future for any recently-dated document — and a
+    posted payment dated in the future is not a thing. It also makes every
+    "as of today" figure disagree with the same figure computed over the whole
+    ledger: the dashboard tile excluded those rows while a drill-down into the
+    same account included them, so the tile and the list it linked to showed
+    different totals for the same account.
+    """
     from app.models.masters import Journal, JournalType
+
+    when = min(when, utc_now().date())
 
     journal_type = JournalType.BANK if gen.maybe(0.7) else JournalType.CASH
     journal = db.execute(
@@ -423,37 +498,66 @@ def _pay(db: Session, *, gen: Gen, actor_id, amount, when, invoice_id=None, bill
 def seed_budgets(
     db: Session, contacts: list[Contact], analytics: list[AnalyticAccount], gen: Gen
 ) -> int:
-    """Two budgets: one comfortably inside plan, one deliberately over it.
+    """Budgets whose planned figures are derived from what actually posted.
 
     A budget nobody has exceeded cannot demonstrate the variance colour, which is
-    the whole point of the report.
+    the whole point of the report — so one is deliberately under-funded.
+
+    The planned amounts are **computed backwards from the real achieved figure**
+    rather than hard-coded. Hard-coded plans drift the moment the transaction
+    seed changes: this file previously planned ₹9,00,000 against trade that
+    actually posted ₹55,00,000, and the report read "812% achieved", which looks
+    like a broken calculation rather than an overspend. Deriving the plan from
+    the actual keeps every percentage inside a range a real business would
+    recognise, whatever the RNG does.
     """
     if db.execute(select(Budget)).scalars().first() is not None:
         return 0
 
     today = utc_now().date()
-    start = today.replace(day=1) - timedelta(days=90)
+    # Cover the whole trading window seeded above, or the achieved figure only
+    # counts the tail of it and every line reads as wildly under target.
+    start = today.replace(day=1) - timedelta(days=int(MONTHS_OF_HISTORY * 30.44))
     end = today + timedelta(days=30)
     responsible = contacts[0] if contacts else None
 
     by_name = {a.name: a for a in analytics}
 
+    def planned_for(tag: str, target_pct: float) -> Decimal:
+        """The plan that makes this tag land at roughly `target_pct` achieved."""
+        analytic = by_name[tag]
+        actual = budget_svc.achieved_amount(
+            db,
+            analytic_account_id=analytic.id,
+            analytic_type=analytic.type,
+            period_start=start,
+            period_end=end,
+        )
+        if actual <= Decimal("0"):
+            return Decimal("100000")
+        # Rounded to the nearest 10k so the figures read as budgeted, not derived.
+        raw = Decimal(actual) / Decimal(str(target_pct / 100))
+        return (raw / 10000).quantize(Decimal("1")) * 10000
+
     created = 0
     for name, allocations, state in (
         (
             "FY Retail Plan",
-            {"Retail Showroom": 900000, "Online Channel": 250000},
+            {"Retail Showroom": planned_for("Retail Showroom", 94),
+             "Online Channel": planned_for("Online Channel", 88)},
             BudgetState.CONFIRMED,
         ),
         (
-            # Under-funded on purpose: actual spend will exceed this.
+            # Under-funded on purpose: actual spend exceeds this, so the report
+            # has a real over-budget line to colour.
             "Procurement Budget",
-            {"Raw Material Purchase": 120000, "Logistics": 40000},
+            {"Raw Material Purchase": planned_for("Raw Material Purchase", 118),
+             "Logistics": planned_for("Logistics", 103)},
             BudgetState.CONFIRMED,
         ),
         (
             "Showroom Refit (draft)",
-            {"Showroom Operations": 300000},
+            {"Showroom Operations": planned_for("Showroom Operations", 72)},
             BudgetState.DRAFT,
         ),
     ):
