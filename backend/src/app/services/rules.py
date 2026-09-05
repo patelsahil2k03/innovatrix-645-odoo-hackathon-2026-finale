@@ -49,10 +49,20 @@ def lock_row(db: Session, model: type[T], row_id: str) -> T | None:
     SQLite: no row-level locking exists, but SQLite serialises write transactions
     at the database level, which gives the same safety for our purposes. We skip the
     clause rather than crash, so the identical code runs on both backends.
+
+    `FOR UPDATE OF <table>` — not a bare `FOR UPDATE` — because several of these
+    models (SalesOrder, PurchaseOrder, VendorBill, CustomerInvoice) declare their
+    contact/vendor/customer relationship as `lazy="joined"`. The ORM folds that
+    into this SELECT as a LEFT OUTER JOIN automatically, and Postgres rejects a
+    bare `FOR UPDATE` on the nullable side of an outer join outright — it never
+    showed up on SQLite because `FOR UPDATE` is silently dropped there. Naming
+    the table locks only the row being mutated, leaves the joined contact
+    unlocked (correct — we're not mutating it), and works with or without the
+    join present.
     """
     stmt = select(model).where(model.id == row_id)
     if not settings.is_sqlite:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update(of=model)
     return db.execute(stmt).scalar_one_or_none()
 
 
