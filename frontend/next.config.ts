@@ -20,6 +20,15 @@ function lanIPs(): string[] {
 const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  // Turbopack finds the project root by walking up for a lockfile, and the repo
+  // root has one — an empty `package-lock.json` beside the script-runner
+  // `package.json` that declares no dependencies. So it picked the repo root and
+  // warned about it, which meant module resolution and file watching spanned
+  // `backend/`, `infra/` and `.venv` as well. Pinned here rather than deleting
+  // that lockfile, because `npm install` at the repo root would silently
+  // recreate it and bring the warning back. `__dirname` resolves because
+  // frontend/package.json declares no `"type"`, so this file loads as CommonJS.
+  turbopack: { root: __dirname },
   // Keep the build honest: a type error must fail the build rather than be silently
   // ignored, so "the build is green" is a trustworthy signal that a merge is safe.
   //
