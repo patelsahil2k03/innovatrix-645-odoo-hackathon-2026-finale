@@ -210,7 +210,10 @@ export default function VendorBillDetailPage({ params }: { params: Promise<{ id:
                 billId={id}
                 direction="SEND"
                 remainingBalance={remaining}
-                onSuccess={() => bill.reload()}
+                onSuccess={() => {
+                  bill.reload();
+                  toast.success("Payment registered");
+                }}
               />
 
               <ConfirmDialog

@@ -201,7 +201,10 @@ export default function CustomerInvoiceDetailPage({ params }: { params: Promise<
                 invoiceId={id}
                 direction="RECEIVE"
                 remainingBalance={remaining}
-                onSuccess={() => invoice.reload()}
+                onSuccess={() => {
+                  invoice.reload();
+                  toast.success("Receipt registered");
+                }}
               />
 
               <ConfirmDialog

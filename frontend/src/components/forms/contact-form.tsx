@@ -9,6 +9,7 @@
 import { useState } from "react";
 
 import { Field } from "@/components/ui/field";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { api, type Account, type Contact, type ContactCreate } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { contactSchema, fieldErrorsFrom, formMessageFrom, validate, type FieldErrors } from "@/lib/validation";
@@ -233,10 +234,10 @@ export function ContactForm({ initial, onSubmit, submitLabel, readOnly }: Contac
         </Field>
       </div>
 
-      <h3>Account mapping</h3>
-      <p style={{ color: "var(--text-muted)", fontSize: "var(--t-sm)", marginTop: -8 }}>
-        Where documents for this contact post — leave blank to use the system default.
-      </p>
+      <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        Account mapping
+        <InfoTooltip text="Where documents for this contact post in the ledger. Leave both blank to use the system default (Debtors / Creditors) — only override this if this contact needs its own sub-ledger account." />
+      </h3>
       <div className="grid-2">
         <Field label="Receivable account" hint="Used when this contact is invoiced">
           {(props) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
@@ -8,7 +8,9 @@ import { Field } from "@/components/ui/field";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type BudgetLine } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { budgetSchema, fieldErrorsFrom, formMessageFrom, validate, type FieldErrors } from "@/lib/validation";
 
 interface DraftBudgetLine extends BudgetLine {
@@ -19,6 +21,8 @@ const emptyLine = (): DraftBudgetLine => ({ key: `bl-${++seq}`, analytic_account
 
 export default function NewBudgetPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
   const [name, setName] = useState("");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
@@ -52,8 +56,9 @@ export default function NewBudgetPage() {
     setErrors({});
     setSubmitting(true);
     try {
-      const created = await api.budgets.create({ ...result.data, responsible_id: result.data.responsible_id ?? null });
-      router.push(`/account/budgets/${created.id}`);
+      await api.budgets.create({ ...result.data, responsible_id: result.data.responsible_id ?? null });
+      toast.success("Budget created");
+      router.push(parentRouteOf(pathname ?? "/"));
     } catch (error) {
       setErrors(fieldErrorsFrom(error));
       setFormError(formMessageFrom(error));

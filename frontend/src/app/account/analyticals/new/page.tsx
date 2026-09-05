@@ -1,18 +1,23 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AnalyticAccountForm } from "@/components/forms/analytic-account-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type AnalyticAccountCreate } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
+import { useToast } from "@/lib/toast-context";
 
 export default function NewAnalyticAccountPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
 
   async function handleCreate(values: AnalyticAccountCreate) {
-    const created = await api.analyticAccounts.create(values);
-    router.push(`/account/analyticals/${created.id}`);
+    await api.analyticAccounts.create(values);
+    toast.success("Analytic account created");
+    router.push(parentRouteOf(pathname ?? "/"));
   }
 
   return (

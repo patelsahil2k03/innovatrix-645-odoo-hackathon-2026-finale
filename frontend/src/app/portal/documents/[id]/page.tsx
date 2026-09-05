@@ -10,6 +10,7 @@ import { PaymentModal } from "@/components/forms/payment-modal";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type CustomerInvoice, type VendorBill } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { round2 } from "@/lib/use-document-lines";
 import { date, money } from "@/lib/format";
 
@@ -19,6 +20,7 @@ function isInvoice(doc: CustomerInvoice | VendorBill): doc is CustomerInvoice {
 
 export default function PortalDocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const toast = useToast();
   const doc = useFetch(() => api.portal.documents.get(id), [id]);
   const [payOpen, setPayOpen] = useState(false);
 
@@ -87,7 +89,10 @@ export default function PortalDocumentDetailPage({ params }: { params: Promise<{
                 billId={invoice ? undefined : data.id}
                 direction={invoice ? "RECEIVE" : "SEND"}
                 remainingBalance={remaining}
-                onSuccess={() => doc.reload()}
+                onSuccess={() => {
+                  doc.reload();
+                  toast.success("Payment registered");
+                }}
                 usePortal
               />
             </>

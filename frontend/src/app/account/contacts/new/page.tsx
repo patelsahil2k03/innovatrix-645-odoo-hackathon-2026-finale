@@ -1,18 +1,23 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { ContactForm } from "@/components/forms/contact-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ContactCreate } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
+import { useToast } from "@/lib/toast-context";
 
 export default function NewContactPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
 
   async function handleCreate(values: ContactCreate) {
-    const created = await api.contacts.create(values);
-    router.push(`/account/contacts/${created.id}`);
+    await api.contacts.create(values);
+    toast.success("Contact created");
+    router.push(parentRouteOf(pathname ?? "/"));
   }
 
   return (

@@ -36,13 +36,19 @@ case "$DB_URL" in
   *)
     case "$DB_HOST" in
       localhost|127.0.0.1|"")
-        echo "→ this machine hosts the database — starting postgres…"
-        docker compose -f infra/docker-compose.yml up -d db
-        until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
-          sleep 1
-        done
-        echo "→ postgres healthy. Teammates connect with:"
-        echo "     DATABASE_URL=…@$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost"):5432/app"
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "→ Docker not installed — falling back to SQLite database (sqlite:///./app.db)"
+          DB_URL="sqlite:///./app.db"
+          export DATABASE_URL="$DB_URL"
+        else
+          echo "→ this machine hosts the database — starting postgres…"
+          docker compose -f infra/docker-compose.yml up -d db
+          until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
+            sleep 1
+          done
+          echo "→ postgres healthy. Teammates connect with:"
+          echo "     DATABASE_URL=…@$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost"):5432/app"
+        fi
         ;;
       *)
         echo "→ using the shared database on $DB_HOST (not starting one here)"
