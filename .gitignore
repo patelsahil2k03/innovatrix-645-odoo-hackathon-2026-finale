@@ -1,0 +1,56 @@
+# ---- Environment & secrets ----
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# ---- Python / backend ----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- Node / frontend ----
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ---- Runtime data ----
+logs/
+*.log
+.trash/
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Working docs ----
+# `docs/` and `ai_guidelines/` are deliberately TRACKED, not ignored. The
+# virtual round ignored them, and two committed READMEs then linked to files
+# that did not exist in a fresh clone (docs/10_LESSONS.md §11). Tracking them
+# keeps every link in this repo resolvable and gives each teammate the
+# playbook and role cards straight from a clone.
+#
+# Session chatter still stays out — notes, scratch files and one-off reports
+# are not documents, and do not belong in the submission.
+*_SESSION_NOTES.md
+scratch/
