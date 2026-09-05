@@ -51,6 +51,11 @@ data shouldn't be lost" true for the whole team, not just for the host.
 
 ### 2.1 Host it (one person, once)
 
+**Set a real `POSTGRES_PASSWORD` in `.env` before starting it** — this instance is
+reachable by anyone on the same LAN or hotspot, and the `app`/`app` default is fine only
+for a throwaway solo instance nobody else connects to.
+`openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | cut -c1-22` generates one.
+
 ```bash
 docker compose -f infra/docker-compose.yml up -d db
 docker compose -f infra/docker-compose.yml ps        # wait for "healthy"
@@ -60,6 +65,21 @@ hostname -I | awk '{print $1}'                       # the IP to give everyone
 `down` (bare, no flags) never touches the data — `pgdata` is a named volume, and only
 `down -v` / `down --volumes` or `docker volume rm hackathon_pgdata` destroy it. Never run
 either of those against a database anyone else is using.
+
+> ⚠️ **Changing `POSTGRES_PASSWORD` in `.env` does nothing on an already-running
+> instance** — Postgres only reads it once, when the volume is first initialized. If you
+> already started the container with the old password, rotate it on the live instance
+> instead: `docker exec hackathon-db psql -U app -d app -c "ALTER USER app WITH PASSWORD
+> '<new>';"`, then update `DATABASE_URL` in `.env` to match.
+>
+> ⚠️ **A `docker exec ... psql` test proves nothing about real remote auth.** The base
+> image's `pg_hba.conf` trusts `127.0.0.1`/`::1` unconditionally — connections from
+> *inside the container's own network namespace* skip password checking entirely, which
+> makes an old, already-rotated password look like it "still works" if you test that way.
+> Anything arriving from outside that namespace — the app on the host via `localhost`,
+> or a teammate via your LAN IP — hits the real `scram-sha-256` rule and needs the actual
+> password. Test from the host or from another machine, never via `docker exec`, if
+> you're verifying a password change actually took effect.
 
 ### 2.2 Everyone else connects to it
 
