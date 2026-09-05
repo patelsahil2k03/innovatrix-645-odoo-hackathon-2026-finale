@@ -43,7 +43,6 @@ export function useEventStream(
 
   useEffect(() => {
     if (!enabled) {
-      setConnected(false);
       return;
     }
 
