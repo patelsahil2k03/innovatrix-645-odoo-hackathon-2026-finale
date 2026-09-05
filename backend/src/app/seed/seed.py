@@ -205,8 +205,21 @@ def seed_journals(db: Session, accounts: dict[str, Account]) -> dict[str, Journa
 
 
 def seed_notifications(db: Session, users: list[User], gen: Gen) -> int:
+    """Idempotent per user: a user who already has any notification is skipped
+    entirely, so re-running `seed` (without --reset) never piles up duplicates.
+
+    This was NOT idempotent originally — every call added a fresh batch on top
+    of whatever already existed, which is exactly what let two ordinary,
+    non-destructive `uv run python -m app.seed` runs against the shared team
+    database quietly double every notification's count.
+    """
     count = 0
     for user in users:
+        already_seeded = db.execute(
+            select(Notification.id).where(Notification.user_id == user.id).limit(1)
+        ).first()
+        if already_seeded is not None:
+            continue
         for _ in range(gen.rng.randint(2, 4)):
             db.add(
                 Notification(

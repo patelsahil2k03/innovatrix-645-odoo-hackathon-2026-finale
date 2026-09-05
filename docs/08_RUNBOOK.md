@@ -6,26 +6,38 @@
 
 ## 1. FIRST RUN
 
+**One `.env` for the whole repo, at the root.** Backend reads it by absolute path
+(`backend/src/app/core/settings.py`) regardless of which directory you run `uv` from —
+there is no `backend/.env` anymore. The frontend still needs its own generated
+`frontend/.env.local` (Next only inlines `NEXT_PUBLIC_*` from that file), which
+`scripts/dev.sh` creates automatically.
+
 ```bash
-cp .env.example .env
+# from the repo root, once
+cp .env.example .env                                # skip if .env already exists
+grep '^NEXT_PUBLIC_' .env > frontend/.env.local
+
+docker compose -f infra/docker-compose.yml up -d db  # skip if using SQLite
 
 cd backend
-uv sync --extra postgres           # psycopg — needed for the Postgres path
+uv sync --extra postgres
 uv run alembic upgrade head
-uv run python -m app.seed          # chart of accounts + demo users + demo ledger
+uv run python -m app.seed                            # chart of accounts + demo users + demo ledger
 uv run uvicorn app.main:app --reload --port 8000
 
-# in a second terminal
+# second terminal, from the repo root
 cd frontend
 npm install
 npm run dev
 ```
 
-Or everything at once from the repo root:
+Or everything at once, one command:
 ```bash
 ./scripts/dev.sh --db docker      # Postgres — use this for anything being graded
 ./scripts/dev.sh                  # SQLite — fine for local work, see the caveat below
 ```
+`dev.sh` regenerates `frontend/.env.local` from `.env` on every run — never hand-edit
+`frontend/.env.local` directly, edit `.env` and rerun `dev.sh` (or the `grep` line above).
 
 > ⚠️ **Which database, and why it matters here.** Money is exact on both — that was tested.
 > But `SELECT … FOR UPDATE` is **silently dropped** on SQLite, so `lock_row()` stops locking
@@ -45,11 +57,14 @@ Demo logins are printed by the seed script. Default password: `Demo@1234`.
 
 ## 2. SHARED TEAM DATABASE
 
-One person hosts Postgres; everyone else points their own `.env` at that machine's IP
-instead of running a second copy. This is what makes "when I do `docker compose down` the
-data shouldn't be lost" true for the whole team, not just for the host.
+**There is exactly one database for this project, and it lives on the team lead's
+machine.** Nobody else runs `docker compose ... up -d db` — not even once, not "just to
+test locally" — because a second Postgres container is a second, empty database with
+none of the seeded data, and anything anyone writes to it never reaches anyone else.
+Everyone else only ever *points at* the one instance (§2.2). This is also what makes
+"`docker compose down` never loses data" a promise that only has to hold on one machine.
 
-### 2.1 Host it (one person, once)
+### 2.1 Host it (team lead, once)
 
 **Set a real `POSTGRES_PASSWORD` in `.env` before starting it** — this instance is
 reachable by anyone on the same LAN or hotspot, and the `app`/`app` default is fine only
@@ -83,12 +98,38 @@ either of those against a database anyone else is using.
 
 ### 2.2 Everyone else connects to it
 
-In your **own** `.env`, replace `localhost` with the host's IP:
+Do **not** run `docker compose up -d db` on your own machine. In your **own** `.env`,
+replace `localhost` with the host's IP (the `.env` in this repo already has this as a
+commented-out second line under `DATABASE_URL` — uncomment it, comment the `localhost`
+one):
 ```bash
-DATABASE_URL=postgresql+psycopg://app:app@<host-ip>:5432/app
+DATABASE_URL=postgresql+psycopg://app:<password>@<host-ip>:5432/app
 ```
-Then run the backend as normal (`uv run uvicorn app.main:app --reload`) — no local Postgres,
-no local migration, just point at the shared one.
+Then run the backend as normal (`uv run uvicorn app.main:app --reload --port 8000`) — no
+local Postgres, no local migration, just point at the shared one. `frontend/.env.local`
+needs no change; the frontend always talks to *your own* `localhost:8000` API, which in
+turn talks to the shared database.
+
+### 2.2.1 Prove your writes actually landed on the shared database
+
+Don't assume it — a wrong `DATABASE_URL` (typo'd IP, still pointing at `localhost`, or a
+stray local Postgres container someone forgot they started) silently writes to the wrong
+place with no error. Verify once per session:
+
+```bash
+# on YOUR machine, right after creating/editing something through the UI or API
+curl -s http://<host-ip>:8081  # Adminer reachable → you're on the shared network at least
+```
+Then, in Adminer (`http://<host-ip>:8081`, server `db`, credentials from `.env`), open the
+table you just wrote to and confirm the row is there — or ask the host to run:
+```sql
+SELECT id, created_at FROM contacts ORDER BY created_at DESC LIMIT 5;  -- or whichever table
+```
+and check your new row appears with a recent `created_at`. If it doesn't show up there but
+does show up in your own `GET` request, your backend is quietly talking to a different
+database than you think — re-check `DATABASE_URL`, and confirm you don't have a stray
+local Postgres running (`docker ps` — if you see a `hackathon-db` container on YOUR
+machine, that's the bug: stop it, you should never have started one).
 
 ### 2.3 Test it actually works — before assuming it does
 
@@ -149,9 +190,15 @@ fuser -k 3000/tcp 8000/tcp
 ```
 `dev.sh` already does this on start and exit.
 
-**Every screen shows an error state**
-The API isn't running or isn't reachable. Check `curl localhost:8000/api/v1/health`,
-then confirm `NEXT_PUBLIC_API_URL` in `frontend/.env.local` matches the API's port.
+**Every screen shows an error state / "CORS error" in the browser console**
+Almost always `NEXT_PUBLIC_API_URL` pointing at the wrong port, not an actual CORS
+misconfiguration — the backend's `allow_origin_regex` already accepts any origin.
+Check `curl localhost:8000/api/v1/health` responds with JSON, then confirm
+`frontend/.env.local` has `NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1`
+(port **8000**, the API — not `8081`, which is Adminer and has no CORS headers
+at all, so pointing at it by mistake looks exactly like a CORS failure in devtools).
+Fix it in `.env` at the repo root, then `grep '^NEXT_PUBLIC_' .env > frontend/.env.local`
+and restart `npm run dev` (Next inlines this at build/start time, not per-request).
 
 **401 on every request even after signing in**
 The auth cookie isn't being sent. Check that the frontend origin is in `cors_origins`

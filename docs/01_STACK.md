@@ -175,6 +175,16 @@ defence against double-posting ([`06_BACKEND.md`](06_BACKEND.md) §4) — become
 That is exactly the class of failure [`10_LESSONS.md`](10_LESSONS.md) is about: a guard
 that silently stops guarding.
 
+**Corollary bug this surfaced (2026-09-05):** `lock_row()`'s plain `SELECT ... FOR UPDATE`
+locks whatever table it's given — but four models (`SalesOrder`, `PurchaseOrder`,
+`VendorBill`, `CustomerInvoice`) declare their contact relationship as `lazy="joined"`,
+so the ORM folds a `LEFT OUTER JOIN` into that same SELECT automatically. Postgres
+outright rejects `FOR UPDATE` on the nullable side of an outer join
+(`FeatureNotSupported`); SQLite drops the clause entirely per Claim 2 above, so this was
+invisible until the first real run against the shared Postgres instance. Fixed by naming
+the table explicitly — `with_for_update(of=model)` in `services/rules.py` — which locks
+only the row being mutated and works whether or not the join is present.
+
 **So:**
 - **Shared / demo / anything being graded → PostgreSQL**, because `lock_row` actually locks.
   `./scripts/dev.sh --db docker` and `uv sync --extra postgres`.

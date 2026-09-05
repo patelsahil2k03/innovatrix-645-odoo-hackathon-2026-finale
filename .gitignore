@@ -1,9 +1,12 @@
 # ---- Environment & secrets ----
-# .env is DELIBERATELY tracked in this repo — see the note in docs/12_SESSION_CONTEXT.md.
+# Root .env is DELIBERATELY tracked in this repo — see the note in docs/12_SESSION_CONTEXT.md.
+# It is the ONLY env file: backend/src/app/core/settings.py reads it by
+# absolute path, so a per-app backend/.env copy is neither needed nor tracked.
 # This is an informed exception, not the default: normally an env file with real
 # credentials never belongs in git, doubly so in a public repo. Made here so every
 # teammate and the evaluator get a working shared-database connection on clone,
 # for the duration of this event only.
+backend/.env
 .env.local
 .env.*.local
 *.key
@@ -74,4 +77,3 @@ Thumbs.db
 # are not documents, and do not belong in the submission.
 *_SESSION_NOTES.md
 scratch/
-

@@ -11,9 +11,10 @@ cd "$ROOT"
 USE_DOCKER=0
 [[ "${1:-}" == "--db" && "${2:-}" == "docker" ]] && USE_DOCKER=1
 
-# Propagate env to both apps (create from example on first run)
+# One .env at the repo root — backend reads it by path (app/core/settings.py),
+# no per-app copy needed. Only the frontend needs a generated file, since Next
+# only inlines NEXT_PUBLIC_* vars from its own .env.local.
 [ -f .env ] || { cp .env.example .env; echo "→ created .env from .env.example"; }
-cp .env backend/.env
 grep '^NEXT_PUBLIC_' .env > frontend/.env.local || true
 
 # A leftover listener on 3000/8000 is what causes "port in use, using 3001 instead",

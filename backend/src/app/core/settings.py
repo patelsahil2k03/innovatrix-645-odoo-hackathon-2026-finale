@@ -1,12 +1,17 @@
 """Typed configuration, read once from the environment / .env file."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# One .env for the whole repo, at the root — not a per-app copy. Resolved by
+# path (not cwd) so `uv run` from backend/ and from the repo root both find it.
+_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ROOT_ENV, extra="ignore")
 
     app_name: str = "Hackathon API"
     app_version: str = "0.1.0"
