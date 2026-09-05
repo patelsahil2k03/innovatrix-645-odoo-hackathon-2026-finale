@@ -42,7 +42,9 @@ report reads. Documents *post* into the ledger; reports *aggregate* the ledger.
 | `type` | Enum(`CUSTOMER`,`VENDOR`,`BOTH`) | `native_enum=False`, indexed |
 | `email` | String(180) | unique where not null — portal login identity |
 | `mobile` | String(20) | |
+| `address_street` | String(180) | |
 | `address_city` / `address_state` | String(80) | |
+| `address_country` | String(80) | default `India` — the mockup draws this field |
 | `address_pincode` | String(10) | |
 | `image_url` | String(400) | nullable |
 | `receivable_account_id` | FK → `accounts.id` | nullable; defaults to the system Debtors account |
@@ -59,25 +61,55 @@ by hand. Seed them from the Chart of Accounts.
 | `type` | Enum(`GOODS`,`SERVICE`,`COMBO`) | |
 | `sales_price` | Numeric(12,2) | `CHECK >= 0` |
 | `cost_price` | Numeric(12,2) | `CHECK >= 0` |
-| `category` | String(80) | indexed |
+| `category_id` | FK → `product_categories.id` | indexed. **Not a string** — see below |
 | `sales_tax_pct` | Numeric(5,2) | default 0, `CHECK 0..100` |
 | `income_account_id` | FK → `accounts.id` | where a sale credits |
 | `expense_account_id` | FK → `accounts.id` | where a purchase debits |
 | `is_archived` | Boolean | |
+
+### `product_categories`
+`name` String(80) **unique** · `is_archived`
+
+A table, not a string column. The mockup notes *"Category can be created and saved on the
+fly (Many2one Field)"* — so the product form offers a combobox that creates a category
+inline when the typed value doesn't exist yet.
 
 ### `accounts` — Chart of Accounts
 | Column | Type | Notes |
 |---|---|---|
 | `code` | String(20) | **unique**, indexed — sorts the reports |
 | `name` | String(120) | required |
-| `type` | Enum(`ASSET`,`LIABILITY`,`EQUITY`,`INCOME`,`EXPENSE`) | indexed |
+| `type` | Enum — **eight values, see below** | indexed |
 | `is_archived` | Boolean | archived accounts reject new postings |
 
-> The statement says **"Capital"**; we store it as `EQUITY` and *label* it Capital in the
-> UI. Accounting convention and the balance-sheet grouping both want `EQUITY`.
+**The eight account types**, taken from the mockup rather than the PDF:
+
+| Type | Rolls up to | Example accounts |
+|---|---|---|
+| `ASSET` | Balance Sheet — Assets | Debtors |
+| `BANK` | Balance Sheet — Assets | Bank |
+| `CASH` | Balance Sheet — Assets | Cash |
+| `LIABILITY` | Balance Sheet — Liabilities | Creditors |
+| `CAPITAL` | Balance Sheet — Liabilities | Capital |
+| `INCOME` | Profit & Loss | Sales Income |
+| `EXPENSE` | Profit & Loss | Purchase Expense |
+| `OTHER_EXPENSE` | Profit & Loss — **its own line** | Other Expense |
+
+> ⚠️ **Three corrections against an earlier reading.** The PDF lists five types; the mockup
+> uses eight. `BANK` and `CASH` are **types**, not named accounts — which is what lets the
+> Balance Sheet list them separately without hard-coding account names. `OTHER_EXPENSE` is
+> distinct from `EXPENSE` because the P&L reports them on separate lines. And the statement's
+> **"Capital"** is stored as `CAPITAL`, not `EQUITY` — the mockup uses the word throughout,
+> and matching the evaluator's vocabulary costs nothing.
 
 **Normal balance** is derived from `type`, never stored:
-`ASSET`, `EXPENSE` → debit-positive · `LIABILITY`, `EQUITY`, `INCOME` → credit-positive.
+`ASSET`, `BANK`, `CASH`, `EXPENSE`, `OTHER_EXPENSE` → debit-positive ·
+`LIABILITY`, `CAPITAL`, `INCOME` → credit-positive.
+
+> **One ambiguity worth naming.** The mockup's type dropdown lists five options while its
+> Balance Sheet notes read like sub-types (`Asset-Bank`, `Asset-Debtors`). Eight flat types
+> satisfies both readings and keeps the reports simple. If it turns out to mean a two-level
+> taxonomy, only the grouping query changes — no table does.
 
 ### `journals`
 | Column | Type | Notes |
@@ -91,22 +123,50 @@ by hand. Seed them from the Chart of Accounts.
 ### `analytic_accounts`
 `name` String(120) · `type` Enum(`INCOME`,`EXPENSE`) · `is_archived`
 
-A **dimension**, not a ledger account. It tags journal lines so a budget can be measured
+A **dimension**, not a ledger account. It tags **document lines** so a budget can be measured
 without distorting the Chart of Accounts.
 
-### `budgets` / `budget_lines`
-| `budgets` | Type |
-|---|---|
-| `name` | String(120) |
-| `period_start` / `period_end` | Date, `CHECK period_end > period_start` |
-| `responsible_user_id` | FK → `users.id` |
+> ⚠️ **Corrected.** An earlier version of this document said analytic tags sit on journal
+> lines. They sit on **invoice, bill and order lines** — the mockup draws a *Budget Analytics*
+> column on every document line table, and describes achievement as *"search Analytical in
+> Sales Invoice … consider budget period and compute total"*. Tagging journal lines instead
+> would be defensible accounting and the wrong answer to the specification. Journal lines keep
+> a nullable analytic column for future reporting, but nothing computes from it today.
 
-| `budget_lines` | Type |
-|---|---|
-| `budget_id` | FK, indexed |
-| `analytic_account_id` | FK, indexed |
-| `planned_amount` | Numeric(12,2), `CHECK >= 0` |
-| | `UNIQUE(budget_id, analytic_account_id)` |
+### `budgets` — with a revision chain
+| Column | Type | Notes |
+|---|---|---|
+| `name` | String(120) | on revision: original name + `" Revised"` |
+| `period_start` / `period_end` | Date | `CHECK period_end > period_start` |
+| `responsible_id` | FK → `contacts.id` | the mockup selects from **contacts**, not users |
+| `state` | Enum(`DRAFT`,`CONFIRMED`,`REVISED`,`CANCELLED`) | indexed |
+| `revision_of_id` | FK → `budgets.id` | set on the successor — "Revision Of" link |
+| `revised_with_id` | FK → `budgets.id` | set on the original — "Revised With" link |
+
+### `budget_lines`
+| Column | Type | Notes |
+|---|---|---|
+| `budget_id` | FK, indexed | |
+| `analytic_account_id` | FK, indexed | |
+| `committed_amount` | Numeric(12,2), `CHECK >= 0` | **the only stored figure** |
+| | | `UNIQUE(budget_id, analytic_account_id)` |
+
+**Achieved, Achieved % and Amount-to-achieve are computed on read**, never stored:
+
+```
+achieved      = Σ document_line.total
+                WHERE analytic_account_id = line.analytic_account_id
+                  AND document.date BETWEEN budget.period_start AND period_end
+                  AND source = invoices if analytic.type = INCOME
+                             , bills    if analytic.type = EXPENSE
+achieved_pct  = achieved ÷ committed × 100
+to_achieve    = committed − achieved
+```
+
+**The revision workflow.** A `CONFIRMED` budget is never edited. `Revise` creates a new
+budget carrying the original's lines, moves the original to `REVISED`, and links the two in
+both directions so either can be opened from the other. Same immutability instinct as the
+ledger, applied to planning.
 
 ---
 
@@ -163,27 +223,43 @@ if sum(l.debit for l in lines) != sum(l.credit for l in lines):
 
 ## 4. DOCUMENTS
 
-All four document headers share a shape: `number` (unique), a `status` enum, a date, a
-contact FK, computed totals, and — once posted — a `journal_entry_id`.
+All four document headers share a shape: a generated `number` (unique), a user-supplied
+`reference`, a `status` enum, a date, a contact FK, computed totals, and — once posted — a
+`journal_entry_id`.
+
+> **`number` and `reference` are two different things.** `number` is ours, generated and
+> gapless (`INV/2026/0042`). `reference` is theirs — free alphanumeric text like
+> `ABC-26-001`, the customer's own PO number. The mockup shows both fields on every document.
 
 ### Purchase chain
 ```
-purchase_orders        number · vendor_id · order_date · status · total
-  └ purchase_order_lines   product_id · quantity · unit_price
-vendor_bills           number · po_id? · vendor_id · bill_date · due_date
+purchase_orders        number · reference · vendor_id · order_date · status · total
+  └ purchase_order_lines   product_id · analytic_account_id · account_id
+                           · quantity · unit_price
+vendor_bills           number · reference · po_id? · vendor_id · bill_date · due_date
                        · status · total · amount_paid · journal_entry_id
-  └ vendor_bill_lines      product_id · quantity · unit_price · account_id
+  └ vendor_bill_lines      product_id · analytic_account_id · account_id
+                           · quantity · unit_price
 ```
 
 ### Sales chain
 ```
-sales_orders           number · customer_id · order_date · status · total
-  └ sales_order_lines      product_id · quantity · unit_price · tax_pct
-customer_invoices      number · so_id? · customer_id · invoice_date · due_date
+sales_orders           number · reference · customer_id · order_date · status · total
+  └ sales_order_lines      product_id · analytic_account_id · account_id
+                           · quantity · unit_price · tax_pct
+customer_invoices      number · reference · so_id? · customer_id · invoice_date · due_date
                        · status · untaxed_total · tax_total · total
                        · amount_paid · journal_entry_id
-  └ customer_invoice_lines product_id · quantity · unit_price · tax_pct · account_id
+  └ customer_invoice_lines product_id · analytic_account_id · account_id
+                           · quantity · unit_price · tax_pct
 ```
+
+**Every line carries `analytic_account_id`** — that column is what the budget report reads.
+It is nullable, because not every line belongs to a budgeted project.
+
+**`po_id` and `so_id` are nullable on purpose.** The mockup notes that the link back to the
+order shows *"only if bill created from PO — hide if bill created fresh without PO"*. Both
+documents can be raised standalone.
 
 Every line: `CHECK (quantity > 0)` and `CHECK (unit_price >= 0)`.
 `amount_paid` is a **cached** figure for list screens and status transitions only — it is
@@ -193,24 +269,31 @@ never what a report reads.
 | Column | Type | Notes |
 |---|---|---|
 | `number` | String(32) | unique |
-| `contact_id` | FK | indexed |
-| `direction` | Enum(`INBOUND`,`OUTBOUND`) | inbound = customer paying us |
-| `journal_id` | FK → `journals.id` | must be a `BANK` or `CASH` journal |
-| `amount` | Numeric(12,2) | `CHECK > 0` |
-| `payment_date` | Date | |
+| `contact_id` | FK | indexed — autofilled from the source document |
+| `direction` | Enum(`RECEIVE`,`SEND`) | the mockup's own words for inbound / outbound |
+| `journal_id` | FK → `journals.id` | must be a `BANK` or `CASH` journal; **defaults to Bank** |
+| `amount` | Numeric(12,2) | `CHECK > 0` — autofilled with the amount due |
+| `payment_date` | Date | defaults to today |
+| `note` | String(200) | free text — the mockup draws this field |
+| `invoice_id` / `bill_id` | FK, nullable | `CHECK` exactly one is set |
 | `journal_entry_id` | FK | |
 | `idempotency_key` | String(64) | **unique** — the double-click guard |
-
-### `payment_allocations`
-`payment_id` FK · `invoice_id` FK? · `bill_id` FK? · `amount` Numeric(12,2) `CHECK > 0`
 
 ```sql
 CHECK ((invoice_id IS NULL) <> (bill_id IS NULL))   -- exactly one target
 ```
 
-One payment can settle several documents; one document can receive several payments. The
-service enforces that `Σ allocations ≤ document.total` and that
-`Σ allocations = payment.amount`.
+> ⚠️ **Simplified from an earlier design.** This previously had a `payment_allocations`
+> join table so one payment could settle several documents. The mockup does not work that
+> way: payment is raised from a **single document's** Pay button, with partner and amount
+> pre-filled from it. One payment, one target. Partial payment is expressed by entering less
+> than the amount due, not by splitting across documents.
+>
+> The join table would not be wrong — it is how a fuller system works — but it is scope we
+> were not asked for, and it complicates the one screen that has to be flawless.
+
+The service enforces `amount ≤ document.total − document.amount_paid`, raising
+`OVERALLOCATED_PAYMENT` otherwise, then moves the document to `PARTIAL` or `PAID`.
 
 ---
 
@@ -247,7 +330,7 @@ Dr  Accounts Payable                                     amount
 
 | Report | Query |
 |---|---|
-| Balance Sheet | group by `account.type ∈ {ASSET, LIABILITY, EQUITY}`, signed by normal balance |
+| Balance Sheet | group by `account.type ∈ {ASSET, BANK, CASH, LIABILITY, CAPITAL}`, signed by normal balance |
 | Profit & Loss | group by `account.type ∈ {INCOME, EXPENSE}` within the period |
 | Trial balance | `Σ debit − Σ credit` over everything — **must equal 0.00** |
 | Budget report | `planned_amount` vs `Σ journal_lines` filtered by `analytic_account_id` and period |
@@ -255,11 +338,22 @@ Dr  Accounts Payable                                     amount
 Retained earnings on the Balance Sheet = the P&L net figure for the period. Assets must
 equal Liabilities + Equity; if it doesn't, the trial balance badge already said so.
 
-### Entry numbering — gapless, and why it matters
-Format `{JOURNAL_CODE}/{YYYY}/{00001}`, allocated **inside the posting transaction** with
-a row lock on a sequence row — not `MAX(entry_number)+1`, which races. A gap in an
-accounting sequence is an audit finding in real systems, and gap detection is a cheap,
-genuinely impressive report.
+### Numbering — the exact formats the mockup uses
+
+| Document | Format | Example |
+|---|---|---|
+| Customer invoice | `INV/{YYYY}/{0000}` | `INV/2026/0042` |
+| Vendor bill | `Bill/{YYYY}/{0000}` | `Bill/2026/0001` |
+| Sales order | `S{00000}` | `S00001` |
+| Purchase order | `P{00000}` | `P00001` |
+
+> Orders use a short running number; posted documents carry the year. Match these exactly —
+> a number format is the cheapest possible fidelity signal, and the evaluator drew them.
+
+Every number is allocated **inside the transaction** while holding a row lock on a sequence
+row — never `MAX(number)+1`, which races two concurrent confirms into the same value. The
+result is gapless, which matters because a gap in an accounting sequence is an audit finding
+in real systems, and gap detection is a cheap, genuinely impressive report.
 
 ---
 
@@ -307,12 +401,18 @@ meaningful, and the reports show real figures rather than round test numbers.
 **A minimal Chart of Accounts must be seeded** or nothing can post:
 
 ```
-1000 Cash              ASSET       2000 Creditors        LIABILITY
-1010 Bank              ASSET       2100 Tax Payable      LIABILITY
-1100 Debtors           ASSET       3000 Capital          EQUITY
-                                   4000 Sales Income     INCOME
-                                   5000 Purchase Expense EXPENSE
+code  name              type            code  name               type
+1000  Cash              CASH            2000  Creditors          LIABILITY
+1010  Bank              BANK            2100  Tax Payable        LIABILITY
+1100  Debtors           ASSET           3000  Capital            CAPITAL
+                                        4000  Sales Income       INCOME
+                                        5000  Purchase Expense   EXPENSE
+                                        5100  Other Expense      OTHER_EXPENSE
 ```
+
+The mockup says these *"are to be pre configured"*, so they are seeded rather than left for
+the user to invent. `Other Expense` earns its row because the Profit & Loss statement reports
+it on a separate line from `Purchase Expense`.
 
 **Seed the edge cases you intend to demo**, or you cannot show the rule working:
 - an invoice **partially** paid, so `PARTIAL` status is visible
@@ -325,10 +425,33 @@ Keep it deterministic (`Gen(42)`). The demo you rehearse is the demo you present
 
 ---
 
-## 9. WHAT'S ALREADY IN THE DATABASE
+## 9. WHAT'S ALREADY IN THE DATABASE — and what changes
 
-`roles`, `users`, `audit_logs`, `notifications` — built, tested, seeded. Don't rebuild
-them. Reference `users.id` for `budgets.responsible_user_id` and `posted_by_id`.
+`roles`, `users`, `audit_logs`, `notifications` — built, tested, seeded. Don't rebuild them.
+Reference `users.id` for `posted_by_id`.
 
-The three roles seed as **Admin**, **Accountant**, **Contact** — see
+The three roles seed as **Admin**, **Accountant**, **User** — see
 [`PROBLEM_STATEMENT.md`](PROBLEM_STATEMENT.md) §2 for the permission split.
+
+### `users` gains three things for self-registration
+
+The mockup includes a **Sign Up** page, which the earlier design did not account for.
+
+| Column | Type | Notes |
+|---|---|---|
+| `login_id` | String(12) | **unique** · `CHECK length between 6 and 12` |
+| `contact_id` | FK → `contacts.id` | nullable — set for portal users, null for staff |
+| `role_id` | FK → `roles.id` | self-registration always creates an **Accountant** |
+
+**Credential rules, taken verbatim from the mockup and enforced server-side:**
+
+- Login ID unique, 6–12 characters
+- Email must not already exist
+- Password: more than 8 characters, and must contain a lowercase letter, an uppercase letter
+  and a special character
+
+> Mirror these in `validation.ts` so the user sees them inline as they type — but the server
+> is the boundary, and both layers must agree on the exact rules.
+
+`contact_id` is what makes portal scoping possible: a `User` sees documents where
+`customer_id = current_user.contact_id`, and nothing else.

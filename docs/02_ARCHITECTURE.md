@@ -82,7 +82,9 @@ src/app/
 │   └── portal.py     ← contact-scoped, separate router
 └── services/
     ├── posting.py    ← ★★ post_entry() / reverse_entry()  — the accounting engine
-    ├── payments.py   ← allocation + idempotency
+    ├── payments.py   ← one payment settles one document, idempotency key
+    ├── budgets.py    ← achievement computation, the revision chain
+    ├── mail.py       ← PDF render + best-effort send, never blocks a posting
     ├── reports.py    ← ledger aggregation
     └── rules.py      ← lock_row · require_status · emit  (given)
 ```

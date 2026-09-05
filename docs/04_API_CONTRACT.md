@@ -12,9 +12,9 @@
 
 ### Error envelope — every non-2xx response
 ```json
-{ "error": { "code": "CARGO_EXCEEDS_CAPACITY",
-             "message": "Human-readable explanation.",
-             "fields": { "cargo_weight_kg": "Must be at most 500" } } }
+{ "error": { "code": "OVERALLOCATED_PAYMENT",
+             "message": "Payment exceeds the amount due on this invoice.",
+             "fields": { "amount": "Must be at most 11,800.00" } } }
 ```
 - `code` — `SCREAMING_SNAKE_CASE`, stable, what the frontend switches on
 - `message` — safe to show a user
@@ -84,20 +84,40 @@ data: {"id": "...", ...}
 
 : heartbeat        ← comment frame every 15s, keeps proxies from closing the stream
 ```
-Naming convention: `noun.verb_past` — e.g. `order.created`, `order.dispatched`, `kpi.refresh`.
+Naming convention: `noun.verb_past` — e.g. `document.posted`, `payment.registered`,
+`ledger.changed`.
 
 ---
 
 ## 3. DOMAIN ENDPOINTS — Urban Furniture Accounting
 
-**Roles:** `Admin` · `Accountant` · `Contact`.
-Reads are open to any authenticated internal user; writes are gated. The **Contact** role
+**Roles:** `Admin` · `Accountant` · `User`.
+Reads are open to any authenticated internal user; writes are gated. The **User** role
 reaches only `/portal/*`, and every portal query is additionally scoped to
 `contact_id = current_user.contact_id` — a data-scoping rule, not an RBAC role.
 
-### 3.1 Master data — 5 modules, one shape
+### 3.0 Sign up
 
-All five behave identically, so they are specified once:
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `POST` | `/auth/signup` | none | Self-registration — always creates an **Accountant** |
+
+```json
+{ "login_id": "rmehta21", "email": "r@example.com",
+  "full_name": "R. Mehta", "password": "..." }
+```
+
+Validation, enforced server-side and mirrored in `validation.ts`:
+`login_id` unique and 6–12 characters · `email` not already present · `password` longer than
+8 characters and containing a lowercase letter, an uppercase letter and a special character.
+Failures return `VALIDATION_ERROR` with per-field messages.
+
+> The mockup is explicit that signup creates an invoicing user. Admin and portal accounts are
+> created by an Admin, never by self-registration.
+
+### 3.1 Master data — 6 modules, one shape
+
+All six behave identically, so they are specified once:
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
@@ -107,7 +127,11 @@ All five behave identically, so they are specified once:
 | `PATCH` | `/{module}/{id}` | **Admin only** | Modify |
 | `POST` | `/{module}/{id}/archive` | **Admin only** | Archive (never a hard delete) |
 
-`{module}` ∈ `contacts` · `products` · `accounts` · `journals` · `analytic-accounts`
+`{module}` ∈ `contacts` · `products` · `product-categories` · `accounts` · `journals` ·
+`analytic-accounts`
+
+`POST /product-categories` also accepts a bare `{"name": "..."}` from the product form's
+combobox, so a category can be created inline without leaving the screen.
 
 > ⚠️ **The Admin/Accountant split is a real, tested rule**, taken from the statement's own
 > wording: the Accountant "Creates Master Data"; only the Admin "Creates/Modify/Archived".
@@ -116,7 +140,8 @@ All five behave identically, so they are specified once:
 | Module | `sort` allowlist | `q` searches |
 |---|---|---|
 | `contacts` | `name`, `type`, `created_at` | `name`, `email`, `mobile` |
-| `products` | `name`, `category`, `sales_price` | `name`, `category` |
+| `products` | `name`, `sales_price`, `cost_price` | `name`, category name |
+| `product-categories` | `name` | `name` |
 | `accounts` | `code`, `name`, `type` | `code`, `name` |
 | `journals` | `name`, `type` | `name` |
 | `analytic-accounts` | `name`, `type` | `name` |
@@ -148,17 +173,63 @@ Identical shape: `/sales-orders` with `/confirm`, `/create-invoice`, `/cancel`, 
 
 **Create request** — `Idempotency-Key` header **required**:
 ```json
-{ "contact_id": "uuid",
-  "direction": "INBOUND",
+{ "invoice_id": "uuid",
+  "direction": "RECEIVE",
   "journal_id": "uuid",
-  "amount": 15000.00,
+  "amount": 11800.00,
   "payment_date": "2026-09-05",
-  "allocations": [ { "invoice_id": "uuid", "amount": 15000.00 } ] }
+  "note": "UPI ref 4471" }
 ```
-`Σ allocations` must equal `amount`, and no allocation may exceed its document's
-remaining balance.
+Exactly one of `invoice_id` or `bill_id`. `amount` may not exceed the document's remaining
+balance (`total − amount_paid`) or the call returns `OVERALLOCATED_PAYMENT`. Partial payment
+is simply an amount less than the balance — the document moves to `PARTIAL`.
 
-### 3.5 The ledger — read-only, and that is the point
+Partner and amount are **pre-filled by the client from the source document**, matching the
+mockup's Pay flow, but the server re-derives both and ignores anything inconsistent.
+
+### 3.5 Document output — print, PDF and email
+
+Available on `customer-invoices` and `vendor-bills`.
+
+| Method | Path | Role | Returns |
+|---|---|---|---|
+| `GET` | `/{doc}/{id}/pdf` | any internal · owner via portal | `application/pdf`, rendered from the same HTML the print view uses |
+| `POST` | `/{doc}/{id}/send` | Admin+Accountant | `{queued: true, to: "..."}` |
+
+`GET /reports/{name}/pdf` does the same for Balance Sheet and Profit & Loss — the mockup
+annotates the P&L screen *"Pdf download on click"*.
+
+> **`send` never blocks anything.** It returns as soon as the message is queued, and a
+> delivery failure is recorded on the document rather than raised — the document is already
+> posted, and mail must not be able to roll that back. The UI reads `last_sent_at` and
+> `last_send_error` to report *sent* or *not sent* honestly. See
+> [`01_STACK.md`](01_STACK.md) §3.2 for why this is contained so carefully.
+
+### 3.6 Budgets
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| `GET`/`POST` | `/budgets` | any / Admin+Accountant | List, create |
+| `GET` | `/budgets/{id}` | any | Detail — lines include the **computed** achieved figures |
+| `POST` | `/budgets/{id}/confirm` | Admin+Accountant | `DRAFT → CONFIRMED` |
+| `POST` | `/budgets/{id}/revise` | Admin+Accountant | Creates the successor, returns it |
+| `POST` | `/budgets/{id}/cancel` | Admin+Accountant | → `CANCELLED` |
+| `GET` | `/budgets/{id}/lines/{line_id}/documents` | any | The invoices or bills behind an achieved figure |
+
+```json
+// GET /budgets/{id} — one line
+{ "analytic_account": "Furniture", "type": "EXPENSE",
+  "committed_amount": 200000.00,
+  "achieved_amount":   10000.00,   // computed
+  "achieved_pct":          5.00,   // computed
+  "amount_to_achieve": 190000.00 } // computed
+```
+
+`POST /revise` is not an edit. It creates a new budget carrying the original's lines and the
+original's name plus `" Revised"`, moves the original to `REVISED`, and links both directions.
+Reviving a non-`CONFIRMED` budget returns `INVALID_STATUS_TRANSITION`.
+
+### 3.7 The ledger — read-only, and that is the point
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
@@ -169,7 +240,7 @@ There is **no** `POST`, `PATCH` or `DELETE` on the ledger. Entries are created o
 side effect of posting a document. Corrections happen through `/cancel`, which writes a
 *reversing* entry.
 
-### 3.6 Reports
+### 3.8 Reports
 
 | Method | Path | Query | Returns |
 |---|---|---|---|
@@ -193,7 +264,7 @@ side effect of posting a document. Corrections happen through `/cancel`, which w
 `is_balanced` drives the **`Trial balance 0.00 ✓`** badge in the UI. It is computed, never
 asserted.
 
-### 3.7 Portal — Contact role only
+### 3.9 Portal — User role only
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -204,7 +275,7 @@ asserted.
 > Returning **404 rather than 403** for another contact's document is deliberate: a 403
 > confirms the record exists, which leaks information across tenants.
 
-### 3.8 SSE events
+### 3.10 SSE events
 
 | Event | Payload | Fires when |
 |---|---|---|
@@ -227,11 +298,16 @@ asserted.
 | `MISSING_ACCOUNT_MAPPING` | 422 | Contact or product has no account to post to | `services/posting.py` |
 | `PERIOD_CLOSED` | 422 | Entry date falls in a locked period *(bonus scope)* | `services/posting.py` |
 | `OVERALLOCATED_PAYMENT` | 422 | An allocation exceeds the document's remaining balance | `services/payments.py` |
-| `ALLOCATION_MISMATCH` | 422 | `Σ allocations ≠ payment.amount` | `services/payments.py` |
 | `DUPLICATE_PAYMENT` | 409 | `Idempotency-Key` already used — returns the original payment | `routers/payments.py` |
 | `INVALID_JOURNAL_TYPE` | 422 | Payment journal is not `BANK` or `CASH` | `services/payments.py` |
 | `CONTACT_TYPE_MISMATCH` | 422 | A vendor on a sales document, or a customer on a purchase | `services/rules.py` |
-| `BUDGET_PERIOD_INVALID` | 422 | `period_end <= period_start` | `schemas/domain.py` |
+| `BUDGET_PERIOD_INVALID` | 422 | `period_end <= period_start` | `schemas/budgets.py` |
+| `BUDGET_NOT_CONFIRMED` | 422 | Revise attempted on a budget that isn't `CONFIRMED` | `services/budgets.py` |
+| `ALREADY_REVISED` | 409 | The budget already has a successor | `services/budgets.py` |
+| `LOGIN_ID_TAKEN` | 409 | Sign-up login ID already exists | `routers/auth.py` |
+| `EMAIL_TAKEN` | 409 | Sign-up email already exists | `routers/auth.py` |
+| `WEAK_PASSWORD` | 422 | Fails the length or character-class rules | `schemas/auth.py` |
+| `MAIL_NOT_CONFIGURED` | 422 | `Send` called with no SMTP host configured | `services/mail.py` |
 
 `fields` keys match request body field names exactly, so the UI drops each message
 straight into the matching input.
