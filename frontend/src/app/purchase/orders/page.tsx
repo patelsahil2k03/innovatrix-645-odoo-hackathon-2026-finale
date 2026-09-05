@@ -181,7 +181,7 @@ function PurchaseOrdersPageInner() {
         title="Purchase Orders"
         subtitle="Confirm an order, then create the bill from it — or raise a bill fresh."
         action={can.record(user?.role.name) ? (
-          <Link href="/purchase/orders/new" className="btn btn-primary">
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New purchase order
           </Link>

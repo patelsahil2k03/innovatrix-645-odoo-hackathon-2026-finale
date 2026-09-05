@@ -181,7 +181,7 @@ function SalesOrdersPageInner() {
         title="Sales Orders"
         subtitle="Confirm an order, then create the invoice from it."
         action={can.record(user?.role.name) ? (
-          <Link href="/sales/orders/new" className="btn btn-primary">
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New sales order
           </Link>

@@ -211,7 +211,7 @@ function CustomerInvoicesPageInner() {
         title="Sale Invoices"
         subtitle="Post an invoice to write it into the ledger."
         action={can.record(user?.role.name) ? (
-          <Link href="/sales/invoices/new" className="btn btn-primary">
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New invoice
           </Link>
