@@ -59,7 +59,9 @@ and the background task hit the same code path.
 
 ---
 
-## 3. WHERE YOUR DOMAIN CODE GOES
+## 3. WHERE THE DOMAIN CODE GOES
+
+The generic `domain.py` placeholders get replaced by named accounting modules:
 
 ```
 src/app/
@@ -67,19 +69,29 @@ src/app/
 │   ├── base.py       ← Base, UUIDMixin, TimestampMixin  (given)
 │   ├── auth.py       ← User, Role                        (given)
 │   ├── system.py     ← AuditLog, Notification            (given)
-│   └── domain.py     ← ★ YOUR TABLES GO HERE
-├── schemas/
-│   ├── common.py     ← Page[T], ErrorEnvelope            (given)
-│   ├── auth.py       ← Login, UserOut                    (given)
-│   └── domain.py     ← ★ YOUR REQUEST/RESPONSE SCHEMAS
+│   ├── masters.py    ← Contact · Product · Account · Journal · AnalyticAccount
+│   ├── ledger.py     ← ★ JournalEntry · JournalLine      THE CORE
+│   ├── documents.py  ← PurchaseOrder · VendorBill · SalesOrder · CustomerInvoice
+│   └── payments.py   ← Payment · PaymentAllocation
+├── schemas/          ← one module per models file, same names
 ├── routers/
 │   ├── health.py auth.py events.py notifications.py      (given)
-│   └── domain.py     ← ★ YOUR ENDPOINTS
+│   ├── masters.py documents.py payments.py
+│   ├── ledger.py     ← read-only: list + detail, no writes
+│   ├── reports.py    ← balance-sheet · profit-and-loss · budget · trial-balance
+│   └── portal.py     ← contact-scoped, separate router
 └── services/
-    └── rules.py      ← ★ YOUR STATE MACHINE / BUSINESS RULES
+    ├── posting.py    ← ★★ post_entry() / reverse_entry()  — the accounting engine
+    ├── payments.py   ← allocation + idempotency
+    ├── reports.py    ← ledger aggregation
+    └── rules.py      ← lock_row · require_status · emit  (given)
 ```
 
-Then register your router in `main.py` — one line, already marked with a `# ★` comment.
+Register each router in `main.py` at the `★ REGISTER YOUR DOMAIN ROUTERS HERE` marker.
+
+**`services/posting.py` is the only module that writes to `journal_lines`.** Nothing else
+imports `JournalLine` for writing — not a router, not the simulator, not the seed script.
+If a second write path appears, the guarantee is gone.
 
 ---
 
@@ -110,12 +122,38 @@ browser with a heartbeat. The frontend's `useEventStream()` hook subscribes once
 can react.
 
 **b) A background task that actually changes data.** `main.py`'s lifespan starts an optional
-asyncio loop (`SIMULATOR_ENABLED=true`). Point it at your domain: advance a status, tick a
-counter, generate an event on a timer. **It must call the same service functions the API calls**
-— never mutate the DB directly, or your "live" data will violate your own business rules.
+asyncio loop (`SIMULATOR_ENABLED=true`). Here it posts **one customer payment against an
+open invoice** on a timer — the best possible tick for this domain, because a single event
+visibly moves three things at once:
+
+```
+payment posts  →  invoice status DRAFT/POSTED → PARTIAL → PAID
+               →  cash KPI rises, receivables KPI falls
+               →  trial balance recomputes and stays 0.00 ✓
+```
+
+**It must call the same service functions the API calls** — never mutate the DB directly,
+or your "live" data will violate the very rules you're demonstrating. In this system that
+is not a style preference: a direct write would produce an unbalanced ledger on stage.
 
 > In the demo, say the words out loud: *"this number is changing live, from our database —
 > nothing here is hardcoded."* Judges are explicitly listening for it.
+
+### The posting path, end to end
+
+```
+POST /customer-invoices/{id}/post
+  → router: require_roles("Admin","Accountant")
+  → service: lock_row(invoice) → require_status(DRAFT)
+  → service: build lines from contact + product account mappings
+  → posting.post_entry():  balance check → duplicate guard → number → write
+  → COMMIT
+  → emit("document.posted") + emit("ledger.changed", is_balanced=True)
+  → browser: invoice row updates, KPIs update, trial-balance badge re-asserts
+```
+
+Every write in this system ends the same way: commit, then publish. Never the reverse — an
+event published before commit can describe a transaction that then rolls back.
 
 ---
 
