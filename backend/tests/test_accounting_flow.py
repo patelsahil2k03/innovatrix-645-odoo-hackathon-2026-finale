@@ -271,8 +271,19 @@ def test_kpis_read_the_ledger(admin_client):
     body = kpis.json()
     assert body["is_balanced"] is True
     assert set(body) == {
-        "receivables", "payables", "cash", "net_profit", "is_balanced"
+        "receivables", "payables", "cash", "net_profit", "is_balanced",
+        # The control accounts behind each figure, so the dashboard tile can
+        # link to the ledger it came from instead of guessing an account code.
+        "receivable_account_ids", "payable_account_ids", "cash_account_ids",
     }
+
+    # Receivables must be the contacts' receivable control account ONLY. It used
+    # to sum every ASSET account, which folded recoverable Input Tax into "money
+    # customers owe us" — an asset, but not a receivable.
+    accounts = admin_client.get(f"{API}/accounts?page_size=100").json()["items"]
+    input_tax = next((a for a in accounts if a["code"] == "1200"), None)
+    if input_tax is not None:
+        assert input_tax["id"] not in body["receivable_account_ids"]
 
 
 # ── §3.5 Print, PDF and Send ──────────────────────────────────────────────────

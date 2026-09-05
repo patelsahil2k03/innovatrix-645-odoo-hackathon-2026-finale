@@ -8,6 +8,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Drawer } from "@/components/ui/drawer";
 import { Field } from "@/components/ui/field";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -75,18 +76,17 @@ function ReceiptsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Sales" }, { label: "Receipt" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Receipts</h1>
-          <p>Payments received against sale invoices.</p>
-        </div>
-        {can.record(user?.role.name) ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
+      <PageHeading
+        image="/img/tabs/receipt.webp"
+        title="Receipts"
+        subtitle="Payments received against sale invoices."
+        action={can.record(user?.role.name) ? (
+          <Link href="/sales/receipts/new" className="btn btn-primary">
             <PlusIcon size={14} />
             New receipt
           </Link>
         ) : null}
-      </div>
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search receipts" />
 

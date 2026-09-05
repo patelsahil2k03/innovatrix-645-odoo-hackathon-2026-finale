@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -175,18 +176,17 @@ function PurchaseOrdersPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Order" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Purchase Orders</h1>
-          <p>Confirm an order, then create the bill from it — or raise a bill fresh.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
+      <PageHeading
+        image="/img/tabs/purchase-order.webp"
+        title="Purchase Orders"
+        subtitle="Confirm an order, then create the bill from it — or raise a bill fresh."
+        action={can.record(user?.role.name) ? (
+          <Link href="/purchase/orders/new" className="btn btn-primary">
             <PlusIcon size={14} />
             New purchase order
           </Link>
         ) : null}
-      </div>
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search purchase orders" placeholder="Search by number or reference" />
 
@@ -237,7 +237,7 @@ function PurchaseOrdersPageInner() {
         open={panel.isNew}
         onClose={() => { resetCreateForm(); panel.close(); }}
         title="New purchase order"
-       
+
         footer={
           <button type="submit" form="new-purchase-order-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Saving…" : "Save purchase order"}
@@ -296,7 +296,7 @@ function PurchaseOrdersPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingOrder.data?.number ?? "Purchase order"}
-       
+
         footer={
           editingOrder.data && canRecord ? (
             <>
@@ -335,10 +335,10 @@ function PurchaseOrdersPageInner() {
                   lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
                   products={products.data?.items ?? []}
                   analyticAccounts={analyticAccounts.data?.items ?? []}
-                  onAdd={() => {}}
-                  onRemove={() => {}}
-                  onUpdate={() => {}}
-                  onSelectProduct={() => {}}
+                  onAdd={() => { }}
+                  onRemove={() => { }}
+                  onUpdate={() => { }}
+                  onSelectProduct={() => { }}
                   totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
                   readOnly
                 />

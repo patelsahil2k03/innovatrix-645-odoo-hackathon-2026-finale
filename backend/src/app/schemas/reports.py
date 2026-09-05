@@ -114,3 +114,8 @@ class KpiOut(BaseModel):
     cash: Money
     net_profit: Money
     is_balanced: bool
+    # The accounts each figure came from, so a tile can link to the ledger
+    # behind it instead of the UI guessing an account code.
+    receivable_account_ids: list[str] = []
+    payable_account_ids: list[str] = []
+    cash_account_ids: list[str] = []

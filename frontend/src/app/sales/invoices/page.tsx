@@ -11,6 +11,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { Modal } from "@/components/ui/modal";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -205,18 +206,17 @@ function CustomerInvoicesPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Sales" }, { label: "Sale Invoice" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Sale Invoices</h1>
-          <p>Post an invoice to write it into the ledger.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
+      <PageHeading
+        image="/img/tabs/sale-invoice.webp"
+        title="Sale Invoices"
+        subtitle="Post an invoice to write it into the ledger."
+        action={can.record(user?.role.name) ? (
+          <Link href="/sales/invoices/new" className="btn btn-primary">
             <PlusIcon size={14} />
             New invoice
           </Link>
         ) : null}
-      </div>
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search invoices" placeholder="Search by number or reference" />
 
@@ -271,7 +271,7 @@ function CustomerInvoicesPageInner() {
         open={panel.isNew}
         onClose={() => { resetCreateForm(); panel.close(); }}
         title="New sale invoice"
-       
+
         footer={
           <button type="submit" form="new-invoice-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Saving…" : "Save invoice"}
@@ -339,7 +339,7 @@ function CustomerInvoicesPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingInvoice.data?.number ?? "Sale invoice"}
-       
+
         footer={
           editingInvoice.data ? (
             <>
@@ -409,10 +409,10 @@ function CustomerInvoicesPageInner() {
                     lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
                     products={products.data?.items ?? []}
                     analyticAccounts={analyticAccounts.data?.items ?? []}
-                    onAdd={() => {}}
-                    onRemove={() => {}}
-                    onUpdate={() => {}}
-                    onSelectProduct={() => {}}
+                    onAdd={() => { }}
+                    onRemove={() => { }}
+                    onUpdate={() => { }}
+                    onSelectProduct={() => { }}
                     totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
                     readOnly
                   />

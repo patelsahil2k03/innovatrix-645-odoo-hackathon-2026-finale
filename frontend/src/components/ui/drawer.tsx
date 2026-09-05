@@ -37,6 +37,7 @@ export function Drawer({ open, title, onClose, children, footer, width = 60 }: D
   const drawerRef = useRef<HTMLDivElement>(null);
   const restoreFocusTo = useRef<HTMLElement | null>(null);
   const titleId = useId();
+  const closeTipId = useId();
   const widthPct = Math.min(80, Math.max(30, width));
 
   const handleKeyDown = useCallback(
@@ -104,9 +105,18 @@ export function Drawer({ open, title, onClose, children, footer, width = 60 }: D
         aria-labelledby={titleId}
         style={{ "--drawer-w": `${widthPct}vw` } as React.CSSProperties}
       >
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close">
+        <button
+          type="button"
+          className="drawer-close"
+          onClick={onClose}
+          aria-label="Close"
+          aria-describedby={closeTipId}
+        >
           <CloseIcon size={16} />
         </button>
+        <span role="tooltip" id={closeTipId} className="drawer-close-tip">
+          Close <kbd>Esc</kbd>
+        </span>
         <div className="drawer-head">
           <h3 id={titleId} className="card-title">{title}</h3>
         </div>

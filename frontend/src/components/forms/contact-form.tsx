@@ -35,7 +35,7 @@ const BLANK: ContactFormValues = {
   mobile: "",
   address_street: "",
   address_city: "",
-  address_state: "India",
+  address_state: "",
   address_country: "India",
   address_pincode: "",
   receivable_account_id: "",

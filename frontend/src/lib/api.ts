@@ -444,7 +444,57 @@ export interface DashboardKpisReport {
   cash: number;
   net_profit: number;
   is_balanced: boolean;
+  /** The accounts each figure came from, so a tile links to its own ledger. */
+  receivable_account_ids: string[];
+  payable_account_ids: string[];
+  cash_account_ids: string[];
 }
+/* ── Analytics — mirrors backend/src/app/schemas/analytics.py ─────────────── */
+
+export type ContactDirection = "customer" | "vendor";
+
+export interface TrendPoint {
+  month: string;
+  /** Rendered server-side so the axis, tooltip and CSV never disagree. */
+  label: string;
+  income: number;
+  expense: number;
+  net_profit: number;
+}
+export interface TrendReport {
+  points: TrendPoint[];
+  total_income: number;
+  total_expense: number;
+  total_net_profit: number;
+}
+export interface BreakdownSlice {
+  id: string;
+  label: string;
+  type: AnalyticType;
+  amount: number;
+}
+export interface BreakdownReport {
+  slices: BreakdownSlice[];
+}
+export interface RankedRow {
+  id: string;
+  label: string;
+  amount: number;
+}
+export interface TopContactsReport {
+  direction: ContactDirection;
+  rows: RankedRow[];
+}
+export interface AgeingBucket {
+  bucket: string;
+  amount: number;
+}
+export interface AgeingReport {
+  as_of: string;
+  receivables: AgeingBucket[];
+  payables: AgeingBucket[];
+}
+
 export interface TrialBalanceRow {
   account_code: string;
   account_name: string;
@@ -596,6 +646,16 @@ export const api = {
     kpis: () => get<DashboardKpisReport>("/reports/kpis"),
     exportUrl: (name: string, params?: ListParams) => `${API_BASE}/reports/${name}/export${buildQuery(params)}`,
     pdfUrl: (name: string, params?: ListParams) => `${API_BASE}/reports/${name}/pdf${buildQuery(params)}`,
+  },
+
+  // ── Analytics — the same ledger, reshaped for charts (§3.8) ───────────────
+  analytics: {
+    trend: (months = 12) => get<TrendReport>("/analytics/trend", { months }),
+    breakdown: (dateFrom?: string, dateTo?: string) =>
+      get<BreakdownReport>("/analytics/breakdown", { date_from: dateFrom, date_to: dateTo }),
+    topContacts: (direction: ContactDirection, limit = 8) =>
+      get<TopContactsReport>("/analytics/top-contacts", { direction, limit }),
+    ageing: (asOf?: string) => get<AgeingReport>("/analytics/ageing", { as_of: asOf }),
   },
 
   // ── Customer portal — User role only (§3.9) ───────────────────────────────

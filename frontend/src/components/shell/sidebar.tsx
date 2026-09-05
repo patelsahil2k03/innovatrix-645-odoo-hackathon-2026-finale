@@ -14,7 +14,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
-import { ChevronDown, HomeIcon, LogOutIcon, MoonIcon, ShieldIcon, SunIcon } from "@/components/icons";
+import { ChevronDown, HomeIcon, LogOutIcon, LogoMark, MoonIcon, ShieldIcon, SunIcon } from "@/components/icons";
 import { TrialBalanceBadge } from "@/components/shell/trial-balance-badge";
 import { useAuth } from "@/lib/auth-context";
 import { useEventStream } from "@/lib/use-event-stream";
@@ -175,7 +175,7 @@ export function Sidebar() {
   return (
     <nav className="sidebar" aria-label="Main navigation">
       <div className="sidebar-brand">
-        <span className="dot" />
+        <LogoMark size={19} className="brand-mark" />
         <span>Urban Furniture</span>
       </div>
 

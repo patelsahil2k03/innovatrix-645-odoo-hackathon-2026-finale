@@ -213,6 +213,34 @@ export const ArchiveIcon = ({ size = 16, className }: IconProps) => (
 
 export const CircleDashedIcon = ({ size = 16, className }: IconProps) => (
   <svg {...base(size)} className={className} aria-hidden="true">
-    <circle cx="12" cy="12" r="9" strokeDasharray="3.2 3.2" />
+    <circle cx="12" cy="12" r="9" strokeDasharray="3.2 3.2" /></svg>)
+/**
+ * The brand mark: a table seen head-on, with two ruled lines beneath the top.
+ *
+ * A dining table and a table of figures are the same word, and ledger paper is
+ * literally *ruled* — so one shape carries both halves of the business. Filled
+ * rather than stroked (it does not use `base()`), because at 16px in the
+ * sidebar a stroked version closes up into a smudge.
+ *
+ * `currentColor` throughout, so it inherits the accent in the sidebar and turns
+ * white inside a filled chip without a second copy of the artwork.
+ */
+export const LogoMark = ({ size = 18, className }: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 40 40"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
+    {/* table top */}
+    <rect x="5" y="13" width="30" height="4.4" rx="2.2" />
+    {/* ruled lines — the ledger half, held back so the table reads first */}
+    <rect x="9" y="19.5" width="22" height="2.2" rx="1.1" opacity="0.38" />
+    <rect x="9" y="24" width="16" height="2.2" rx="1.1" opacity="0.38" />
+    {/* legs */}
+    <rect x="7.6" y="17.4" width="3.6" height="15" rx="1.8" />
+    <rect x="28.8" y="17.4" width="3.6" height="15" rx="1.8" />
   </svg>
 );

@@ -1,0 +1,600 @@
+<title>Urban Furniture Schema</title>
+<meta name="description" content="Every table, key and relationship in the accounting schema, grouped by domain with plain-English notes.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --ground: #eef1f0;
+    --ground-2: #e2e7e5;
+    --panel: #ffffff;
+    --ink: #16211d;
+    --ink-2: #445048;
+    --ink-faint: #6f7d75;
+    --rule: #c9d2ce;
+    --rule-strong: #a9b6b0;
+    --accent: #1f6f5c;
+    --accent-ink: #0f4a3d;
+    --accent-soft: #dcece6;
+    --amber: #9a6a20;
+    --amber-soft: #f2e6cf;
+    --pk: #0f4a3d;
+    --fk: #9a6a20;
+    --shadow: 0 1px 2px rgba(22,33,29,0.06), 0 6px 20px rgba(22,33,29,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11171a;
+      --ground-2: #16201f;
+      --panel: #182422;
+      --ink: #e7ece9;
+      --ink-2: #b6c2bc;
+      --ink-faint: #839089;
+      --rule: #2b3835;
+      --rule-strong: #3c4b46;
+      --accent: #4fbfa0;
+      --accent-ink: #a8ecd8;
+      --accent-soft: #1c322c;
+      --amber: #e0ac5c;
+      --amber-soft: #322b1a;
+      --pk: #7fdcbd;
+      --fk: #e0ac5c;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11171a;
+    --ground-2: #16201f;
+    --panel: #182422;
+    --ink: #e7ece9;
+    --ink-2: #b6c2bc;
+    --ink-faint: #839089;
+    --rule: #2b3835;
+    --rule-strong: #3c4b46;
+    --accent: #4fbfa0;
+    --accent-ink: #a8ecd8;
+    --accent-soft: #1c322c;
+    --amber: #e0ac5c;
+    --amber-soft: #322b1a;
+    --pk: #7fdcbd;
+    --fk: #e0ac5c;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Source Sans 3', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; text-wrap: balance; color: var(--ink); }
+  h1 { font-size: clamp(2rem, 4vw, 2.6rem); font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .kicker { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  .lede { max-width: 62ch; color: var(--ink-2); font-size: 1.05rem; margin: 0 0 40px; }
+
+  h2 { font-size: 1.5rem; font-weight: 600; margin: 0 0 4px; }
+  .section-sub { color: var(--ink-faint); font-size: 0.95rem; margin: 0 0 20px; max-width: 62ch; }
+  section { margin-top: 64px; }
+  section:first-of-type { margin-top: 0; }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 48px;
+  }
+  .legend-item { display: flex; align-items: baseline; gap: 10px; font-size: 0.88rem; color: var(--ink-2); }
+  .legend-sym { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--ink); min-width: 58px; }
+
+  .diagram-card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .diagram-card pre.mermaid { margin: 0; min-width: 640px; }
+
+  table.rel {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 22px;
+    font-size: 0.92rem;
+  }
+  table.rel th {
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--rule-strong);
+    font-weight: 600;
+  }
+  table.rel td {
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    color: var(--ink-2);
+  }
+  table.rel tr:last-child td { border-bottom: none; }
+  .rel-pair {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.86rem;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .card {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 5px;
+    background: var(--ground-2);
+    font-weight: 500;
+  }
+  .card.pk-owner { background: var(--accent-soft); color: var(--accent-ink); }
+  .arrow { color: var(--ink-faint); padding: 0 3px; }
+  .tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .tag.one-many { background: var(--accent-soft); color: var(--accent-ink); }
+  .tag.one-one  { background: var(--amber-soft); color: var(--amber); }
+  .tag.optional { background: var(--ground-2); color: var(--ink-faint); }
+
+  .callout {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-top: 20px;
+    box-shadow: var(--shadow);
+  }
+  .callout h3 { font-size: 1.02rem; margin: 0 0 6px; font-family: 'Source Sans 3', sans-serif; font-weight: 700; }
+  .callout p { margin: 0; color: var(--ink-2); font-size: 0.94rem; }
+  .callout + .callout { margin-top: 14px; }
+  .callout code, td code, p code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.86em;
+    background: var(--ground-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--rule); color: var(--ink-faint); font-size: 0.85rem; }
+</style>
+
+<div class="wrap">
+  <p class="kicker">Urban Furniture &middot; Accounting System</p>
+  <h1>Schema, key by key</h1>
+  <p class="lede">
+    Every table's primary key, every foreign key, every relationship's cardinality —
+    grouped by what the tables are actually for, with a one-line reason for each link.
+    Read top to bottom: masters, then documents flowing into the ledger, then payments,
+    budgets and system tables.
+  </p>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-sym">||&mdash;o{</span> one row relates to zero or many rows</div>
+    <div class="legend-item"><span class="legend-sym">||&mdash;|{</span> one row relates to one or many rows</div>
+    <div class="legend-item"><span class="legend-sym">PK</span> primary key &mdash; always a UUID string</div>
+    <div class="legend-item"><span class="legend-sym">FK</span> foreign key &mdash; points at another table's PK</div>
+  </div>
+
+  <section id="masters">
+    <h2>1 &middot; Master data</h2>
+    <p class="section-sub">
+      The nouns of the business. <code>accounts</code> has no foreign keys at all — it's the
+      leaf every other table points at, for a different reason each time.
+    </p>
+
+    <div class="diagram-card">
+<pre class="mermaid">
+erDiagram
+    ACCOUNTS {
+        string id PK
+        string code
+        string type
+    }
+    CONTACTS {
+        string id PK
+        string name
+        string type
+        string receivable_account_id FK
+        string payable_account_id FK
+    }
+    PRODUCT_CATEGORIES {
+        string id PK
+        string name
+    }
+    PRODUCTS {
+        string id PK
+        string name
+        string category_id FK
+        string income_account_id FK
+        string expense_account_id FK
+    }
+    JOURNALS {
+        string id PK
+        string name
+        string type
+        string default_debit_account_id FK
+        string default_credit_account_id FK
+    }
+    ANALYTIC_ACCOUNTS {
+        string id PK
+        string name
+        string type
+    }
+
+    ACCOUNTS ||--o{ CONTACTS : "is the receivable/payable of"
+    ACCOUNTS ||--o{ PRODUCTS : "is the income/expense of"
+    ACCOUNTS ||--o{ JOURNALS : "is the default money account of"
+    PRODUCT_CATEGORIES ||--o{ PRODUCTS : "groups"
+</pre>
+    </div>
+
+    <table class="rel">
+      <thead><tr><th>Relationship</th><th>Cardinality</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">accounts.id</span><span class="arrow">&larr;</span><span class="card">contacts.receivable_account_id</span></td>
+          <td><span class="tag optional">optional</span> <span class="tag one-many">1&ndash;N</span></td>
+          <td>One account can be the "who owes us" bucket for many contacts. Nullable — a contact can rely on the system default instead of naming one.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">accounts.id</span><span class="arrow">&larr;</span><span class="card">contacts.payable_account_id</span></td>
+          <td><span class="tag optional">optional</span> <span class="tag one-many">1&ndash;N</span></td>
+          <td>Same idea, reversed direction: the "who we owe" bucket. A vendor and a customer can be the <em>same</em> contact (type <code>BOTH</code>), using both columns.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">accounts.id</span><span class="arrow">&larr;</span><span class="card">products.income_account_id / expense_account_id</span></td>
+          <td><span class="tag one-many">1&ndash;N</span></td>
+          <td>Every product decides which income account it credits when sold, and which expense account it debits when bought.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">product_categories.id</span><span class="arrow">&larr;</span><span class="card">products.category_id</span></td>
+          <td><span class="tag one-many">1&ndash;N</span></td>
+          <td>Plain grouping for the product list &mdash; a category is a table, not a hardcoded enum, so it can be created inline from the product form.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">accounts.id</span><span class="arrow">&larr;</span><span class="card">journals.default_debit/credit_account_id</span></td>
+          <td><span class="tag one-many">1&ndash;N</span></td>
+          <td>Only Bank/Cash journals set these — they name which real-money account a payment through that journal lands in.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="documents">
+    <h2>2 &middot; Documents &rarr; the ledger</h2>
+    <p class="section-sub">
+      Every document is a header table plus a lines table. Every line carries its own
+      product and account — never the parent document — so editing a product later can't
+      rewrite a line that already posted. Everything funnels into <code>journal_entries</code>,
+      which is the only table the reports actually read.
+    </p>
+
+    <div class="diagram-card">
+<pre class="mermaid">
+erDiagram
+    CONTACTS {
+        string id PK
+    }
+    PRODUCTS {
+        string id PK
+    }
+    SALES_ORDERS {
+        string id PK
+        string number
+        string customer_id FK
+        string status
+    }
+    SALES_ORDER_LINES {
+        string id PK
+        string order_id FK
+        string product_id FK
+        string account_id FK
+    }
+    CUSTOMER_INVOICES {
+        string id PK
+        string number
+        string customer_id FK
+        string so_id FK
+        string journal_entry_id FK
+        string status
+    }
+    CUSTOMER_INVOICE_LINES {
+        string id PK
+        string invoice_id FK
+        string product_id FK
+        string account_id FK
+        string analytic_account_id FK
+    }
+    PURCHASE_ORDERS {
+        string id PK
+        string number
+        string vendor_id FK
+    }
+    PURCHASE_ORDER_LINES {
+        string id PK
+        string order_id FK
+        string product_id FK
+    }
+    VENDOR_BILLS {
+        string id PK
+        string number
+        string vendor_id FK
+        string po_id FK
+        string journal_entry_id FK
+    }
+    VENDOR_BILL_LINES {
+        string id PK
+        string bill_id FK
+        string product_id FK
+    }
+    JOURNALS {
+        string id PK
+    }
+    JOURNAL_ENTRIES {
+        string id PK
+        string entry_number
+        string journal_id FK
+        string source_type
+        string source_id
+        string reversal_of_id FK
+        string state
+    }
+    JOURNAL_LINES {
+        string id PK
+        string entry_id FK
+        string account_id FK
+        string analytic_account_id FK
+        string partner_id FK
+        numeric debit
+        numeric credit
+    }
+
+    CONTACTS ||--o{ SALES_ORDERS : "buys via"
+    SALES_ORDERS ||--|{ SALES_ORDER_LINES : "itemizes as"
+    PRODUCTS ||--o{ SALES_ORDER_LINES : "is sold on"
+    SALES_ORDERS ||--o{ CUSTOMER_INVOICES : "may be invoiced as"
+    CONTACTS ||--o{ CUSTOMER_INVOICES : "is billed"
+    CUSTOMER_INVOICES ||--|{ CUSTOMER_INVOICE_LINES : "itemizes as"
+    PRODUCTS ||--o{ CUSTOMER_INVOICE_LINES : "is sold on"
+
+    CONTACTS ||--o{ PURCHASE_ORDERS : "sells to us via"
+    PURCHASE_ORDERS ||--|{ PURCHASE_ORDER_LINES : "itemizes as"
+    PRODUCTS ||--o{ PURCHASE_ORDER_LINES : "is bought on"
+    PURCHASE_ORDERS ||--o{ VENDOR_BILLS : "may be billed as"
+    CONTACTS ||--o{ VENDOR_BILLS : "bills us"
+    VENDOR_BILLS ||--|{ VENDOR_BILL_LINES : "itemizes as"
+
+    JOURNALS ||--o{ JOURNAL_ENTRIES : "records through"
+    JOURNAL_ENTRIES ||--|{ JOURNAL_LINES : "balances as"
+    JOURNAL_ENTRIES ||--o{ JOURNAL_ENTRIES : "is reversed by"
+    CUSTOMER_INVOICES ||--o| JOURNAL_ENTRIES : "posts as"
+    VENDOR_BILLS ||--o| JOURNAL_ENTRIES : "posts as"
+</pre>
+    </div>
+
+    <table class="rel">
+      <thead><tr><th>Relationship</th><th>Cardinality</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">sales_orders.id</span><span class="arrow">&larr;</span><span class="card">sales_order_lines.order_id</span></td>
+          <td><span class="tag one-many">1&ndash;N</span></td>
+          <td>One order, many line items. Deleting the header cascades to its lines — a line never outlives its document.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">sales_orders.id</span><span class="arrow">&larr;</span><span class="card">customer_invoices.so_id</span></td>
+          <td><span class="tag optional">nullable</span> <span class="tag one-many">1&ndash;N</span></td>
+          <td>An invoice <em>may</em> trace back to the order that generated it. Nullable on purpose: the mockup requires bills and invoices raisable standalone, with no order at all.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">journal_entries.id</span><span class="arrow">&larr;</span><span class="card">journal_lines.entry_id</span></td>
+          <td><span class="tag one-many">1&ndash;N</span></td>
+          <td>The actual double-entry: one entry, two or more balanced lines (debits = credits). This is the only table every report reads.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card">customer_invoices.journal_entry_id</span><span class="arrow">&rarr;</span><span class="card pk-owner">journal_entries.id</span></td>
+          <td><span class="tag optional">nullable</span> <span class="tag one-one">effectively 1&ndash;1</span></td>
+          <td>Nullable because a <code>DRAFT</code> invoice hasn't posted yet. Not a DB-level unique constraint, but a partial unique index on <code>journal_entries(source_type, source_id)</code> guarantees one live entry per document from the other side.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">journal_entries.id</span><span class="arrow">&larr;</span><span class="card">journal_entries.reversal_of_id</span></td>
+          <td><span class="tag optional">self-referencing</span></td>
+          <td>A posted entry is never edited. A correction is a new entry that cancels it, linked back here &mdash; the mistake and the fix both stay visible forever.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">journal_lines.account_id</span></td>
+          <td><span class="tag one-many">N&ndash;1</span></td>
+          <td>Notice what this table <em>doesn't</em> have: no <code>invoice_id</code>, no <code>bill_id</code>. A line only knows its account &mdash; it has no idea what document produced it, which is exactly why reports can't double-count or miss a document type.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="payments-budgets">
+    <h2>3 &middot; Payments, budgets &amp; system tables</h2>
+    <p class="section-sub">
+      Money settling documents, planning against the ledger via analytics, and the tables
+      that aren't accounting at all &mdash; auth, notifications, audit.
+    </p>
+
+    <div class="diagram-card">
+<pre class="mermaid">
+erDiagram
+    CONTACTS { string id PK }
+    JOURNALS { string id PK }
+    JOURNAL_ENTRIES { string id PK }
+    CUSTOMER_INVOICES { string id PK }
+    VENDOR_BILLS { string id PK }
+    PAYMENTS {
+        string id PK
+        string number
+        string idempotency_key
+        string contact_id FK
+        string journal_id FK
+        string invoice_id FK
+        string bill_id FK
+        string journal_entry_id FK
+        string direction
+    }
+    ANALYTIC_ACCOUNTS { string id PK }
+    BUDGETS {
+        string id PK
+        string name
+        string state
+        string responsible_id FK
+        string revision_of_id FK
+        string revised_with_id FK
+    }
+    BUDGET_LINES {
+        string id PK
+        string budget_id FK
+        string analytic_account_id FK
+        numeric committed_amount
+    }
+    ROLES { string id PK  string name }
+    USERS {
+        string id PK
+        string email
+        string login_id
+        string role_id FK
+        string contact_id FK
+    }
+    AUDIT_LOGS { string id PK  string user_id FK }
+    NOTIFICATIONS { string id PK  string user_id FK }
+
+    CONTACTS ||--o{ PAYMENTS : "pays or is paid via"
+    JOURNALS ||--o{ PAYMENTS : "moves through"
+    CUSTOMER_INVOICES ||--o| PAYMENTS : "is settled by"
+    VENDOR_BILLS ||--o| PAYMENTS : "is settled by"
+    PAYMENTS ||--o| JOURNAL_ENTRIES : "posts as"
+
+    CONTACTS ||--o{ BUDGETS : "is responsible for"
+    BUDGETS ||--|{ BUDGET_LINES : "plans as"
+    ANALYTIC_ACCOUNTS ||--o{ BUDGET_LINES : "is tracked by"
+    BUDGETS ||--o| BUDGETS : "is revised by"
+
+    ROLES ||--o{ USERS : "grants permissions to"
+    CONTACTS ||--o| USERS : "logs in as"
+    USERS ||--o{ AUDIT_LOGS : "is recorded doing"
+    USERS ||--o{ NOTIFICATIONS : "is notified via"
+</pre>
+    </div>
+
+    <table class="rel">
+      <thead><tr><th>Relationship</th><th>Cardinality</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="rel-pair"><span class="card">payments.invoice_id</span> / <span class="card">payments.bill_id</span></td>
+          <td><span class="tag optional">both nullable</span></td>
+          <td>Both columns exist, both are nullable, but a CHECK constraint forces <strong>exactly one</strong> to be set. A payment always settles one thing &mdash; never both, never neither.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card">payments.idempotency_key</span></td>
+          <td><span class="tag one-one">unique</span></td>
+          <td>Not a foreign key &mdash; a plain unique constraint. A retried "Pay" click can't create a second payment for the same click.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">budgets.id</span><span class="arrow">&larr;</span><span class="card">budgets.revision_of_id / revised_with_id</span></td>
+          <td><span class="tag optional">self-referencing, both ways</span></td>
+          <td>A CONFIRMED budget is never silently edited &mdash; a revision is a new row, linked both forward and backward to the one it replaces.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">contacts.id</span><span class="arrow">&larr;</span><span class="card">users.contact_id</span></td>
+          <td><span class="tag optional">nullable</span> <span class="tag one-one">effectively 1&ndash;1</span></td>
+          <td>How the contact portal works: a portal-role user is <em>the same person</em> as a contact, so they only ever see their own documents. Internal staff users leave this null.</td>
+        </tr>
+        <tr>
+          <td class="rel-pair"><span class="card pk-owner">users.id</span><span class="arrow">&larr;</span><span class="card">audit_logs.user_id</span></td>
+          <td><span class="tag one-many">1&ndash;N</span></td>
+          <td>Every successful write (POST/PATCH/PUT/DELETE) is recorded here automatically by middleware &mdash; nobody calls this table directly.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="rules">
+    <h2>4 &middot; The constraints that matter more than the diagram</h2>
+    <p class="section-sub">Three rules, enforced by the database itself, that no foreign key on its own can express.</p>
+
+    <div class="callout">
+      <h3>One live posting per document</h3>
+      <p>
+        A <em>partial</em> unique index on <code>journal_entries(source_type, source_id)</code>,
+        active only where <code>state &ne; 'REVERSED'</code>. One document can have exactly one
+        entry that currently counts &mdash; but a reversed entry doesn't block a fresh repost.
+        This is the real double-posting guard, not any single foreign key.
+      </p>
+    </div>
+    <div class="callout">
+      <h3>Every UUID is generated before the row exists</h3>
+      <p>
+        Every <code>id</code> is a 36-character string, built in application code, never a
+        database <code>SERIAL</code>. Two people on two machines writing to the same shared
+        database can never collide on an ID &mdash; there's no "who gets row 47" race.
+      </p>
+    </div>
+    <div class="callout">
+      <h3>Gapless numbers come from a lock, not the primary key</h3>
+      <p>
+        <code>INV/2026/0005</code> and <code>S00001</code> are unrelated to any <code>id</code>.
+        A separate <code>number_sequences</code> table is read under
+        <code>SELECT&nbsp;...&nbsp;FOR&nbsp;UPDATE</code> and incremented atomically, so two
+        backends posting at the same instant never hand out the same number.
+      </p>
+    </div>
+  </section>
+
+  <footer>Urban Furniture &mdash; Accounting System &middot; schema reference generated from the live database</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+(function () {
+  // Self-contained on purpose: this file is meant to be opened directly (no
+  // build step, no server), so the diagram library ships with the page rather
+  // than relying on any host to inject it.
+  function isDark() {
+    var stamp = document.documentElement.getAttribute('data-theme');
+    if (stamp === 'dark') return true;
+    if (stamp === 'light') return false;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  var dark = isDark();
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: 'strict',
+    theme: 'base',
+    themeVariables: dark ? {
+      background: '#182422', primaryColor: '#1c322c', primaryTextColor: '#e7ece9',
+      primaryBorderColor: '#4fbfa0', lineColor: '#839089', tertiaryColor: '#16201f',
+      fontFamily: 'IBM Plex Mono, monospace', fontSize: '14px'
+    } : {
+      background: '#ffffff', primaryColor: '#dcece6', primaryTextColor: '#16211d',
+      primaryBorderColor: '#1f6f5c', lineColor: '#6f7d75', tertiaryColor: '#eef1f0',
+      fontFamily: 'IBM Plex Mono, monospace', fontSize: '14px'
+    }
+  });
+})();
+</script>
