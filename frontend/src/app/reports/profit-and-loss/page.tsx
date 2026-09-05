@@ -8,6 +8,7 @@ import { DrillAmount } from "@/components/ui/drill-amount";
 import { Field } from "@/components/ui/field";
 import { DownloadIcon } from "@/components/icons";
 import { api, type ReportGroup } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 import { money } from "@/lib/format";
@@ -46,10 +47,17 @@ function GroupTable({ group }: { group: ReportGroup }) {
 }
 
 export default function ProfitAndLossPage() {
+  const { user } = useAuth();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const report = useFetch(() => api.reports.profitAndLoss(dateFrom || undefined, dateTo || undefined), [dateFrom, dateTo]);
-  useEventStream({ "ledger.changed": () => report.reload() });
+  const report = useFetch(
+    () =>
+      user
+        ? api.reports.profitAndLoss(dateFrom || undefined, dateTo || undefined)
+        : Promise.resolve(null),
+    [user, dateFrom, dateTo],
+  );
+  useEventStream({ "ledger.changed": () => report.reload() }, !!user);
 
   return (
     <AppShell>

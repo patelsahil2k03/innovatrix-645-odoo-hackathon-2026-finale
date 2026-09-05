@@ -32,11 +32,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     getThemeServerSnapshot,
   );
 
-  const live = useEventStream({
-    "kpi.refresh": () => {
-      /* pages subscribe to what they care about; the shell only shows connectivity */
+  const live = useEventStream(
+    {
+      "kpi.refresh": () => {
+        /* pages subscribe to what they care about; the shell only shows connectivity */
+      },
     },
-  });
+    !!user, // /events requires a session — don't connect (and 401-loop) before one exists
+  );
 
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";

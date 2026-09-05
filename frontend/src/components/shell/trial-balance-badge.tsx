@@ -9,13 +9,20 @@
 
 import { AlertTriangleIcon, CheckCircleIcon } from "@/components/icons";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { money } from "@/lib/format";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 
 export function TrialBalanceBadge() {
-  const trialBalance = useFetch(() => api.reports.trialBalance(), []);
-  useEventStream({ "ledger.changed": () => trialBalance.reload() });
+  const { user } = useAuth();
+  // No session yet → skip the call rather than 401. The badge's own loading/error
+  // fallback ("Trial balance —") already covers a null result correctly.
+  const trialBalance = useFetch(
+    () => (user ? api.reports.trialBalance() : Promise.resolve(null)),
+    [user],
+  );
+  useEventStream({ "ledger.changed": () => trialBalance.reload() }, !!user);
 
   if (trialBalance.loading) {
     return <span className="badge badge-neutral">Trial balance …</span>;
