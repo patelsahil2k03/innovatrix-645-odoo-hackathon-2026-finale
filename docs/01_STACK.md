@@ -68,21 +68,68 @@ that opens the stream** so any drift fails immediately at setup, not at 22:00.
 
 ---
 
-## 3. DELIBERATELY OPEN — decide when the PS lands
+## 3. RESOLVED — decided once the problem statement landed
 
-Do not pre-commit these. You will have far better information at 09:30 on day 1.
+These were deliberately left open. **Urban Furniture: Accounting System** settles them:
 
-| Decision | Options | Decide based on |
+| Decision | Resolution | Why |
 |---|---|---|
-| **Database** | **SQLite** (zero setup, one file) vs **PostgreSQL** (Docker) | Both already work — flip `DATABASE_URL` in `.env`, nothing else changes. Default to **SQLite** unless the PS needs concurrent writes, JSON/array columns, or you want the "real DB" story. On unfamiliar venue hardware, SQLite removes an entire class of failure. |
-| **Charts** | Hand-rolled SVG vs `recharts` | If the PS wants 1–2 simple charts, hand-roll (zero deps, already themed). If it wants a real analytics dashboard, `recharts@3.10` is worth the install. |
-| **Maps / geo** | Leaflet, or nothing | Only if the PS is location-shaped. Don't add it speculatively. |
-| **File uploads** | Local disk vs base64-in-DB | Only if the PS demands attachments. |
-| **Background jobs** | asyncio task (already in boilerplate) vs anything heavier | The built-in asyncio task is almost certainly enough. |
-| **Any domain library** | — | Only if it saves >1 hour AND you can explain it to the evaluator. |
+| **Database** | **PostgreSQL for the shared/demo instance · SQLite fine for local dev** | See §3.1 — this was tested, not assumed, and the reason is **not** the one you'd expect. |
+| **Charts** | **Hand-rolled SVG** | The reports are tables of figures, not an analytics dashboard. At most: one budget planned-vs-actual bar per line, and a small net-profit trend. Both are a `<rect>` and a `<path>`; `recharts` would be ~200KB to draw two shapes we'd have to re-theme anyway. |
+| **Maps / geo** | **Nothing** | Not a location-shaped domain. |
+| **File uploads** | **Profile image URL only** | The Contact Master lists "Profile Image". A URL field plus a fallback initials avatar satisfies it. No upload pipeline, no storage, no MIME validation — none of it is asked for. |
+| **PDF generation** | **Not built** | Unlike the two rejected statements, this one never asks for PDF. CSV export (already in the boilerplate) covers "export the report". |
+| **Background jobs** | **The existing asyncio task** | It posts one small payment on a timer — see [`06_BACKEND.md`](06_BACKEND.md) §10. |
+| **New dependencies** | **None** | The whole domain is `Numeric`, `Enum` and `SUM(...) GROUP BY`. Nothing here needs a library. |
 
-**Rule of thumb from the organizers themselves:** *"Use trendy technologies only if they add
-real value."* Every dependency you add is a dependency you must defend at 13:00.
+> **Zero new dependencies is a defensible answer**, and a better one than a clever pick.
+> The organizers say *"use trendy technologies only if they add real value"* — every
+> dependency is one you must justify to the evaluator.
+
+### 3.1 The database question, actually tested
+
+Two claims get made about SQLite and money. We tested both against SQLAlchemy 2.0.52
+rather than repeating folklore.
+
+**Claim 1 — "SQLite loses decimal precision, so money breaks." → FALSE. Do not repeat it.**
+
+```
+1000 rows of Decimal("0.07"), summed by SQLite's own SUM():
+  DB SUM()  → Decimal('70.00')     exact ✅
+  Python    → Decimal('70.00')     exact ✅
+  delta     → 0.00
+```
+SQLAlchemy's SQLite dialect round-trips `Numeric` through a string representation, so
+`Decimal` survives storage *and* in-database aggregation. No precision warning is raised.
+**Money on SQLite is safe.**
+
+**Claim 2 — "`SELECT … FOR UPDATE` doesn't work on SQLite." → TRUE, and it fails silently.**
+
+The same `with_for_update()` query compiled for each dialect:
+```
+Postgres:  SELECT s.id, s.n FROM s WHERE s.id = %(id_1)s FOR UPDATE
+SQLite:    SELECT s.id, s.n FROM s WHERE s.id = ?
+```
+The lock clause is **dropped with no error and no warning**. `lock_row()` — our primary
+defence against double-posting ([`06_BACKEND.md`](06_BACKEND.md) §4) — becomes a plain
+`SELECT` on SQLite while continuing to look correct in the source.
+
+That is exactly the class of failure [`10_LESSONS.md`](10_LESSONS.md) is about: a guard
+that silently stops guarding.
+
+**So:**
+- **Shared / demo / anything being graded → PostgreSQL**, because `lock_row` actually locks.
+  `./scripts/dev.sh --db docker` and `uv sync --extra postgres`.
+- **Local development → SQLite is fine.** Identical schema, exact money, zero setup, works
+  offline. If Docker fails on someone's laptop, they lose nothing but real row locks.
+- **Correctness does not depend on the choice.** The real backstop against a duplicate
+  journal entry is `UNIQUE(source_type, source_id)` from
+  [`03_DATA_MODEL.md`](03_DATA_MODEL.md) §3, and a unique constraint works identically on
+  both. The lock turns an ugly constraint violation into a clean `ALREADY_POSTED` — it is
+  the difference between a 500 and a 409, not between right and wrong.
+- **The concurrency test in [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md) §1.3
+  only proves anything on Postgres.** Mark it `@pytest.mark.postgres` and skip it on
+  SQLite rather than letting it pass vacuously.
 
 ---
 
