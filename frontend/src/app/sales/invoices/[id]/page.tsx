@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type Account, type Product } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
@@ -32,10 +33,10 @@ export default function CustomerInvoiceDetailPage({ params }: { params: Promise<
   const { user } = useAuth();
   const toast = useToast();
   const invoice = useFetch(() => api.customerInvoices.get(id), [id]);
-  const products = useFetch(() => api.products.list({ page_size: 200 }), []);
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200 }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200 }), []);
-  const contacts = useFetch(() => api.contacts.list({ page_size: 200 }), []);
+  const products = useFetch(() => api.products.list({ page_size: 100 }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100 }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100 }), []);
+  const contacts = useFetch(() => api.contacts.list({ page_size: 100 }), []);
 
   useEventStream(
     {
@@ -138,6 +139,7 @@ export default function CustomerInvoiceDetailPage({ params }: { params: Promise<
                     </button>
                   ) : null}
                 </div>
+                <ClosePanel />
               </div>
 
               {actionError ? <div className="alert alert-danger" role="alert">{actionError}</div> : null}

@@ -66,8 +66,8 @@ export function ProductForm({ initial, onSubmit, submitLabel, readOnly }: Produc
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const categories = useFetch(() => api.productCategories.list({ page_size: 200, sort: "name" }), []);
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200, sort: "code" }), []);
+  const categories = useFetch(() => api.productCategories.list({ page_size: 100, sort: "name" }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100, sort: "code" }), []);
   const accountOptions = accounts.data?.items ?? [];
 
   function setField<K extends keyof ProductFormValues>(field: K, value: ProductFormValues[K]) {

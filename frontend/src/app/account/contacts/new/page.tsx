@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { ContactForm } from "@/components/forms/contact-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ContactCreate } from "@/lib/api";
 
 export default function NewContactPage() {
@@ -21,6 +22,7 @@ export default function NewContactPage() {
           <h1>New contact</h1>
           <p>Create a customer or vendor.</p>
         </div>
+        <ClosePanel />
       </div>
       <ContactForm onSubmit={handleCreate} submitLabel="Create contact" />
     </AppShell>

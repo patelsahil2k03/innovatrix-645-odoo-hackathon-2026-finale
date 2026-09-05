@@ -7,6 +7,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ContactForm, contactToFormValues } from "@/components/forms/contact-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ContactCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
@@ -55,6 +56,7 @@ export default function ContactDetailPage({ params }: { params: Promise<{ id: st
                   Archive
                 </button>
               ) : null}
+              <ClosePanel />
             </div>
 
             {!canManage ? (

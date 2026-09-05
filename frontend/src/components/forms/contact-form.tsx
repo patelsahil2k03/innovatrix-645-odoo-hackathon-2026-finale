@@ -74,7 +74,7 @@ export function ContactForm({ initial, onSubmit, submitLabel, readOnly }: Contac
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200, sort: "code" }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100, sort: "code" }), []);
 
   function setField<K extends keyof ContactFormValues>(field: K, value: ContactFormValues[K]) {
     setValues((prev) => ({ ...prev, [field]: value }));

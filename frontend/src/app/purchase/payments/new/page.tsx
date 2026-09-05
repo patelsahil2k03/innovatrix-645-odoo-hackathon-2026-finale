@@ -7,6 +7,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { Field } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentModal } from "@/components/forms/payment-modal";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { round2 } from "@/lib/use-document-lines";
@@ -17,7 +18,7 @@ export default function NewPurchasePaymentPage() {
   const [billId, setBillId] = useState("");
   const [payOpen, setPayOpen] = useState(false);
 
-  const bills = useFetch(() => api.vendorBills.list({ page_size: 200, sort: "-bill_date" }), []);
+  const bills = useFetch(() => api.vendorBills.list({ page_size: 100, sort: "-bill_date" }), []);
   const payable = (bills.data?.items ?? []).filter((bill) => bill.status === "POSTED" || bill.status === "PARTIAL");
   const selected = payable.find((bill) => bill.id === billId);
   const remaining = selected ? round2(selected.total - selected.amount_paid) : 0;
@@ -29,6 +30,7 @@ export default function NewPurchasePaymentPage() {
           <h1>New payment</h1>
           <p>Register a payment against an open vendor bill.</p>
         </div>
+        <ClosePanel />
       </div>
 
       <div className="card stack">

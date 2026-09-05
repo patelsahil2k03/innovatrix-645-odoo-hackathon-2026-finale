@@ -9,6 +9,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
@@ -24,8 +25,8 @@ export default function SalesOrderDetailPage({ params }: { params: Promise<{ id:
   const { user } = useAuth();
   const toast = useToast();
   const order = useFetch(() => api.salesOrders.get(id), [id]);
-  const products = useFetch(() => api.products.list({ page_size: 200 }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200 }), []);
+  const products = useFetch(() => api.products.list({ page_size: 100 }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100 }), []);
   const [working, setWorking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -88,6 +89,7 @@ export default function SalesOrderDetailPage({ params }: { params: Promise<{ id:
                   ) : null}
                 </div>
               ) : null}
+              <ClosePanel />
             </div>
 
             {actionError ? <div className="alert alert-danger" role="alert">{actionError}</div> : null}

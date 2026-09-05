@@ -7,6 +7,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ProductForm, productToFormValues } from "@/components/forms/product-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ProductCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
@@ -48,6 +49,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   Archive
                 </button>
               ) : null}
+              <ClosePanel />
             </div>
 
             {!canManage ? (

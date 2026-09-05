@@ -7,6 +7,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { Field } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentModal } from "@/components/forms/payment-modal";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { round2 } from "@/lib/use-document-lines";
@@ -19,7 +20,7 @@ export default function NewReceiptPage() {
 
   // Only invoices that can still take a payment.
   const invoices = useFetch(
-    () => api.customerInvoices.list({ page_size: 200, sort: "-invoice_date" }),
+    () => api.customerInvoices.list({ page_size: 100, sort: "-invoice_date" }),
     [],
   );
   const payable = (invoices.data?.items ?? []).filter((inv) => inv.status === "POSTED" || inv.status === "PARTIAL");
@@ -33,6 +34,7 @@ export default function NewReceiptPage() {
           <h1>New receipt</h1>
           <p>Register a payment against an open sale invoice.</p>
         </div>
+        <ClosePanel />
       </div>
 
       <div className="card stack">

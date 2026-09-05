@@ -7,6 +7,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type Account, type Product } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { buildSalesPostingPreview, lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
@@ -26,10 +27,10 @@ export default function NewCustomerInvoicePage() {
   const [customerError, setCustomerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const contacts = useFetch(() => api.contacts.list({ page_size: 200, sort: "name" }), []);
-  const products = useFetch(() => api.products.list({ page_size: 200, sort: "name" }), []);
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200 }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200, sort: "name" }), []);
+  const contacts = useFetch(() => api.contacts.list({ page_size: 100, sort: "name" }), []);
+  const products = useFetch(() => api.products.list({ page_size: 100, sort: "name" }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100 }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100, sort: "name" }), []);
   const customers = (contacts.data?.items ?? []).filter((c) => c.type === "CUSTOMER" || c.type === "BOTH");
 
   const { lines, addLine, removeLine, updateLine, selectProduct, totals } = useDocumentLines();
@@ -88,6 +89,7 @@ export default function NewCustomerInvoicePage() {
           <h1>New sale invoice</h1>
           <p>Saved as a draft — nothing posts to the ledger until you confirm it.</p>
         </div>
+        <ClosePanel />
       </div>
 
       <form className="stack" onSubmit={handleSubmit} noValidate>

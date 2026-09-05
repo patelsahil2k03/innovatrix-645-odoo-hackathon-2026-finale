@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { Field } from "@/components/ui/field";
 import { PlusIcon, TrashIcon } from "@/components/icons";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type BudgetLine } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { budgetSchema, fieldErrorsFrom, formMessageFrom, validate, type FieldErrors } from "@/lib/validation";
@@ -27,8 +28,8 @@ export default function NewBudgetPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const contacts = useFetch(() => api.contacts.list({ page_size: 200, sort: "name" }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200, sort: "name" }), []);
+  const contacts = useFetch(() => api.contacts.list({ page_size: 100, sort: "name" }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100, sort: "name" }), []);
 
   function updateLine(key: string, patch: Partial<BudgetLine>) {
     setLines((prev) => prev.map((line) => (line.key === key ? { ...line, ...patch } : line)));
@@ -68,6 +69,7 @@ export default function NewBudgetPage() {
           <h1>New budget</h1>
           <p>Only the committed amount is stored — achieved figures are computed on read.</p>
         </div>
+        <ClosePanel />
       </div>
 
       <form className="stack" onSubmit={handleSubmit} noValidate>

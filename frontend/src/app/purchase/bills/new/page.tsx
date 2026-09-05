@@ -7,6 +7,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type Account, type Product } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { buildPurchasePostingPreview, lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
@@ -26,10 +27,10 @@ export default function NewVendorBillPage() {
   const [vendorError, setVendorError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const contacts = useFetch(() => api.contacts.list({ page_size: 200, sort: "name" }), []);
-  const products = useFetch(() => api.products.list({ page_size: 200, sort: "name" }), []);
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200 }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200, sort: "name" }), []);
+  const contacts = useFetch(() => api.contacts.list({ page_size: 100, sort: "name" }), []);
+  const products = useFetch(() => api.products.list({ page_size: 100, sort: "name" }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100 }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100, sort: "name" }), []);
   const vendors = (contacts.data?.items ?? []).filter((c) => c.type === "VENDOR" || c.type === "BOTH");
 
   const { lines, addLine, removeLine, updateLine, selectProduct, totals } = useDocumentLines();
@@ -84,6 +85,7 @@ export default function NewVendorBillPage() {
           <h1>New vendor bill</h1>
           <p>Saved as a draft — a bill can be raised fresh or from a purchase order.</p>
         </div>
+        <ClosePanel />
       </div>
 
       <form className="stack" onSubmit={handleSubmit} noValidate>

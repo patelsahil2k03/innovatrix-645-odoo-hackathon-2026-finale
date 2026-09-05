@@ -6,6 +6,7 @@ import { use } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type CustomerInvoice, type VendorBill } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { date, money } from "@/lib/format";
@@ -41,6 +42,9 @@ export default function BudgetLineDocumentsPage({ params }: { params: Promise<{ 
           <h1>Documents behind {line?.analytic_account_name ?? "this line"}</h1>
           <p>Every invoice or bill line tagged with this analytic account, inside the budget&apos;s period.</p>
         </div>
+        {/* One segment up is `/lines/{lineId}`, which is not a page — this
+            drill-down closes back to the budget it came from. */}
+        <ClosePanel fallbackHref={`/account/budgets/${id}`} label="Close and return to budget" />
       </div>
 
       <div className="card">

@@ -8,6 +8,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { formMessageFrom } from "@/lib/validation";
@@ -89,6 +90,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                   ) : null}
                 </div>
               ) : null}
+              <ClosePanel />
             </div>
 
             {actionError ? <div className="alert alert-danger" role="alert">{actionError}</div> : null}

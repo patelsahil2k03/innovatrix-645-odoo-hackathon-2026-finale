@@ -7,6 +7,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AccountForm, accountToFormValues } from "@/components/forms/account-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type AccountCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
@@ -47,6 +48,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                   Archive
                 </button>
               ) : null}
+              <ClosePanel />
             </div>
             {!canManage ? (
               <div className="alert alert-info">Only an Admin can modify or archive master data.</div>
