@@ -10,8 +10,9 @@
 cp .env.example .env
 
 cd backend
-uv sync
-uv run python -m app.seed          # creates tables + demo users, prints logins
+uv sync --extra postgres           # psycopg — needed for the Postgres path
+uv run alembic upgrade head
+uv run python -m app.seed          # chart of accounts + demo users + demo ledger
 uv run uvicorn app.main:app --reload --port 8000
 
 # in a second terminal
@@ -22,9 +23,15 @@ npm run dev
 
 Or everything at once from the repo root:
 ```bash
-./scripts/dev.sh                  # SQLite, no Docker
-./scripts/dev.sh --db docker      # also starts Postgres
+./scripts/dev.sh --db docker      # Postgres — use this for anything being graded
+./scripts/dev.sh                  # SQLite — fine for local work, see the caveat below
 ```
+
+> ⚠️ **Which database, and why it matters here.** Money is exact on both — that was tested.
+> But `SELECT … FOR UPDATE` is **silently dropped** on SQLite, so `lock_row()` stops locking
+> while still looking correct in the source. Use Postgres for the demo, for anything being
+> graded, and whenever you're testing concurrency. Full detail and the test output:
+> [`01_STACK.md`](01_STACK.md) §3.1.
 
 | What | Where |
 |---|---|
@@ -75,6 +82,44 @@ rm backend/app.db && cd backend && uv run python -m app.seed
 ./scripts/verify-sse.sh          # proves the stream end to end
 ```
 Also confirm `SIMULATOR_ENABLED=true` in `.env` if you expect data to move on its own.
+
+---
+
+## 2.1 ACCOUNTING-SPECIFIC PROBLEMS
+
+**`Trial balance` badge is red / the balance sheet doesn't balance**
+Something wrote `journal_lines` outside `services/posting.py`. That is the only permitted
+write path. Find it:
+```bash
+grep -rn "JournalLine(" backend/src/app --include="*.py" | grep -v services/posting.py
+```
+Then check for orphaned or one-sided entries:
+```sql
+SELECT e.entry_number, SUM(l.debit) AS d, SUM(l.credit) AS c
+FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id
+GROUP BY e.entry_number HAVING SUM(l.debit) <> SUM(l.credit);
+```
+
+**`MISSING_ACCOUNT_MAPPING` when posting**
+The contact has no receivable/payable account, or the product has no income/expense
+account. The seed sets these; a hand-created record won't have them. Fix the record — do
+**not** add a fallback account in the posting code, or the error stops being informative.
+
+**`ALREADY_POSTED` on a document that looks unposted**
+A previous attempt committed the entry but failed afterwards. Check:
+```sql
+SELECT * FROM journal_entries WHERE source_id = '<document-uuid>';
+```
+If a live entry exists, the document is genuinely posted — refresh the UI.
+
+**A payment won't allocate**
+`Σ allocations` must equal `payment.amount` exactly, and no single allocation may exceed its
+document's `total - amount_paid`. Both are enveloped 4xx (`ALLOCATION_MISMATCH`,
+`OVERALLOCATED_PAYMENT`), never a 500.
+
+**Reports are empty but documents exist**
+The documents are still `DRAFT`. Only `POSTED` entries reach a report — that is correct
+behaviour, not a bug.
 
 **Frontend build fails on a Next config key**
 Next.js 16 removed the `eslint` key from `next.config.ts` (and `next lint`). Lint is a
