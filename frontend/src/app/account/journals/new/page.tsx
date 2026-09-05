@@ -1,22 +1,29 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { JournalForm } from "@/components/forms/journal-form";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type JournalCreate } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
+import { useToast } from "@/lib/toast-context";
 
 export default function NewJournalPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
 
   async function handleCreate(values: JournalCreate) {
-    const created = await api.journals.create(values);
-    router.push(`/account/journals/${created.id}`);
+    await api.journals.create(values);
+    toast.success("Journal created");
+    router.push(parentRouteOf(pathname ?? "/"));
   }
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Journals", href: "/account/journals" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New journal</h1>

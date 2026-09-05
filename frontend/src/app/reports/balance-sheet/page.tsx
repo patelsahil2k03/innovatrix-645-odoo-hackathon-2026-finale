@@ -1,8 +1,12 @@
 "use client";
 
+import { memo } from "react";
+
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { DownloadIcon } from "@/components/icons";
 import { api, type ReportGroup } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -10,7 +14,7 @@ import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 import { date, money } from "@/lib/format";
 
-function GroupTable({ group, asOf }: { group: ReportGroup; asOf: string }) {
+const GroupTable = memo(function GroupTable({ group, asOf }: { group: ReportGroup; asOf: string }) {
   return (
     <div className="card">
       <div className="card-head"><span className="card-title">{group.label}</span></div>
@@ -42,7 +46,7 @@ function GroupTable({ group, asOf }: { group: ReportGroup; asOf: string }) {
       <p style={{ fontSize: "var(--t-xs)", color: "var(--text-faint)", marginTop: 8 }}>As of {date(asOf)}</p>
     </div>
   );
-}
+});
 
 export default function BalanceSheetPage() {
   const { user } = useAuth();
@@ -54,6 +58,7 @@ export default function BalanceSheetPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Report" }, { label: "Balance Sheet" }]} />
       <div className="page-head">
         <div>
           <h1>Balance Sheet</h1>
@@ -64,7 +69,13 @@ export default function BalanceSheetPage() {
         </a>
       </div>
 
-      <AsyncState loading={report.loading} error={report.error} data={report.data} onRetry={report.reload}>
+      <AsyncState
+        loading={report.loading}
+        error={report.error}
+        data={report.data}
+        onRetry={report.reload}
+        skeleton={<SkeletonCard lines={6} />}
+      >
         {(data) => (
           <>
             {!data.is_balanced ? (

@@ -1,19 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
 import { documentLinesSchema, fieldErrorsFrom, formMessageFrom, required, validate } from "@/lib/validation";
 
 export default function NewSalesOrderPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
   const [reference, setReference] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -46,13 +51,14 @@ export default function NewSalesOrderPage() {
 
     setSubmitting(true);
     try {
-      const created = await api.salesOrders.create({
+      await api.salesOrders.create({
         reference: reference || null,
         customer_id: customerId,
         order_date: orderDate,
         lines: linesResult.data,
       });
-      router.push(`/sales/orders/${created.id}`);
+      toast.success("Sales order created");
+      router.push(parentRouteOf(pathname ?? "/"));
     } catch (error) {
       setFormError(formMessageFrom(error));
       const fields = fieldErrorsFrom(error);
@@ -64,6 +70,7 @@ export default function NewSalesOrderPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Sales" }, { label: "Sales Order", href: "/sales/orders" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New sales order</h1>

@@ -4,7 +4,9 @@ import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ProductForm, productToFormValues } from "@/components/forms/product-form";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -36,7 +38,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <AppShell>
-      <AsyncState loading={product.loading} error={product.error} data={product.data} onRetry={product.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Product", href: "/account/products" },
+          { label: product.data?.name ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={product.loading}
+        error={product.error}
+        data={product.data}
+        onRetry={product.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => (
           <>
             <div className="page-head">

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { KanbanGrid } from "@/components/ui/kanban";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ViewToggle, type ListView } from "@/components/ui/view-toggle";
@@ -34,8 +36,28 @@ export default function ContactsPage() {
     [page, debouncedSearch, sort],
   );
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const kanbanItems = useMemo(
+    () =>
+      (contacts.data?.items ?? []).map((contact) => ({
+        id: contact.id,
+        title: contact.name,
+        subtitle: contact.email ?? contact.mobile ?? undefined,
+        meta: humanize(contact.type),
+        imageUrl: contact.image_url,
+        href: `/account/contacts/${contact.id}`,
+        badge: contact.is_archived ? <span className="badge badge-neutral">Archived</span> : undefined,
+      })),
+    [contacts.data],
+  );
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Contact" }]} />
       <div className="page-head">
         <div>
           <h1>Contacts</h1>
@@ -52,7 +74,7 @@ export default function ContactsPage() {
       <div className="row-between">
         <SearchInput
           value={search}
-          onChange={(value) => { setSearch(value); setPage(1); }}
+          onChange={handleSearchChange}
           label="Search contacts"
           placeholder="Search by name, email or mobile"
         />
@@ -68,6 +90,7 @@ export default function ContactsPage() {
           emptyTitle="No contacts yet"
           emptyHint="Create your first customer or vendor to get started."
           onRetry={contacts.reload}
+          skeleton={<SkeletonTable rows={6} columns={6} />}
         >
           {(pageData) =>
             view === "list" ? (
@@ -98,17 +121,7 @@ export default function ContactsPage() {
                 </table>
               </div>
             ) : (
-              <KanbanGrid
-                items={pageData.items.map((contact) => ({
-                  id: contact.id,
-                  title: contact.name,
-                  subtitle: contact.email ?? contact.mobile ?? undefined,
-                  meta: humanize(contact.type),
-                  imageUrl: contact.image_url,
-                  href: `/account/contacts/${contact.id}`,
-                  badge: contact.is_archived ? <span className="badge badge-neutral">Archived</span> : undefined,
-                }))}
-              />
+              <KanbanGrid items={kanbanItems} />
             )
           }
         </AsyncState>

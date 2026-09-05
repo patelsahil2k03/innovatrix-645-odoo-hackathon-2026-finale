@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { KanbanGrid } from "@/components/ui/kanban";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ViewToggle, type ListView } from "@/components/ui/view-toggle";
@@ -34,8 +36,28 @@ export default function ProductsPage() {
     [page, debouncedSearch, sort],
   );
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const kanbanItems = useMemo(
+    () =>
+      (products.data?.items ?? []).map((product) => ({
+        id: product.id,
+        title: product.name,
+        subtitle: product.category_name ?? humanize(product.type),
+        meta: money(product.sales_price),
+        imageUrl: product.image_url,
+        href: `/account/products/${product.id}`,
+        badge: product.is_archived ? <span className="badge badge-neutral">Archived</span> : undefined,
+      })),
+    [products.data],
+  );
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Account" }, { label: "Product" }]} />
       <div className="page-head">
         <div>
           <h1>Products</h1>
@@ -52,7 +74,7 @@ export default function ProductsPage() {
       <div className="row-between">
         <SearchInput
           value={search}
-          onChange={(value) => { setSearch(value); setPage(1); }}
+          onChange={handleSearchChange}
           label="Search products"
           placeholder="Search by name or category"
         />
@@ -68,6 +90,7 @@ export default function ProductsPage() {
           emptyTitle="No products yet"
           emptyHint="Create your first product to start building orders and invoices."
           onRetry={products.reload}
+          skeleton={<SkeletonTable rows={6} columns={6} />}
         >
           {(pageData) =>
             view === "list" ? (
@@ -98,17 +121,7 @@ export default function ProductsPage() {
                 </table>
               </div>
             ) : (
-              <KanbanGrid
-                items={pageData.items.map((product) => ({
-                  id: product.id,
-                  title: product.name,
-                  subtitle: product.category_name ?? humanize(product.type),
-                  meta: money(product.sales_price),
-                  imageUrl: product.image_url,
-                  href: `/account/products/${product.id}`,
-                  badge: product.is_archived ? <span className="badge badge-neutral">Archived</span> : undefined,
-                }))}
-              />
+              <KanbanGrid items={kanbanItems} />
             )
           }
         </AsyncState>

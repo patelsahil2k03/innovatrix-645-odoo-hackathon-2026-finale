@@ -4,7 +4,9 @@ import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ContactForm, contactToFormValues } from "@/components/forms/contact-form";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -36,11 +38,19 @@ export default function ContactDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <AppShell>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Contact", href: "/account/contacts" },
+          { label: contact.data?.name ?? "…" },
+        ]}
+      />
       <AsyncState
         loading={contact.loading}
         error={contact.error}
         data={contact.data}
         onRetry={contact.reload}
+        skeleton={<SkeletonCard lines={4} />}
       >
         {(data) => (
           <>

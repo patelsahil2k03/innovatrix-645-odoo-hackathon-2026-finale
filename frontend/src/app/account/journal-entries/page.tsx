@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
@@ -60,15 +62,20 @@ function JournalEntriesPageInner() {
     "payment.registered": () => entries.reload(),
   });
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
-      {from && fromLabel ? (
-        <nav className="breadcrumbs" aria-label="Breadcrumb">
-          <Link href={from}>{fromLabel}</Link>
-          <span className="sep">/</span>
-          <span>{accountLabel ?? "Journal lines"}</span>
-        </nav>
-      ) : null}
+      <Breadcrumbs
+        items={
+          from && fromLabel
+            ? [{ label: fromLabel, href: from }, { label: accountLabel ?? "Journal lines" }]
+            : [{ label: "Account" }, { label: "Journal Entries" }]
+        }
+      />
 
       <div className="page-head">
         <div>
@@ -77,7 +84,7 @@ function JournalEntriesPageInner() {
         </div>
       </div>
 
-      <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search journal entries" placeholder="Search by entry number or reference" />
+      <SearchInput value={search} onChange={handleSearchChange} label="Search journal entries" placeholder="Search by entry number or reference" />
 
       <div className="card">
         <AsyncState
@@ -87,6 +94,7 @@ function JournalEntriesPageInner() {
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="Nothing posted yet"
           onRetry={entries.reload}
+          skeleton={<SkeletonTable rows={6} columns={6} />}
         >
           {(pageData) => (
             <div className="table-scroll">

@@ -4,12 +4,15 @@ import Link from "next/link";
 import { use, useState } from "react";
 
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DownloadIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type CustomerInvoice, type VendorBill } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { round2 } from "@/lib/use-document-lines";
 import { date, money } from "@/lib/format";
 
@@ -19,14 +22,22 @@ function isInvoice(doc: CustomerInvoice | VendorBill): doc is CustomerInvoice {
 
 export default function PortalDocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const toast = useToast();
   const doc = useFetch(() => api.portal.documents.get(id), [id]);
   const [payOpen, setPayOpen] = useState(false);
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "My Documents", href: "/portal/documents" }, { label: doc.data?.number ?? "…" }]} />
       <p style={{ fontSize: "var(--t-sm)" }}><Link href="/portal/documents">← My Documents</Link></p>
 
-      <AsyncState loading={doc.loading} error={doc.error} data={doc.data} onRetry={doc.reload}>
+      <AsyncState
+        loading={doc.loading}
+        error={doc.error}
+        data={doc.data}
+        onRetry={doc.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => {
           const invoice = isInvoice(data);
           const remaining = round2(data.total - data.amount_paid);
@@ -87,7 +98,10 @@ export default function PortalDocumentDetailPage({ params }: { params: Promise<{
                 billId={invoice ? undefined : data.id}
                 direction={invoice ? "RECEIVE" : "SEND"}
                 remainingBalance={remaining}
-                onSuccess={() => doc.reload()}
+                onSuccess={() => {
+                  doc.reload();
+                  toast.success("Payment registered");
+                }}
                 usePortal
               />
             </>

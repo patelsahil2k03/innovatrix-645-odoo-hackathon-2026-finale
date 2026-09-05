@@ -1,20 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentModal } from "@/components/forms/payment-modal";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { round2 } from "@/lib/use-document-lines";
 import { date, money } from "@/lib/format";
 
 export default function NewPurchasePaymentPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
   const [billId, setBillId] = useState("");
   const [payOpen, setPayOpen] = useState(false);
 
@@ -25,6 +30,7 @@ export default function NewPurchasePaymentPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Payment", href: "/purchase/payments" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New payment</h1>
@@ -67,7 +73,10 @@ export default function NewPurchasePaymentPage() {
           billId={selected.id}
           direction="SEND"
           remainingBalance={remaining}
-          onSuccess={() => router.push(`/purchase/bills/${selected.id}`)}
+          onSuccess={() => {
+            toast.success("Payment registered");
+            router.push(parentRouteOf(pathname ?? "/"));
+          }}
         />
       ) : null}
     </AppShell>

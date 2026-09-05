@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { PlusIcon } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -30,8 +32,14 @@ export default function PurchasePaymentsPage() {
   );
   useEventStream({ "payment.registered": () => payments.reload() });
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Payment" }]} />
       <div className="page-head">
         <div>
           <h1>Payments</h1>
@@ -45,7 +53,7 @@ export default function PurchasePaymentsPage() {
         ) : null}
       </div>
 
-      <SearchInput value={search} onChange={(value) => { setSearch(value); setPage(1); }} label="Search payments" />
+      <SearchInput value={search} onChange={handleSearchChange} label="Search payments" />
 
       <div className="card">
         <AsyncState
@@ -55,6 +63,7 @@ export default function PurchasePaymentsPage() {
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="No payments yet"
           onRetry={payments.reload}
+          skeleton={<SkeletonTable rows={6} columns={6} />}
         >
           {(pageData) => (
             <div className="table-scroll">

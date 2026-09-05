@@ -6,7 +6,7 @@ create, patch, archive. Each gets a `Create`, an `Update` and an `Out` — the
 optional, which a shared model cannot express without making creation permissive.
 """
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AliasPath, BaseModel, EmailStr, Field
 
 from app.models.masters import (
     AccountType,
@@ -119,6 +119,9 @@ class ProductOut(ORMModel):
     sales_price: Money
     cost_price: Money
     category_id: str | None
+    category_name: str | None = Field(
+        default=None, validation_alias=AliasPath("category", "name")
+    )
     sales_tax_pct: Money
     income_account_id: str | None
     expense_account_id: str | None

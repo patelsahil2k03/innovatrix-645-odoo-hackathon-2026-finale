@@ -1,15 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type Account, type Product } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { buildPurchasePostingPreview, lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
 import { documentLinesSchema, fieldErrorsFrom, formMessageFrom, required, validate } from "@/lib/validation";
 
@@ -19,6 +22,8 @@ function byId<T extends { id: string }>(items: T[]): Record<string, T> {
 
 export default function NewVendorBillPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
   const [reference, setReference] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [billDate, setBillDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -61,14 +66,15 @@ export default function NewVendorBillPage() {
 
     setSubmitting(true);
     try {
-      const created = await api.vendorBills.create({
+      await api.vendorBills.create({
         reference: reference || null,
         vendor_id: vendorId,
         bill_date: billDate,
         due_date: dueDate || null,
         lines: linesResult.data,
       });
-      router.push(`/purchase/bills/${created.id}`);
+      toast.success("Vendor bill created");
+      router.push(parentRouteOf(pathname ?? "/"));
     } catch (error) {
       setFormError(formMessageFrom(error));
       const fields = fieldErrorsFrom(error);
@@ -80,6 +86,7 @@ export default function NewVendorBillPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Bill", href: "/purchase/bills" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New vendor bill</h1>

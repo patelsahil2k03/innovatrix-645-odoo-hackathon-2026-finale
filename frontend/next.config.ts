@@ -31,6 +31,13 @@ const nextConfig: NextConfig = {
   // machine's LAN IP directly (http://<host-ip>:3000) to demo/review. Next 16 blocks
   // cross-origin dev requests (HMR) from anywhere not explicitly allow-listed.
   allowedDevOrigins: lanIPs(),
+  // Dev-only badge Next renders in a screen corner — bottom-left by default, and
+  // still colliding with the sidebar's live status / user / sign-out controls
+  // (AppShell moved them out of the topbar) at bottom-right on a narrow/mobile
+  // viewport, where the sidebar goes full-width. No corner is safe at every
+  // breakpoint, so disabled outright rather than chasing it. Never renders in a
+  // production build either way.
+  devIndicators: false,
   // The browser only ever talks to the origin it loaded the page from, and this
   // forwards /api/* to that same machine's backend. Three problems disappear at
   // once: no API host is baked into the bundle (so a teammate viewing

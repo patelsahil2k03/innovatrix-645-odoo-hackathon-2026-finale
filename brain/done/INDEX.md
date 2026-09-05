@@ -5,6 +5,7 @@
 
 | Date | What | File |
 |---|---|---|
+| 2026-09-05 | `useCallback`/`useMemo`/`React.memo` applied across every table/list page (row-level memo where it's a real win — LineItemsEditor, budget line editors, report GroupTables; useCallback+useMemo on search handlers and duplicate Kanban-map derivations elsewhere) — lint/tsc/build all clean | [`2026-09-05-table-usecallback-usememo.md`](2026-09-05-table-usecallback-usememo.md) |
 | 2026-09-05 | Frontend UX audit (47 routes) → P0 fixed: reusable `ConfirmDialog` + toast system, wired into all archive actions + posted-document/draft cancel actions; P1–P3 documented, not yet built | [`2026-09-05-frontend-ux-audit-p0-confirmations-toasts.md`](2026-09-05-frontend-ux-audit-p0-confirmations-toasts.md) |
 | 2026-09-05 | Apple-consistency sweep: sidebar's border-stripe selection → solid capsule, custom `<select>` chevron everywhere, dark-mode date icon fix, built the missing `/audit-log` page + a real 404 page | [`2026-09-05-design-apple-consistency-fixes.md`](2026-09-05-design-apple-consistency-fixes.md) |
 | 2026-09-05 | Design tokens wired into a Tailwind v4 `@theme` block — utilities like `bg-accent`/`rounded-lg`/`shadow-lg` now available, existing custom classes untouched | [`2026-09-05-design-tokens-wired-to-tailwind-theme.md`](2026-09-05-design-tokens-wired-to-tailwind-theme.md) |

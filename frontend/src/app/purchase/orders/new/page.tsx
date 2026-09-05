@@ -1,19 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
 import { documentLinesSchema, fieldErrorsFrom, formMessageFrom, required, validate } from "@/lib/validation";
 
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
   const [reference, setReference] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -46,13 +51,14 @@ export default function NewPurchaseOrderPage() {
 
     setSubmitting(true);
     try {
-      const created = await api.purchaseOrders.create({
+      await api.purchaseOrders.create({
         reference: reference || null,
         vendor_id: vendorId,
         order_date: orderDate,
         lines: linesResult.data,
       });
-      router.push(`/purchase/orders/${created.id}`);
+      toast.success("Purchase order created");
+      router.push(parentRouteOf(pathname ?? "/"));
     } catch (error) {
       setFormError(formMessageFrom(error));
       const fields = fieldErrorsFrom(error);
@@ -64,6 +70,7 @@ export default function NewPurchaseOrderPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Order", href: "/purchase/orders" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New purchase order</h1>

@@ -6,7 +6,9 @@ import { use, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ClosePanel } from "@/components/ui/close-panel";
@@ -65,7 +67,20 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
 
   return (
     <AppShell>
-      <AsyncState loading={order.loading} error={order.error} data={order.data} onRetry={order.reload}>
+      <Breadcrumbs
+        items={[
+          { label: "Purchase" },
+          { label: "Purchase Order", href: "/purchase/orders" },
+          { label: order.data?.number ?? "…" },
+        ]}
+      />
+      <AsyncState
+        loading={order.loading}
+        error={order.error}
+        data={order.data}
+        onRetry={order.reload}
+        skeleton={<SkeletonCard lines={4} />}
+      >
         {(data) => (
           <>
             <div className="page-head">

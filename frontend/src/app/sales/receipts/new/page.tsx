@@ -1,20 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentModal } from "@/components/forms/payment-modal";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
+import { parentRouteOf } from "@/lib/use-close-panel";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { round2 } from "@/lib/use-document-lines";
 import { date, money } from "@/lib/format";
 
 export default function NewReceiptPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
   const [invoiceId, setInvoiceId] = useState("");
   const [payOpen, setPayOpen] = useState(false);
 
@@ -29,6 +34,7 @@ export default function NewReceiptPage() {
 
   return (
     <AppShell>
+      <Breadcrumbs items={[{ label: "Sales" }, { label: "Receipt", href: "/sales/receipts" }, { label: "New" }]} />
       <div className="page-head">
         <div>
           <h1>New receipt</h1>
@@ -71,7 +77,10 @@ export default function NewReceiptPage() {
           invoiceId={selected.id}
           direction="RECEIVE"
           remainingBalance={remaining}
-          onSuccess={() => router.push(`/sales/invoices/${selected.id}`)}
+          onSuccess={() => {
+            toast.success("Receipt registered");
+            router.push(parentRouteOf(pathname ?? "/"));
+          }}
         />
       ) : null}
     </AppShell>

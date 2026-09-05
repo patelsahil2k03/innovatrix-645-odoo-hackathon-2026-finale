@@ -5,6 +5,8 @@ import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type CustomerInvoice, type VendorBill } from "@/lib/api";
@@ -29,13 +31,14 @@ export default function BudgetLineDocumentsPage({ params }: { params: Promise<{ 
 
   return (
     <AppShell>
-      <nav className="breadcrumbs" aria-label="Breadcrumb">
-        <Link href="/account/budgets">Budgets</Link>
-        <span className="sep">/</span>
-        <Link href={`/account/budgets/${id}`}>{budget.data?.name ?? "Budget"}</Link>
-        <span className="sep">/</span>
-        <span>{line?.analytic_account_name ?? "Line"}</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Account" },
+          { label: "Analytical Budget", href: "/account/budgets" },
+          { label: budget.data?.name ?? "Budget", href: `/account/budgets/${id}` },
+          { label: line?.analytic_account_name ?? "Documents" },
+        ]}
+      />
 
       <div className="page-head">
         <div>
@@ -55,6 +58,7 @@ export default function BudgetLineDocumentsPage({ params }: { params: Promise<{ 
           isEmpty={(p) => p.items.length === 0}
           emptyTitle="Nothing posted against this line yet"
           onRetry={documents.reload}
+          skeleton={<SkeletonTable rows={5} columns={5} />}
         >
           {(pageData) => (
             <div className="table-scroll">
