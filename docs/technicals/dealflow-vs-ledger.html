@@ -1,0 +1,614 @@
+<title>DealFlow or Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+
+<style>
+:root{
+  --ground:#F7F8F9;
+  --surface:#FFFFFF;
+  --sunk:#EFF1F3;
+  --ink:#12181F;
+  --muted:#5B6772;
+  --faint:#8A949E;
+  --rule:#DFE3E7;
+  --rule-strong:#C6CDD4;
+
+  --deal:#B4690E;
+  --deal-soft:#FBF1E3;
+  --ledger:#1F6F5C;
+  --ledger-soft:#E6F1ED;
+
+  --crit:#B02A25;
+  --crit-soft:#FAEBEA;
+  --warn:#8A6100;
+  --shared:#5B6772;
+
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --measure:68ch;
+  --pad:clamp(20px,5vw,64px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1418;
+    --surface:#161D23;
+    --sunk:#1B242B;
+    --ink:#E6EAEE;
+    --muted:#9AA6B1;
+    --faint:#6E7B87;
+    --rule:#2A343D;
+    --rule-strong:#3B4854;
+    --deal:#E0A155;
+    --deal-soft:#2A1F12;
+    --ledger:#5FB89E;
+    --ledger-soft:#12231E;
+    --crit:#E08A85;
+    --crit-soft:#2A1615;
+    --warn:#D6A93F;
+    --shared:#9AA6B1;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1418;
+  --surface:#161D23;
+  --sunk:#1B242B;
+  --ink:#E6EAEE;
+  --muted:#9AA6B1;
+  --faint:#6E7B87;
+  --rule:#2A343D;
+  --rule-strong:#3B4854;
+  --deal:#E0A155;
+  --deal-soft:#2A1F12;
+  --ledger:#5FB89E;
+  --ledger-soft:#12231E;
+  --crit:#E08A85;
+  --crit-soft:#2A1615;
+  --warn:#D6A93F;
+  --shared:#9AA6B1;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:var(--pad)}
+
+h1,h2,h3,h4{font-family:var(--serif);text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,5.2vw,54px);line-height:1.06;font-weight:700;letter-spacing:-.02em}
+h2{font-size:clamp(24px,3.2vw,33px);line-height:1.15;font-weight:600;letter-spacing:-.015em}
+h3{font-size:19px;line-height:1.25;font-weight:600}
+h4{font-size:16px;line-height:1.3;font-weight:600}
+p{margin:0;max-width:var(--measure)}
+a{color:inherit}
+
+.eyebrow{
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+}
+.lede{font-size:19px;line-height:1.55;color:var(--muted);max-width:60ch}
+.small{font-size:14px;line-height:1.55;color:var(--muted)}
+.tiny{font-size:13px;line-height:1.5;color:var(--faint)}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- masthead ---------- */
+.masthead{display:flex;flex-direction:column;gap:22px;padding-bottom:34px;border-bottom:2px solid var(--ink)}
+.masthead-meta{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline}
+.dot{width:4px;height:4px;border-radius:50%;background:var(--rule-strong);align-self:center}
+
+/* ---------- generic section rhythm ---------- */
+section{display:flex;flex-direction:column;gap:26px;padding:56px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-head{display:flex;flex-direction:column;gap:10px}
+
+/* ---------- verdict ---------- */
+.verdict{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--ink);
+  padding:26px 28px;display:flex;flex-direction:column;gap:14px;
+}
+.verdict p{max-width:none}
+.verdict strong{font-weight:600}
+
+/* ---------- overlap proportion ---------- */
+.props{display:flex;flex-direction:column;gap:26px}
+.prop{display:flex;flex-direction:column;gap:9px}
+.prop-top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.bar{display:flex;height:34px;border:1px solid var(--rule-strong);overflow:hidden}
+.bar span{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;white-space:nowrap;overflow:hidden}
+.seg-shared{background:var(--sunk);color:var(--muted);border-right:1px solid var(--rule-strong)}
+.seg-deal{background:var(--deal-soft);color:var(--deal)}
+.seg-ledger{background:var(--ledger-soft);color:var(--ledger)}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
+.key{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.swatch{width:11px;height:11px;border:1px solid var(--rule-strong);flex:none}
+
+/* ---------- two-column compare ---------- */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:860px){.duo{grid-template-columns:1fr}}
+
+.panel{
+  background:var(--surface);border:1px solid var(--rule);
+  padding:22px 24px 24px;display:flex;flex-direction:column;gap:16px;
+  border-top:3px solid var(--rule-strong);
+}
+.panel.deal{border-top-color:var(--deal)}
+.panel.ledger{border-top-color:var(--ledger)}
+.panel h3{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.panel p{max-width:none}
+.tag{
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 7px;border:1px solid currentColor;
+}
+.deal .tag{color:var(--deal)}
+.ledger .tag{color:var(--ledger)}
+
+.spine{
+  font-family:var(--mono);font-size:12.5px;line-height:1.5;
+  background:var(--sunk);padding:12px 14px;border-left:2px solid var(--rule-strong);
+  overflow-x:auto;
+}
+.deal .spine{border-left-color:var(--deal)}
+.ledger .spine{border-left-color:var(--ledger)}
+
+/* ---------- definition rows ---------- */
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:150px 1fr;gap:18px;padding:11px 0;border-top:1px solid var(--rule)}
+.row:first-child{border-top:0}
+.row dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding-top:3px}
+.row dd{margin:0;font-size:14.5px;line-height:1.55}
+@media (max-width:620px){.row{grid-template-columns:1fr;gap:4px}}
+
+/* ---------- entity model ---------- */
+.model{display:flex;flex-direction:column;gap:2px}
+.group{background:var(--surface);border:1px solid var(--rule);padding:16px 18px;display:flex;flex-direction:column;gap:11px}
+.group-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.group-head .eyebrow{color:var(--ink)}
+.ents{display:flex;flex-wrap:wrap;gap:6px}
+.ent{
+  font-family:var(--mono);font-size:12px;padding:4px 8px;
+  background:var(--sunk);border:1px solid var(--rule);color:var(--ink);
+  white-space:nowrap;
+}
+.ent.is-shared{border-style:dashed;border-color:var(--rule-strong);color:var(--muted)}
+.ent.is-core{border-color:currentColor;font-weight:500}
+.deal-scope .ent.is-core{color:var(--deal);background:var(--deal-soft)}
+.ledger-scope .ent.is-core{color:var(--ledger);background:var(--ledger-soft)}
+
+/* ---------- formula ---------- */
+.formula{
+  font-family:var(--mono);font-size:13px;line-height:1.75;
+  background:var(--ink);color:var(--ground);
+  padding:18px 20px;overflow-x:auto;white-space:pre;
+}
+:root[data-theme="dark"] .formula,
+:root:not([data-theme="light"]) .formula{background:#080C0F;color:#D8DEE4}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .formula{background:var(--ink);color:var(--ground)}}
+.formula b{color:#E0A155;font-weight:600}
+
+/* ---------- cut list ---------- */
+.ladder{display:flex;flex-direction:column;gap:2px}
+.tier{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--rule-strong);padding:15px 18px;display:flex;flex-direction:column;gap:9px}
+.tier.must{border-left-color:var(--crit)}
+.tier.should{border-left-color:var(--warn)}
+.tier.wow{border-left-color:var(--ledger)}
+.tier.cut{border-left-color:var(--rule-strong);background:var(--sunk)}
+.tier-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.tier-name{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.must .tier-name{color:var(--crit)}
+.should .tier-name{color:var(--warn)}
+.wow .tier-name{color:var(--ledger)}
+.cut .tier-name{color:var(--faint)}
+.tier ol,.tier ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:14.5px;line-height:1.5}
+.tier li::marker{color:var(--faint);font-family:var(--mono);font-size:12px}
+.cut li{color:var(--muted)}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint);background:var(--sunk);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.c-deal{color:var(--deal);font-weight:500}
+td.c-ledger{color:var(--ledger);font-weight:500}
+th.rowhead,td.rowhead{font-weight:500;color:var(--ink)}
+
+/* ---------- callout ---------- */
+.note{
+  border:1px solid var(--rule);border-left:3px solid var(--crit);
+  background:var(--crit-soft);padding:16px 18px;display:flex;flex-direction:column;gap:7px;
+}
+.note .eyebrow{color:var(--crit)}
+.note p{max-width:none;font-size:14.5px}
+
+.asks{display:flex;flex-direction:column;gap:2px}
+.ask{background:var(--surface);border:1px solid var(--rule);padding:15px 18px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+.ask-n{font-family:var(--mono);font-size:12px;color:var(--faint);padding-top:3px}
+.ask p{max-width:none;font-size:14.5px}
+
+footer{padding:40px 0 8px;color:var(--faint);font-size:13px;display:flex;flex-direction:column;gap:6px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:focus-visible{outline:2px solid var(--deal);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="masthead-meta">
+      <span class="eyebrow">Innovatrix #645</span><span class="dot"></span>
+      <span class="eyebrow">Odoo Hackathon 2026 — Final Round</span><span class="dot"></span>
+      <span class="eyebrow">Problem-statement selection</span>
+    </div>
+    <h1>DealFlow or Ledger</h1>
+    <p class="lede">Two of the three problem statements look similar on the surface. They are not. Here is what actually differs, what each domain model costs to build, and what gets cut when the clock runs out.</p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">The question on the table</span>
+      <h2>“There’s a lot of overlap” — half true, and the half that’s false is the half that matters</h2>
+    </div>
+
+    <div class="verdict">
+      <p>The overlap is real, but it sits entirely on the <strong>perimeter</strong>: five shared concepts — Customer, Product, Order, Invoice, Payment. Both statements walk the same outer path of <em>master data → document → payment → report</em>.</p>
+      <p>The <strong>cores are disjoint</strong>. Furniture’s centre of gravity is the <em>general ledger</em>: the interesting object is a balanced journal entry, and the hard problem is an accounting <em>invariant</em>. DealFlow’s centre of gravity is the <em>quotation state machine</em>: the interesting object is an approval chain, and the hard problem is <em>orchestration</em>. Neither core appears anywhere in the other statement.</p>
+      <p>Counted as domain concepts, the shared perimeter is <strong>42%</strong> of Furniture and only <strong>21%</strong> of DealFlow — which is another way of saying DealFlow is roughly twice the build.</p>
+    </div>
+
+    <div class="props">
+      <div class="prop">
+        <div class="prop-top">
+          <h4>Urban Furniture — 12 domain concepts</h4>
+          <span class="tiny mono num">5 shared · 7 unique</span>
+        </div>
+        <div class="bar" role="img" aria-label="Urban Furniture: 5 of 12 concepts shared with DealFlow, 7 unique to the accounting core">
+          <span class="seg-shared" style="flex:0 0 41.7%">SHARED 42%</span>
+          <span class="seg-ledger" style="flex:0 0 58.3%">LEDGER CORE 58%</span>
+        </div>
+      </div>
+      <div class="prop">
+        <div class="prop-top">
+          <h4>DealFlow360 — 24 domain concepts</h4>
+          <span class="tiny mono num">5 shared · 19 unique</span>
+        </div>
+        <div class="bar" role="img" aria-label="DealFlow360: 5 of 24 concepts shared with Urban Furniture, 19 unique to the deal governance core">
+          <span class="seg-shared" style="flex:0 0 20.8%">SHARED 21%</span>
+          <span class="seg-deal" style="flex:0 0 79.2%">DEAL GOVERNANCE CORE 79%</span>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="key"><span class="swatch" style="background:var(--sunk)"></span>Customer · Product · Order · Invoice · Payment</span>
+        <span class="key"><span class="swatch" style="background:var(--ledger-soft);border-color:var(--ledger)"></span>Chart of accounts, journals, entries, analytics, budgets, purchase side</span>
+        <span class="key"><span class="swatch" style="background:var(--deal-soft);border-color:var(--deal)"></span>Tiers, ceilings, approvals, warehouses, subscriptions, portal, alerts</span>
+      </div>
+      <p class="tiny">Counted at concept level, not table level, to avoid false precision — one concept such as “Sales Order” is two tables (header and lines). Table counts land at roughly 19 for Furniture and 26 for DealFlow.</p>
+    </div>
+
+    <div class="verdict" style="border-left-color:var(--deal)">
+      <span class="eyebrow" style="color:var(--deal)">The consequence worth acting on</span>
+      <p><strong>DealFlow360 has no ledger. Furniture is nothing but ledger.</strong> DealFlow stops at “invoice status updates correctly” — there is no chart of accounts, no double entry, no P&amp;L anywhere in its 13 pages.</p>
+      <p>So Furniture’s entire core is precisely DealFlow’s missing back end. If we build DealFlow and bolt a minimal posting engine underneath it, we hold a differentiator that <em>no other DealFlow team will have</em> — harvested from the statement we didn’t pick. That is the strongest argument for treating these as one decision rather than two.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Side by side</span>
+      <h2>The spine of each system</h2>
+      <p class="small">Find the one entity that moves through statuses with rules attached. That entity is the app.</p>
+    </div>
+
+    <div class="duo">
+      <div class="panel deal">
+        <h3>DealFlow360 <span class="tag">Orchestration</span></h3>
+        <div class="spine">Quotation
+  DRAFT → PENDING_APPROVAL → APPROVED
+        → SENT → UNDER_NEGOTIATION
+        → CONFIRMED → FULFILLED
+        ↘ REJECTED · CANCELLED</div>
+        <dl class="rows">
+          <div class="row"><dt>Hard problem</dt><dd>Routing a quote to the right approvers from a score computed across every line, then keeping that decision valid while the customer renegotiates it.</dd></div>
+          <div class="row"><dt>Proof it works</dt><dd>A quote the rep never flagged routes itself to Finance, and says why.</dd></div>
+          <div class="row"><dt>Failure mode</dt><dd>Scope. Five roles, nine config areas, nine screens, plus a separate portal.</dd></div>
+        </dl>
+      </div>
+
+      <div class="panel ledger">
+        <h3>Urban Furniture <span class="tag">Invariant</span></h3>
+        <div class="spine">Journal Entry
+  DRAFT → POSTED → (REVERSED)
+
+  ∀ entry:  Σ debit = Σ credit
+  ∀ report: aggregate lines,
+            never sum documents</div>
+        <dl class="rows">
+          <div class="row"><dt>Hard problem</dt><dd>Every document — bill, invoice, payment — emitting balanced, immutable postings, with reports derived from the ledger alone.</dd></div>
+          <div class="row"><dt>Proof it works</dt><dd>A live <span class="mono">Trial balance 0.00 ✓</span> badge that survives every demo action.</dd></div>
+          <div class="row"><dt>Failure mode</dt><dd>Flatness. Correct, complete, and visually undramatic unless the reporting earns attention.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="deal-scope">
+    <div class="sec-head">
+      <span class="eyebrow" style="color:var(--deal)">Domain model — Option A</span>
+      <h2>DealFlow360</h2>
+      <p class="small">Dashed entities are the shared perimeter we would build either way. Filled entities are the deal-governance core that exists only here.</p>
+    </div>
+
+    <div class="model">
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">Configuration &amp; catalogue</span><span class="tiny mono">12 tables</span></div>
+        <div class="ents">
+          <span class="ent is-shared">customers</span><span class="ent is-shared">products</span>
+          <span class="ent is-core">product_categories</span><span class="ent is-core">product_variants</span>
+          <span class="ent is-core">price_lists</span><span class="ent is-core">price_list_items</span>
+          <span class="ent is-core">discount_tiers</span><span class="ent is-core">approval_rules</span>
+          <span class="ent is-core">warehouses</span><span class="ent is-core">stock_levels</span>
+          <span class="ent is-core">subscription_plans</span><span class="ent is-core">upsell_rules</span>
+        </div>
+        <p class="tiny"><span class="mono">product_categories.max_discount_pct</span> and <span class="mono">discount_tiers.max_discount_pct</span> are the two ceilings the risk score reconciles. <span class="mono">approval_rules</span> holds an ordered role list, not a boolean — that is what makes the chain configurable rather than hardcoded.</p>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">Quotation &amp; approval — the core</span><span class="tiny mono">4 tables</span></div>
+        <div class="ents">
+          <span class="ent is-core">quotations</span><span class="ent is-core">quotation_lines</span>
+          <span class="ent is-core">quotation_revisions</span><span class="ent is-core">approvals</span>
+        </div>
+        <p class="tiny"><span class="mono">quotation_lines</span> stores a computed <span class="mono">ceiling_pct</span> and <span class="mono">overage_pct</span> per line — the score is derived from stored line facts, not recomputed from config at read time, so an approval stays explainable after the tiers change.</p>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">Fulfilment &amp; billing</span><span class="tiny mono">7 tables</span></div>
+        <div class="ents">
+          <span class="ent is-shared">orders</span>
+          <span class="ent is-core">fulfillment_allocations</span><span class="ent is-core">subscriptions</span>
+          <span class="ent is-core">billing_schedule_items</span><span class="ent is-shared">invoices</span>
+          <span class="ent is-core">credit_notes</span><span class="ent is-shared">payments</span>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">Portal &amp; monitoring</span><span class="tiny mono">3 tables</span></div>
+        <div class="ents">
+          <span class="ent is-core">portal_requests</span><span class="ent is-core">portal_tokens</span>
+          <span class="ent is-core">deal_alerts</span>
+        </div>
+        <p class="tiny">§7 requires the portal be “a real, separate, restricted view, not just another internal screen with a different label.” <span class="mono">portal_tokens</span> — hashed, scoped to one quotation, expiring — is what makes that claim true rather than asserted.</p>
+      </div>
+    </div>
+
+    <h4>The one algorithm to get exactly right</h4>
+    <p class="small">§10 spells this out with a worked example, which means it can be implemented to the letter and defended line by line. It must handle both stated cases: one badly-over line, and many slightly-over lines that individually look fine.</p>
+    <div class="formula">for each line:
+    ceiling  = <b>min</b>(customer_tier_ceiling, product_category_ceiling)
+    overage  = <b>max</b>(0, discount_pct − ceiling)
+    weight   = line_subtotal ÷ order_subtotal
+
+blended_score  = Σ (overage × weight)        <b>← many small violations</b>
+worst_line     = max(overage)                <b>← one large violation</b>
+
+route_on = <b>max</b>(blended_score, worst_line)
+    ↳ matched against approval_rules → ordered list of required roles</div>
+    <p class="tiny">Worked from the statement’s own example: a Gold customer at a 15% tier ceiling, with a Service line discounted 18% against a 10% category ceiling, is 8 points over on that line — so the whole quotation routes for approval even though 15% “sounds fine on paper”.</p>
+  </section>
+
+  <section class="ledger-scope">
+    <div class="sec-head">
+      <span class="eyebrow" style="color:var(--ledger)">Domain model — Option B</span>
+      <h2>Urban Furniture</h2>
+      <p class="small">The statement is six pages and mentions double entry almost in passing. That thinness is the opportunity: most teams will store balances on invoices and sum them into a balance sheet.</p>
+    </div>
+
+    <div class="model">
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">Master data</span><span class="tiny mono">7 tables</span></div>
+        <div class="ents">
+          <span class="ent is-shared">contacts</span><span class="ent is-shared">products</span>
+          <span class="ent is-core">accounts</span><span class="ent is-core">journals</span>
+          <span class="ent is-core">analytic_accounts</span><span class="ent is-core">budgets</span>
+          <span class="ent is-core">budget_lines</span>
+        </div>
+        <p class="tiny">Contacts and products carry account mappings — <span class="mono">receivable_account_id</span>, <span class="mono">income_account_id</span> — which is what lets a document post itself without the user choosing accounts by hand.</p>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">The ledger — the core</span><span class="tiny mono">2 tables</span></div>
+        <div class="ents">
+          <span class="ent is-core">journal_entries</span><span class="ent is-core">journal_lines</span>
+        </div>
+        <p class="tiny">Two tables carry the entire differentiator. <span class="mono">journal_entries</span> holds a gapless sequence number, an immutable <span class="mono">POSTED</span> state and a <span class="mono">reversed_by_id</span>; corrections create a reversing entry rather than an update. The <span class="mono">Σ debit = Σ credit</span> rule belongs in a database constraint, not only in application code.</p>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="eyebrow">Documents — each one posts to the ledger</span><span class="tiny mono">10 tables</span></div>
+        <div class="ents">
+          <span class="ent is-core">purchase_orders</span><span class="ent is-core">purchase_order_lines</span>
+          <span class="ent is-core">vendor_bills</span><span class="ent is-core">vendor_bill_lines</span>
+          <span class="ent is-shared">sales_orders</span><span class="ent is-shared">sales_order_lines</span>
+          <span class="ent is-shared">customer_invoices</span><span class="ent is-shared">customer_invoice_lines</span>
+          <span class="ent is-shared">payments</span><span class="ent is-core">payment_allocations</span>
+        </div>
+        <p class="tiny">Furniture is bidirectional — it has a purchase side (PO → Bill) that DealFlow has no equivalent of. <span class="mono">payment_allocations</span> is what allows one payment to settle several invoices partially, which the statement doesn’t ask for and every real system needs.</p>
+      </div>
+    </div>
+
+    <h4>The one invariant to get exactly right</h4>
+    <div class="formula">post(document) → exactly one balanced journal_entry
+                 <b>constraint: Σ debit = Σ credit</b>
+
+Balance Sheet = Σ journal_lines  <b>group by</b> account.type ∈ {ASSET, LIABILITY, EQUITY}
+P&amp;L           = Σ journal_lines  <b>group by</b> account.type ∈ {INCOME, EXPENSE}
+Trial balance = Σ debit − Σ credit  <b>≡ 0</b>     ← assert live, on screen
+
+correction    = reversing entry, <b>never</b> UPDATE
+retry         = idempotency_key, <b>never</b> a second posting</div>
+    <p class="tiny">Reports aggregate the ledger and never sum documents. That single rule is the difference between an accounting system and an invoice list with a balance sheet drawn on top — and it is visible from the outside the moment a judge asks what happens after a credit note.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Scope</span>
+      <h2>What ships, and what we say out loud that we cut</h2>
+      <p class="small">Sorted into the playbook’s own four tiers. The cut list goes in the README verbatim — an honest out-of-scope section did not cost us anything in the virtual round.</p>
+    </div>
+
+    <div class="duo">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <h3 style="color:var(--deal)">DealFlow360</h3>
+        <div class="ladder">
+          <div class="tier must">
+            <div class="tier-head"><span class="tier-name">Must</span><span class="tiny">Grade floor — the §9 test flow walks all of it</span></div>
+            <ol>
+              <li>Auth, five roles, RBAC on every write</li>
+              <li>Products, categories, price list</li>
+              <li>Discount tiers, category ceilings, approval chain config</li>
+              <li>Quotation builder — lines, quantities, discounts, live margin</li>
+              <li><strong>Blended risk score and automatic routing</strong></li>
+              <li>Approval screen with logged approve / reject / return</li>
+              <li>Warehouse stock, auto split, manual override</li>
+              <li>One order mixing a one-time and a recurring line</li>
+              <li>Customer portal — separate, restricted, counter-discount re-enters approval</li>
+              <li>Deal health: stalled deals and discount anomalies</li>
+              <li>Confirm → payment → invoice status</li>
+            </ol>
+          </div>
+          <div class="tier should">
+            <div class="tier-head"><span class="tier-name">Should</span><span class="tiny">After Must is green</span></div>
+            <ul><li>Pipeline kanban</li><li>Upsell panel with margin delta</li><li>Report filters — period, rep, status, product</li><li>PDF / XLS export</li><li>Backorder consolidation prompt</li></ul>
+          </div>
+          <div class="tier wow">
+            <div class="tier-head"><span class="tier-name">Wow</span><span class="tiny">Exactly one</span></div>
+            <ul><li><strong>“Why does this need approval?”</strong> — the score explained line by line, plus a what-if discount slider that moves the required approval level before anything is committed</li></ul>
+          </div>
+          <div class="tier cut">
+            <div class="tier-head"><span class="tier-name">Cut</span><span class="tiny">Stated in the README</span></div>
+            <ul><li>Multi-currency and multi-company (the statement calls these a bonus, not a requirement)</li><li>Variants beyond one attribute</li><li>Proration beyond mid-cycle quantity change</li><li>Credit notes beyond a flat refund</li><li>Emailing quotes — the portal link replaces it</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <h3 style="color:var(--ledger)">Urban Furniture</h3>
+        <div class="ladder">
+          <div class="tier must">
+            <div class="tier-head"><span class="tier-name">Must</span><span class="tiny">Grade floor — §7 use-case steps</span></div>
+            <ol>
+              <li>Auth, three roles including the contact portal</li>
+              <li>Contact, product, chart of accounts, journal masters</li>
+              <li><strong>The posting engine — document to balanced entry</strong></li>
+              <li>PO → Vendor Bill → Payment</li>
+              <li>SO → Customer Invoice → Payment</li>
+              <li>Balance Sheet and P&amp;L, computed from the ledger</li>
+              <li>Analytic account, budget, budget report</li>
+              <li>Contact portal — own invoices only, make a payment</li>
+            </ol>
+          </div>
+          <div class="tier should">
+            <div class="tier-head"><span class="tier-name">Should</span><span class="tiny">After Must is green</span></div>
+            <ul><li>Partial payments allocated across documents</li><li>Tax on sales lines</li><li>Aged receivables and payables</li><li>Period lock so a closed month cannot be posted into</li></ul>
+          </div>
+          <div class="tier wow">
+            <div class="tier-head"><span class="tier-name">Wow</span><span class="tiny">Exactly one</span></div>
+            <ul><li><strong>Drill-down from any report figure</strong> — Balance Sheet number → account → journal lines → source document, with a permanent <span class="mono">Trial balance 0.00 ✓</span> badge that never stops being true</li></ul>
+          </div>
+          <div class="tier cut">
+            <div class="tier-head"><span class="tier-name">Cut</span><span class="tiny">Stated in the README</span></div>
+            <ul><li>Multi-currency and FX gain/loss</li><li>Bank reconciliation</li><li>Recurring and deferred entries</li><li>Fiscal-year closing entries</li><li>Asset depreciation</li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">The case for each</span>
+      <h2>Why take it</h2>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Argument</th><th>DealFlow360</th><th>Urban Furniture</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th class="rowhead" scope="row">Scored criterion #1 — live data</th>
+            <td class="c-deal">Native. Deal health, stalled alerts, live margin, stock moving under a split.</td>
+            <td>Engineered. The ledger has to be made to visibly move.</td>
+          </tr>
+          <tr>
+            <th class="rowhead" scope="row">Reuses what we already built</th>
+            <td class="c-deal">Most. §A3 requires approvals logged with user, timestamp and reason — that is our audit middleware, already tested.</td>
+            <td>Some. Audit is useful here but not required by the statement.</td>
+          </tr>
+          <tr>
+            <th class="rowhead" scope="row">Specification quality</th>
+            <td class="c-deal">13 pages, an algorithm with a worked example, and an 8-step test flow that is effectively the judges’ script.</td>
+            <td>6 pages. Thin enough that meeting it is easy and exceeding it is obvious.</td>
+          </tr>
+          <tr>
+            <th class="rowhead" scope="row">Differentiation ceiling</th>
+            <td class="c-deal">High — genuinely implementing the hard parts instead of faking them.</td>
+            <td class="c-ledger">Highest relative to the statement — a real posting engine beats an invoice list outright.</td>
+          </tr>
+          <tr>
+            <th class="rowhead" scope="row">Confidence of finishing</th>
+            <td>Lower. Twice the domain model.</td>
+            <td class="c-ledger">Highest. Smallest, simplest model of the three statements.</td>
+          </tr>
+          <tr>
+            <th class="rowhead" scope="row">Demo drama</th>
+            <td class="c-deal">A quote routes itself to Finance and explains why; the customer counters from a portal and it re-routes live.</td>
+            <td>A number on a report opens the journal line that produced it.</td>
+          </tr>
+          <tr>
+            <th class="rowhead" scope="row">Second UI surface</th>
+            <td class="c-deal">A genuinely separate customer portal — required to be real, and few teams will build one.</td>
+            <td>A smaller contact portal — view own invoices, pay.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="eyebrow">Where the recommendation could be wrong</span>
+      <p>DealFlow is roughly twice the build, and the argument that our foundation absorbs the difference is a judgement, not a measurement. If the ranking is wrong, this is where it breaks — and the failure shows up late, around the point where the portal and the subscription billing both still need writing.</p>
+      <p>Furniture is the safer pick and I won’t dress that up as a weakness. It is also plausibly the more crowded pick, precisely because it is safer — but that is unknowable from here, and I’m not going to guess at what other teams will choose.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Before this is decided</span>
+      <h2>Three open items</h2>
+    </div>
+    <div class="asks">
+      <div class="ask"><span class="ask-n num">01</span><p><strong>Open the mockup links.</strong> Both PDFs end with an Excalidraw URL showing the UI the evaluator has in mind. Nobody has opened them yet, and they could change the effort estimate materially in either direction.</p></div>
+      <div class="ask"><span class="ask-n num">02</span><p><strong>Decide whether the ledger rides along.</strong> If DealFlow is chosen, adding a minimal posting engine underneath it is the single strongest differentiator available — and also the fastest way to overrun. It is a deliberate call, not something to drift into at hour eighteen.</p></div>
+      <div class="ask"><span class="ask-n num">03</span><p><strong>Pick the one wow, and only one.</strong> Both cut lists name a single item. Two wow features is how a team ends up with neither finished.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Prepared for Team Innovatrix #645 · Sahil Patel, Devasya Joshi, Gaurav Rathva, Pranjal Shah</p>
+    <p>Entity counts are read from the two problem statements directly. Ledger invariants follow standard double-entry practice; the fulfilment split is a known NP-hard problem, so any implementation here is an explicitly documented heuristic, not an optimum.</p>
+  </footer>
+
+</div>
