@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Start the whole dev stack.
+# Start everything for development.
 #
-#   ./scripts/dev.sh              api + web, SQLite (no Docker)   ← default
-#   ./scripts/dev.sh --db docker  also start Postgres in Docker
+#   ./scripts/dev.sh        ← the only command. Everyone runs this.
+#
+# There is no database flag to get wrong. `DATABASE_URL` in .env already says
+# whether this machine hosts the database or connects to someone else's, so this
+# script reads it and does the right thing:
+#
+#   DATABASE_URL points at localhost  → you host it; the container is started here
+#   DATABASE_URL points at an IP      → someone else hosts it; nothing is started,
+#                                       the connection is checked before booting
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-
-USE_DOCKER=0
-[[ "${1:-}" == "--db" && "${2:-}" == "docker" ]] && USE_DOCKER=1
 
 # One .env at the repo root — backend reads it by path (app/core/settings.py),
 # no per-app copy needed. Only the frontend needs a generated file, since Next
@@ -17,19 +21,34 @@ USE_DOCKER=0
 [ -f .env ] || { cp .env.example .env; echo "→ created .env from .env.example"; }
 grep '^NEXT_PUBLIC_' .env > frontend/.env.local || true
 
-# A leftover listener on 3000/8000 is what causes "port in use, using 3001 instead",
-# which then breaks CORS in confusing ways. Clear them before starting, not just on exit.
+DB_URL="$(grep -E '^DATABASE_URL=' .env | tail -1 | cut -d= -f2-)"
+# Host between "@" and the following ":" or "/". Empty for a sqlite URL.
+DB_HOST="$(printf '%s' "$DB_URL" | sed -n 's|.*@\([^:/]*\).*|\1|p')"
+
+# A leftover listener on 3000/8000 is what causes "port in use, using 3001 instead".
 free_ports() { ./scripts/kill-ports.sh >/dev/null 2>&1 || true; }
 free_ports
 
-if [ "$USE_DOCKER" = "1" ]; then
-  echo "→ starting postgres…"
-  docker compose -f infra/docker-compose.yml up -d db
-  echo "→ waiting for db health…"
-  until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
-    sleep 1
-  done
-fi
+case "$DB_HOST" in
+  localhost|127.0.0.1|"")
+    echo "→ this machine hosts the database — starting postgres…"
+    docker compose -f infra/docker-compose.yml up -d db
+    until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
+      sleep 1
+    done
+    echo "→ postgres healthy. Teammates connect with:"
+    echo "     DATABASE_URL=…@$(hostname -I | awk '{print $1}'):5432/app"
+    ;;
+  *)
+    echo "→ using the shared database on $DB_HOST (not starting one here)"
+    # Fail loudly now rather than as a wall of tracebacks after both servers boot.
+    if ! (exec 3<>"/dev/tcp/$DB_HOST/5432") 2>/dev/null; then
+      echo "✗ cannot reach $DB_HOST:5432 — is that machine up, and are you both on"
+      echo "  the same network? See docs/01_STACK.md §3.2." >&2
+      exit 1
+    fi
+    ;;
+esac
 
 cleanup() {
   echo; echo "→ stopping…"
