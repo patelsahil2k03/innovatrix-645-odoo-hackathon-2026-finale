@@ -1,21 +1,24 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ContactForm, contactToFormValues } from "@/components/forms/contact-form";
 import { api, type ContactCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { can } from "@/lib/roles";
 
 export default function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
+  const toast = useToast();
   const contact = useFetch(() => api.contacts.get(id), [id]);
-  const [archiving, setArchiving] = useState(false);
 
   const canManage = can.manageMasterData(user?.role.name);
 
@@ -24,15 +27,11 @@ export default function ContactDetailPage({ params }: { params: Promise<{ id: st
     contact.reload();
   }
 
-  async function handleArchive() {
-    setArchiving(true);
-    try {
-      await api.contacts.archive(id);
-      contact.reload();
-    } finally {
-      setArchiving(false);
-    }
-  }
+  const archiveAction = useConfirmAction(async () => {
+    await api.contacts.archive(id);
+    contact.reload();
+    toast.success("Contact archived");
+  });
 
   return (
     <AppShell>
@@ -52,8 +51,8 @@ export default function ContactDetailPage({ params }: { params: Promise<{ id: st
                 </p>
               </div>
               {canManage && !data.is_archived ? (
-                <button type="button" className="btn btn-danger" onClick={handleArchive} disabled={archiving}>
-                  {archiving ? "Archiving…" : "Archive"}
+                <button type="button" className="btn btn-danger" onClick={archiveAction.request}>
+                  Archive
                 </button>
               ) : null}
             </div>
@@ -69,6 +68,25 @@ export default function ContactDetailPage({ params }: { params: Promise<{ id: st
               onSubmit={handleUpdate}
               submitLabel="Save changes"
               readOnly={!canManage || data.is_archived}
+            />
+
+            <ConfirmDialog
+              open={archiveAction.open}
+              onCancel={archiveAction.cancel}
+              onConfirm={archiveAction.confirm}
+              pending={archiveAction.pending}
+              error={archiveAction.error}
+              tone="danger"
+              title="Archive this contact?"
+              confirmLabel="Archive contact"
+              pendingLabel="Archiving…"
+              description={
+                <p>
+                  {data.name} will no longer appear in active lists or pickers on new documents.
+                  Existing invoices, bills and orders for this contact are untouched, but there
+                  is no way to unarchive it from the app yet.
+                </p>
+              }
             />
           </>
         )}

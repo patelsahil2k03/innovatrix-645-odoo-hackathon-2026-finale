@@ -6,12 +6,15 @@ import { use, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useConfirmAction } from "@/lib/use-confirm-action";
 import { formMessageFrom } from "@/lib/validation";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { date } from "@/lib/format";
 import { can } from "@/lib/roles";
 
@@ -19,6 +22,7 @@ export default function SalesOrderDetailPage({ params }: { params: Promise<{ id:
   const { id } = use(params);
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
   const order = useFetch(() => api.salesOrders.get(id), [id]);
   const products = useFetch(() => api.products.list({ page_size: 200 }), []);
   const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200 }), []);
@@ -52,18 +56,11 @@ export default function SalesOrderDetailPage({ params }: { params: Promise<{ id:
     }
   }
 
-  async function handleCancel() {
-    setWorking(true);
-    setActionError(null);
-    try {
-      await api.salesOrders.cancel(id);
-      order.reload();
-    } catch (error) {
-      setActionError(formMessageFrom(error));
-    } finally {
-      setWorking(false);
-    }
-  }
+  const cancelAction = useConfirmAction(async () => {
+    await api.salesOrders.cancel(id);
+    order.reload();
+    toast.success("Sales order cancelled");
+  });
 
   return (
     <AppShell>
@@ -81,7 +78,7 @@ export default function SalesOrderDetailPage({ params }: { params: Promise<{ id:
               {canRecord ? (
                 <div className="row">
                   {data.status === "DRAFT" ? (
-                    <button type="button" className="btn" onClick={handleCancel} disabled={working}>Cancel</button>
+                    <button type="button" className="btn" onClick={cancelAction.request} disabled={working}>Cancel</button>
                   ) : null}
                   {data.status === "DRAFT" ? (
                     <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={working}>Confirm</button>
@@ -113,6 +110,18 @@ export default function SalesOrderDetailPage({ params }: { params: Promise<{ id:
             <p style={{ fontSize: "var(--t-sm)", color: "var(--text-muted)" }}>
               <Link href="/sales/orders">← Back to sales orders</Link>
             </p>
+
+            <ConfirmDialog
+              open={cancelAction.open}
+              onCancel={cancelAction.cancel}
+              onConfirm={cancelAction.confirm}
+              pending={cancelAction.pending}
+              error={cancelAction.error}
+              title="Cancel this sales order?"
+              confirmLabel="Cancel order"
+              pendingLabel="Cancelling…"
+              description={<p>This discards the draft. It hasn&apos;t been invoiced yet, so nothing in the ledger is affected — but the order itself can&apos;t be recovered once cancelled.</p>}
+            />
           </>
         )}
       </AsyncState>

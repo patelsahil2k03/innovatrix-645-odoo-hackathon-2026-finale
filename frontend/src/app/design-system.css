@@ -516,6 +516,12 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .modal-body { padding: var(--s-4); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s-4); }
 .modal-foot { display: flex; justify-content: flex-end; gap: var(--s-2); padding: var(--s-4); border-top: 1px solid var(--border); }
 
+/* ConfirmDialog — a Modal with a fixed icon + body layout, for destructive or
+   irreversible actions (archive, cancel a posted document). */
+.confirm-dialog-body { display: flex; gap: var(--s-3); align-items: flex-start; }
+.confirm-dialog-icon { flex-shrink: 0; margin-top: 2px; color: var(--text-muted); }
+.confirm-dialog-icon-danger { color: var(--danger); }
+
 /* ═══ TABS ═══════════════════════════════════════════════════════════════ */
 
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -539,6 +545,19 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .alert-danger { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
 .alert-ok { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
 .alert-info { background: var(--info-soft); border-color: var(--info-border); color: var(--info); }
+
+/* ═══ TOAST ══════════════════════════════════════════════════════════════ */
+
+.toast-viewport { position: fixed; bottom: var(--s-5); right: var(--s-5); z-index: 200; display: flex; flex-direction: column; gap: var(--s-2); max-width: 360px; }
+.toast { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-radius: var(--radius-sm); border: 1px solid; box-shadow: var(--shadow-md); animation: toast-in 0.18s ease-out; }
+.toast-success { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
+.toast-error { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
+.toast-info { background: var(--info-soft); border-color: var(--info-border); color: var(--info); }
+.toast-message { flex: 1; font-size: var(--t-sm); color: var(--text); }
+.toast-dismiss { display: inline-flex; padding: 2px; border: 0; background: none; color: var(--text-muted); border-radius: var(--radius-full); cursor: pointer; }
+.toast-dismiss:hover { background: var(--surface-2); color: var(--text); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 520px) { .toast-viewport { left: var(--s-3); right: var(--s-3); max-width: none; } }
 
 .auth-screen { min-height: 100vh; display: grid; place-items: center; padding: var(--s-5); background: var(--surface-2); }
 .auth-card { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: var(--s-5); }
