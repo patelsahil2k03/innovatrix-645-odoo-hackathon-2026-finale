@@ -134,6 +134,16 @@ export interface Notification {
   created_at: string;
 }
 
+export interface AuditLog {
+  id: string;
+  user_id: string;
+  action: string;
+  entity_name: string;
+  entity_id: string | null;
+  status_code: number;
+  created_at: string;
+}
+
 /* ── Domain types — docs/03_DATA_MODEL.md ──────────────────────────────────── */
 
 export type ContactType = "CUSTOMER" | "VENDOR" | "BOTH";
@@ -488,7 +498,7 @@ export const api = {
   },
 
   auditLogs: {
-    list: (params?: ListParams) => get<Page<Record<string, unknown>>>("/audit-logs", params),
+    list: (params?: ListParams) => get<Page<AuditLog>>("/audit-logs", params),
   },
 
   // ── Master data (04_API_CONTRACT.md §3.1) ────────────────────────────────

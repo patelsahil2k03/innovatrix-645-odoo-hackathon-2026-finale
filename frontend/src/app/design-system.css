@@ -13,11 +13,15 @@
 
    Full Apple aesthetic (frontend/DESIGN.md) applied to the CHROME and COMPONENT GRAMMAR:
    Action Blue accent, its radius scale, pill-shaped buttons everywhere, "no shadow except
-   product imagery" (cards/kanban carry a hairline border instead), a persistent near-black
-   nav rail (Apple's global-nav ink #1d1d1f, always dark regardless of theme) with Sky Link
-   Blue (#2997ff) for the active item since Action Blue disappears on dark, a frosted
-   translucent topbar (Apple's sub-nav-frosted), the tight heading tracking, the 300/400/
-   600/700 weight ladder, and the scale(0.97) press micro-interaction.
+   product imagery" (cards/kanban carry a hairline border instead), a frosted translucent
+   topbar (Apple's sub-nav-frosted), the tight heading tracking, the 300/400/600/700 weight
+   ladder, and the scale(0.97) press micro-interaction. The sidebar follows the light/dark
+   theme like everything else in the app (an earlier pass made it permanently near-black,
+   mirroring Apple's global-nav bar, which never changes with the page — reverted per
+   explicit feedback that a fixed-dark sidebar next to a light theme read as broken, not
+   deliberate). Its selected-item state is still a solid capsule fill, never a coloured
+   side-bar/stripe — DESIGN.md's own selected-state pattern
+   (`configurator-option-chip-selected`) is a full-shape upgrade, not an edge decoration.
    What did NOT change: table row density, form field sizes, number formatting — those are
    docs/05_FRONTEND.md's "precise and dense, numbers are the content" non-negotiables, and
    they win over DESIGN.md's airier marketing proportions wherever the two would collide.
@@ -70,32 +74,24 @@
   /* Frosted translucent surface for the topbar (DESIGN.md's sub-nav-frosted). */
   --surface-translucent: hsl(var(--accent-h) 20% 96% / 0.72);
 
+  /* Custom <select> chevron — a bare, unstyled native select is the one place
+     OS chrome breaks the illusion. Neutral gray on purpose: DESIGN.md's Do's
+     reserve the accent for things that ARE an action, not a decoration. */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%236b6b70' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
   --t-xs: 11px; --t-sm: 12.5px; --t-base: 14px;
   --t-md: 16px; --t-lg: 20px;   --t-xl: 26px;  --t-2xl: 40px;
 
   --sidebar-w: 244px;
   --sidebar-w-collapsed: 68px;
   --topbar-h: 60px;
-
-  /* ── Nav rail — fixed, NOT theme-derived. Apple's global-nav is always black
-     regardless of site theme; same idea here so the persistent chrome never
-     flips with light/dark mode. Active item uses Sky Link Blue (#2997ff),
-     DESIGN.md's rule: Action Blue disappears against a dark tile. ────────── */
-  --nav-bg:          #1d1d1f;
-  --nav-text:        #ffffff;
-  --nav-text-muted:  #98989d;
-  --nav-text-faint:  #6e6e73;
-  --nav-active-bg:   rgba(41, 151, 255, 0.16);
-  --nav-active-text: #2997ff;
-  --nav-hover-bg:    rgba(255, 255, 255, 0.06);
-  --nav-border:      rgba(255, 255, 255, 0.08);
 }
 
 /* ═══ TAILWIND THEME ═════════════════════════════════════════════════════════
    Exposes the tokens above (and frontend/DESIGN.md's Apple language) as real
-   Tailwind utilities — bg-accent, text-nav-text-muted, rounded-lg, shadow-lg,
-   font-sans, text-2xl — so new markup can reach for utilities instead of
-   hand-rolling another custom class, without inventing a second palette.
+   Tailwind utilities — bg-accent, rounded-lg, shadow-lg, font-sans, text-2xl —
+   so new markup can reach for utilities instead of hand-rolling another
+   custom class, without inventing a second palette.
 
    Colors alias the plain :root custom properties above via var(), which is
    what makes dark mode "just work" for the generated utilities too: the
@@ -131,16 +127,6 @@
   --color-warn:    var(--warn);    --color-warn-soft:   var(--warn-soft);   --color-warn-border:   var(--warn-border);
   --color-danger:  var(--danger);  --color-danger-soft: var(--danger-soft); --color-danger-border: var(--danger-border);
   --color-info:    var(--info);    --color-info-soft:   var(--info-soft);   --color-info-border:   var(--info-border);
-
-  /* Nav rail — fixed, not theme-derived (see the :root block's comment). */
-  --color-nav-bg:          var(--nav-bg);
-  --color-nav-text:        var(--nav-text);
-  --color-nav-text-muted:  var(--nav-text-muted);
-  --color-nav-text-faint:  var(--nav-text-faint);
-  --color-nav-active-bg:   var(--nav-active-bg);
-  --color-nav-active-text: var(--nav-active-text);
-  --color-nav-hover-bg:    var(--nav-hover-bg);
-  --color-nav-border:      var(--nav-border);
 
   /* Text scale — our `--t-*` names don't collide with Tailwind's `--text-*`
      namespace, so these are plain aliases too. */
@@ -203,6 +189,7 @@
     --shadow-lg: 0 24px 48px -24px #000c;
 
     --surface-translucent: hsl(var(--accent-h) 20% 13% / 0.72);
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%23c7c7cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 
@@ -234,6 +221,7 @@
   --shadow-lg: 0 24px 48px -24px #000c;
 
   --surface-translucent: hsl(var(--accent-h) 20% 13% / 0.72);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%23c7c7cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* ═══ BASE ═══════════════════════════════════════════════════════════════ */
@@ -284,9 +272,15 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 
 /* ═══ LAYOUT ═════════════════════════════════════════════════════════════ */
 
-.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+/* Fixed 100vh frame — sidebar + topbar never move, only .app-main scrolls
+   internally. `min-height` here (the old value) let the grid row grow taller
+   than the sidebar's own 100vh box on any page longer than one screen: below
+   that point the sidebar's column showed the page background bleeding
+   through, and the sidebar stopped tracking the scroll entirely. `height`
+   keeps the frame exactly one viewport tall so that never happens. */
+.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100vh; }
 .app-shell[data-collapsed="true"] { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
-.app-main { display: flex; flex-direction: column; min-width: 0; }
+.app-main { display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow-y: auto; }
 .page { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-5); max-width: 100%; }
 
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
@@ -299,7 +293,12 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-4); }
 
 @media (max-width: 860px) {
-  .app-shell, .app-shell[data-collapsed="true"] { grid-template-columns: 1fr; }
+  /* Below this width sidebar and main stack in one column instead of sitting
+     side by side — the fixed-100vh-frame trick above would clip .app-main's
+     row entirely, so fall back to plain document flow + page-level scroll. */
+  .app-shell, .app-shell[data-collapsed="true"] { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+  .app-main { height: auto; overflow-y: visible; }
+  .sidebar { position: static; height: auto; }
   .page { padding: var(--s-4) var(--s-3); }
 }
 
@@ -378,6 +377,29 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+/* A bare native <select> is the one place OS chrome still shows through —
+   Apple's inputs never look like that. Custom chevron, no native arrow. */
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 11px 11px;
+}
+/* The native date-picker glyph is a fixed dark icon regardless of theme —
+   invisible on a dark input otherwise. */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme="light"]) input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
 .input[aria-invalid="true"], .select[aria-invalid="true"], .textarea[aria-invalid="true"] {
   border-color: var(--danger);
 }
@@ -444,27 +466,32 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .kpi-sub { font-size: var(--t-xs); color: var(--text-faint); }
 
 /* ═══ SIDEBAR / TOPBAR ═══════════════════════════════════════════════════
-   Sidebar = Apple's global-nav, made persistent and full-height: fixed near-
-   black chrome (--nav-* tokens, not theme-derived) so the product (the data)
-   is what changes with light/dark, not the frame around it.
+   Sidebar follows the light/dark theme like every other surface — same
+   --surface/--text tokens as a card, so it repaints for free on theme flip.
    Topbar = Apple's sub-nav-frosted: translucent + backdrop-blur, floating
    over the page rather than a flat bar. */
 
-.sidebar { background: var(--nav-bg); border-right: 1px solid var(--nav-border); display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-3); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.sidebar-brand { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) var(--s-3); font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em; color: var(--nav-text); }
-.sidebar-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--nav-active-text); flex: none; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-3); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.sidebar-brand { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) var(--s-3); font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em; color: var(--text); }
+.sidebar-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+/* DESIGN.md never marks "selected" with a colour bar down the side — that's a
+   generic dashboard convention (Linear/Vercel/GitHub), not Apple's. Its own
+   selected-state pattern (configurator-option-chip-selected) is a full-shape
+   upgrade: same shape, stronger fill/border, nothing bolted onto one edge. So
+   the active row here is a solid capsule — background + text colour only,
+   using the same --accent/--accent-ink pair every primary button uses. */
 .nav-item {
   display: flex; align-items: center; gap: var(--s-3);
   padding: 9px var(--s-3);
-  border-radius: var(--radius-sm);
-  color: var(--nav-text-muted);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
   font-size: var(--t-sm); font-weight: 400;
-  border-left: 2px solid transparent;
+  letter-spacing: -0.006em;
 }
-.nav-item:hover { background: var(--nav-hover-bg); color: var(--nav-text); text-decoration: none; }
-.nav-item[aria-current="page"] { background: var(--nav-active-bg); color: var(--nav-active-text); border-left-color: var(--nav-active-text); font-weight: 600; }
-.nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--nav-text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 600; }
+.nav-item:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.nav-item[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 600; }
 
 .topbar {
   height: var(--topbar-h);
@@ -525,9 +552,9 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   gap: var(--s-2); padding: var(--s-3) var(--s-3) 4px;
   background: none; border: 0; cursor: pointer; font: inherit;
   font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--nav-text-faint); font-weight: 600;
+  color: var(--text-faint); font-weight: 600;
 }
-.nav-group-toggle:hover { color: var(--nav-text-muted); }
+.nav-group-toggle:hover { color: var(--text-muted); }
 .nav-group-toggle svg { transition: transform 120ms ease; }
 .nav-group-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
 .nav-group-items { display: flex; flex-direction: column; gap: 2px; }
