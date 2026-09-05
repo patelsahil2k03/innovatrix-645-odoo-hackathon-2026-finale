@@ -23,8 +23,31 @@ from app.core.security import hash_password
 from app.core.settings import get_settings
 from app.models import Base
 from app.models.auth import Role, User
-from app.models.masters import Account, AccountType, Journal, JournalType
+from app.models.budgets import Budget, BudgetLine
+from app.models.documents import (
+    CustomerInvoice,
+    CustomerInvoiceLine,
+    PurchaseOrder,
+    PurchaseOrderLine,
+    SalesOrder,
+    SalesOrderLine,
+    VendorBill,
+    VendorBillLine,
+)
+from app.models.ledger import JournalEntry, JournalLine, NumberSequence
+from app.models.masters import (
+    Account,
+    AccountType,
+    AnalyticAccount,
+    Contact,
+    Journal,
+    JournalType,
+    Product,
+    ProductCategory,
+)
+from app.models.payments import Payment
 from app.models.system import Notification
+from app.seed.domain import seed_domain
 from app.seed.generators import Gen
 
 settings = get_settings()
@@ -80,8 +103,38 @@ def create_tables() -> None:
 
 
 def reset_tables(db: Session) -> None:
-    """Delete all rows, children first so foreign keys stay satisfied."""
-    for model in (Notification, User, Role, Journal, Account):
+    """Delete all rows, children first so foreign keys stay satisfied.
+
+    Order matters and is not alphabetical: payments and documents reference
+    journal entries, entries reference journals and accounts, and everything
+    references contacts. Deleting a parent first fails on the foreign keys that
+    `PRAGMA foreign_keys=ON` (core/database.py) deliberately enforces.
+    """
+    for model in (
+        Payment,
+        JournalLine,
+        CustomerInvoiceLine,
+        VendorBillLine,
+        SalesOrderLine,
+        PurchaseOrderLine,
+        CustomerInvoice,
+        VendorBill,
+        SalesOrder,
+        PurchaseOrder,
+        JournalEntry,
+        BudgetLine,
+        Budget,
+        NumberSequence,
+        Notification,
+        User,
+        Role,
+        Journal,
+        Product,
+        ProductCategory,
+        AnalyticAccount,
+        Contact,
+        Account,
+    ):
         db.query(model).delete()
     db.commit()
 
@@ -181,9 +234,11 @@ def seed_all(db: Session, *, seed_value: int = 42) -> dict[str, int]:
     accounts = seed_chart_of_accounts(db)
     journals = seed_journals(db, accounts)
 
-    # ★ Contacts, products, and any demo documents/transactions are the team's
-    # own domain seed data, added as each feature is built — not fabricated
-    # here ahead of the schema that would give them meaning.
+    # The accounting domain: contacts, products, a month of trading, and the
+    # budgets that measure it. Built through services/, so seeded data obeys
+    # exactly the rules the API enforces (see seed/domain.py).
+    admin = next((u for u in users if u.role_id == roles["Admin"].id), None)
+    domain_counts = seed_domain(db, accounts, admin.id if admin else None, gen)
 
     return {
         "roles": len(roles),
@@ -191,7 +246,20 @@ def seed_all(db: Session, *, seed_value: int = 42) -> dict[str, int]:
         "notifications": notifications,
         "accounts": len(accounts),
         "journals": len(journals),
+        **domain_counts,
     }
+
+
+def db_portal_login() -> tuple[str, str] | None:
+    """The seeded portal user, looked up for the login summary."""
+    db = SessionLocal()
+    try:
+        user = db.execute(
+            select(User).where(User.email == "portal@urbanfurniture.in")
+        ).scalar_one_or_none()
+        return (user.email, user.full_name) if user else None
+    finally:
+        db.close()
 
 
 def main() -> None:
@@ -203,6 +271,15 @@ def main() -> None:
     `tests/test_seed_smoke.py` now imports and calls this — if the header disappears
     again, the test suite fails immediately.
     """
+    # Windows consoles default to cp1252, which cannot encode the check mark
+    # and box characters below — printing them raises UnicodeEncodeError and
+    # the documented setup command dies *after* successfully seeding, which
+    # reads exactly like a failed seed. Force UTF-8 on the way out instead of
+    # giving up the formatting.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="Seed demo data.")
     parser.add_argument(
         "--reset", action="store_true", help="DESTRUCTIVE: delete all rows first"
@@ -238,7 +315,13 @@ def main() -> None:
     print("\n  \033[1mDemo logins\033[0m (password for all: "
           f"\033[1m{settings.seed_password}\033[0m)")
     for email, full_name, role_name, _login_id in DEMO_USERS:
-        print(f"     {email:<22} {role_name:<16} {full_name}")
+        print(f"     {email:<30} {role_name:<12} {full_name}")
+    # Created in seed/domain.py alongside the contact it is scoped to, so it is
+    # not in DEMO_USERS — but it is the login that demonstrates portal scoping,
+    # and an undiscoverable demo account may as well not exist.
+    portal = db_portal_login()
+    if portal:
+        print(f"     {portal[0]:<30} {'User':<12} {portal[1]} (portal)")
     print()
 
 

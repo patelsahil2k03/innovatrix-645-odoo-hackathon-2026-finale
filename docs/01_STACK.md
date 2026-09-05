@@ -87,6 +87,43 @@ These were deliberately left open. **Urban Furniture: Accounting System** settle
 > trendy technologies only if they add real value"* — and the defence for each of these is an
 > annotation on the official mockup, which is the strongest justification available.
 
+> ### ⚠️ REVERSED IN IMPLEMENTATION — the PDF engine is `xhtml2pdf`, not `weasyprint`
+>
+> **WeasyPrint does not work on this team's Windows machines.** It binds to GTK
+> (`libgobject-2.0-0`, Pango, cairo), a separate native install that is not
+> present, and it fails when the library loads rather than at import — so the
+> endpoint looks healthy right up until someone clicks Download in the demo.
+>
+> `xhtml2pdf` replaces it: pure Python, no native dependencies, installs with
+> `uv sync` like everything else. It renders the **same Jinja template** the
+> print view uses, so the "one artefact, no drift" reasoning that chose an
+> HTML-based engine in the first place is untouched — only the engine changed.
+>
+> WeasyPrint is deliberately **not** in `pyproject.toml`: on a machine that
+> cannot use it, importing it writes a multi-line troubleshooting banner to
+> stderr on every PDF request. `services/rendering.py` still tries it first, so
+> a Linux deployment (or Windows plus the GTK runtime) that installs it gets the
+> better renderer with no code change. CSS is kept plain — no flexbox, no grid,
+> no web fonts — so both engines produce the same layout.
+>
+> ### And `aiosmtplib` turned out not to be needed either
+>
+> `services/mail.py` uses the **standard library's `smtplib`**. The reason to
+> reach for the async client is to avoid blocking the event loop, and this
+> endpoint never does: `POST /{doc}/{id}/send` is a sync `def`, so FastAPI runs
+> it in the threadpool, where a blocking socket with a 10s timeout costs
+> nothing. An async client here would add a dependency to solve a problem the
+> framework already solved.
+>
+> It also lets the endpoint report the **real** outcome rather than only that a
+> message was handed off — `{queued, to, error}` — which is what makes
+> `last_send_error` meaningful.
+>
+> **Net new dependencies: one.** `xhtml2pdf`, traceable to the mockup's *"Pdf
+> download on click"*. (`jinja2` comes in with it and is already in FastAPI's
+> own tree.) Fewer moving parts than planned, and the two that were dropped were
+> dropped for stated reasons rather than forgotten.
+
 ### 3.2 Email is the one thing that can fail on the day
 
 The organizers ask for solutions that *"plan for offline or local"*. Real SMTP is the

@@ -226,6 +226,26 @@ if sum(l.debit for l in lines) != sum(l.credit for l in lines):
 > but it runs inside the same transaction as the insert, so a failure rolls the whole
 > posting back. It is never possible to commit an unbalanced entry.
 
+### ⚠️ `REVERSED` means superseded, not void — and reports must count it
+
+Every aggregation reads entries in state `POSTED` **or** `REVERSED`
+(`services/posting.py::LEDGER_STATES`), never `POSTED` alone.
+
+`REVERSED` marks an entry as superseded so the partial unique index above
+releases the source document for a correction. It does **not** mean the entry
+never happened. What cancels it is its reversal — the mirror-image entry — not
+its removal from the query.
+
+Filtering reports on `state == POSTED` is the subtle version of this bug: the
+original drops out of the sums while its reversal stays in, so every account
+ends up showing the exact **negative** of the transaction that was reversed.
+The trial balance still reads `0.00` either way, which is precisely why it
+survives review — *balanced* and *correct* are not the same claim.
+
+With both states counted, a posted-then-reversed invoice nets every account it
+touched back to zero, which is what §5's "the trial balance still lands on zero"
+actually means.
+
 ---
 
 ## 4. DOCUMENTS
@@ -278,6 +298,13 @@ documents can be raised standalone.
 Every line: `CHECK (quantity > 0)` and `CHECK (unit_price >= 0)`.
 `amount_paid` is a **cached** figure for list screens and status transitions only — it is
 never what a report reads.
+
+Both `vendor_bills` and `customer_invoices` also carry `last_sent_at`
+(`DateTime(tz)`) and `last_send_error` (`String(200)`) — required by
+[`04_API_CONTRACT.md`](04_API_CONTRACT.md) §3.5, which has the UI read them to
+report *sent* or *not sent* honestly. Mail is attempted only after the document
+is posted, and a failure writes `last_send_error` rather than raising, so
+delivery can never roll a posting back. Migration: `fffe688792ce`.
 
 ### `payments`
 | Column | Type | Notes |

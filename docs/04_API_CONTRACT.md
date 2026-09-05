@@ -308,14 +308,67 @@ asserted.
 | `EMAIL_TAKEN` | 409 | Sign-up email already exists | `routers/auth.py` |
 | `WEAK_PASSWORD` | 422 | Fails the length or character-class rules | `schemas/auth.py` |
 | `MAIL_NOT_CONFIGURED` | 422 | `Send` called with no SMTP host configured | `services/mail.py` |
-| `EMPTY_DOCUMENT` | 422 | Confirm/post attempted with zero lines | `services/rules.py` |
-| `CANNOT_CANCEL_WITH_PAYMENTS` | 409 | Cancel attempted on a document with `amount_paid > 0` | `services/rules.py` |
+| `EMPTY_DOCUMENT` | 422 | Confirm/post attempted with zero lines, **or** a document whose lines total 0.00 | `services/documents.py` |
+| `CANNOT_CANCEL_WITH_PAYMENTS` | 409 | Cancel attempted on a document with `amount_paid > 0` | `services/documents.py` |
+| `CONTACT_ARCHIVED` | 422 | An archived contact used on a new document | `services/documents.py` |
+| `PRODUCT_ARCHIVED` | 422 | An archived product added to a new document line | `services/documents.py` |
+| `PDF_ENGINE_UNAVAILABLE` | 503 | No PDF renderer installed on the server — the print view still works | `services/rendering.py` |
+| `ROLE_NOT_CONFIGURED` | 422 | Sign-up attempted before roles were seeded | `routers/auth.py` |
+| `INVALID_CREDENTIALS` | 401 | Wrong email or password — deliberately identical for both | `routers/auth.py` |
+| `ACCOUNT_INACTIVE` | 403 | The account exists but has been deactivated | `routers/auth.py` |
+| `CONFLICT` | 409 | A unique constraint rejected a create or patch (account code, contact email, …) | `routers/masters.py` |
 
 `fields` keys match request body field names exactly, so the UI drops each message
 straight into the matching input.
 
 **Add a row the moment you invent a code.** Last round this table was left empty and the
 frontend guessed.
+
+---
+
+## 4.1 ADDED DURING IMPLEMENTATION
+
+> ⚠️ **Logged after the fact, against §5's own rule.** These were added while
+> building the backend rather than announced first. They are all additive — no
+> endpoint in §3 changed shape or disappeared — but the protocol exists so the
+> frontend is never surprised, and this section is the correction.
+
+| Method | Path | Role | Why it exists |
+|---|---|---|---|
+| `GET` | `/reports/kpis` | internal | §3.10 promises a `kpi.refresh` event but no endpoint to read the same four figures on first paint. The tiles need a value before the first event arrives. |
+| `GET` | `/{doc}/{id}/print` | internal · owner | The HTML the PDF is rendered from. §3.5 specifies the PDF; the print view is the same artefact and is what makes "Print" work without a download. |
+| `GET` | `/portal/invoices` · `/portal/bills` | portal | §3.9 specifies a combined `/portal/documents`. Both split views exist too, because a contact who is `BOTH` needs to filter one from the other. |
+| `PATCH` | `/sales-orders/{id}` · `/purchase-orders/{id}` · `/customer-invoices/{id}` · `/vendor-bills/{id}` | Admin+Accountant | §3 lists create and the transitions but no edit. A draft has to be editable before it is confirmed. **Draft only** — a posted document returns `CANNOT_MODIFY_POSTED`. |
+| `GET` | `/payments/{id}` | internal | Detail for a row in the payments list. |
+| `GET` | `/budgets/{id}/lines/{line_id}/documents` | internal | Specified in §3.6; listed here because the response shape was not. Returns `[{document_type, id, number, date, contact_id, status, amount}]`. |
+
+**Query parameters added:**
+
+| Endpoint | Param | Notes |
+|---|---|---|
+| all master-data lists | `include_archived` | Default `false`. Archived rows are hidden from lists but remain fetchable by id, because documents still reference them. |
+| document lists | `status`, `vendor_id` / `customer_id` | Backs the dashboard's All / Confirmed / Draft counts. |
+| `/journal-entries` | `source_type` | `customer_invoice` · `vendor_bill` · `payment` · `manual`. |
+| `/payments` | `contact_id`, `direction` | |
+
+**Two behaviours worth stating explicitly, because the codes alone are ambiguous:**
+
+1. **A replayed `Idempotency-Key` returns `200` with the original payment**, not
+   `409`. A retry is not an error, and answering 409 pushes the client into an
+   error path for something that succeeded. `DUPLICATE_PAYMENT` (409) is reserved
+   for the genuinely conflicting case: the **same key reused for a different
+   payment** (different document or different amount).
+2. **`POST /budgets/{id}/revise` returns `201`**, not 200 — it creates a new
+   budget and returns the successor.
+
+**Account defaults on create.** `POST /contacts` fills `receivable_account_id` /
+`payable_account_id` from the seeded Debtors and Creditors accounts when they are
+not supplied, exactly as [`03_DATA_MODEL.md`](03_DATA_MODEL.md) §2 specifies.
+`POST /products` does the same for `income_account_id` / `expense_account_id`
+from Sales Income and Purchase Expense — **not** specified there, but the failure
+it prevents is worse: a product with no income account can be created, added to
+an invoice, and only refused at the moment someone clicks Post. Both remain
+overridable per record and per document line.
 
 ---
 
