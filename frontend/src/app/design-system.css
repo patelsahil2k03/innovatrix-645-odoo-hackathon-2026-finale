@@ -1132,3 +1132,65 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   margin: 0 auto;
   object-fit: contain;
 }
+
+/* ── Status count chips ─────────────────────────────────────────────────────
+   "All 40 · Draft 4 · Confirmed 5" beside a module (the mockup's own strip).
+
+   Built from the tokens already here — surface, border, accent, muted text —
+   so it adds no colour to the system. The count is what the eye is looking
+   for, so it carries the weight and tabular numerals; the label stays muted.
+   Selected state is a filled chip rather than a coloured one, matching
+   .chart-switch's segmented control rather than inventing a second idiom. */
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  /* 44px touch targets are the rule for primary controls; these are dense
+     secondary filters in a data-grid UI, so they take the same compact height
+     as .btn-sm and stay comfortably tappable via generous horizontal padding. */
+  min-height: 28px;
+  transition: color .12s ease, background .12s ease, border-color .12s ease;
+}
+/* The global a:hover underline would otherwise strike through a chip's label. */
+a.status-chip, a.status-chip:hover, a.status-chip:focus { text-decoration: none; }
+a.status-chip:hover { color: var(--text); border-color: var(--border-firm); }
+a.status-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status-chip[data-active="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.status-chip-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  color: var(--text);
+}
+.status-chip[data-active="true"] .status-chip-count { color: #fff; }
+
+/* The dashboard's module list: a label, then that module's chips. */
+.status-module {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--border);
+}
+.status-module:first-child { border-top: 0; padding-top: 0; }
+.status-module-name { font-size: var(--t-sm); font-weight: 600; color: var(--text); }

@@ -495,6 +495,22 @@ export interface AgeingReport {
   payables: AgeingBucket[];
 }
 
+/** Keys are the document states themselves, so a state added on the server
+ *  appears here without a type change (04_API_CONTRACT.md §4.1). */
+export interface ModuleCounts {
+  total: number;
+  by_status: Record<string, number>;
+}
+export type StatusCountsModule =
+  | "sales_orders"
+  | "customer_invoices"
+  | "purchase_orders"
+  | "vendor_bills"
+  | "budgets";
+export interface StatusCountsReport {
+  modules: Record<StatusCountsModule, ModuleCounts>;
+}
+
 export interface TrialBalanceRow {
   account_code: string;
   account_name: string;
@@ -657,6 +673,9 @@ export const api = {
       get<TopContactsReport>("/analytics/top-contacts", { direction, limit }),
     ageing: (asOf?: string) => get<AgeingReport>("/analytics/ageing", { as_of: asOf }),
   },
+
+  // ── Document counts per state — the mockup's All / Draft / Confirmed (§4.1) ─
+  statusCounts: () => get<StatusCountsReport>("/status-counts"),
 
   // ── Customer portal — User role only (§3.9) ───────────────────────────────
   portal: {

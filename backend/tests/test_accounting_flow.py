@@ -347,3 +347,43 @@ def test_send_refuses_explicitly_when_smtp_is_not_configured(admin_client):
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "MAIL_NOT_CONFIGURED"
+
+
+def test_status_counts_covers_every_state_including_the_empty_ones(admin_client):
+    """A state with no documents must render as 0, not disappear.
+
+    A missing column reads as "this state cannot happen"; a zero reads as
+    "nothing is there yet". Only the second is true, and the difference is
+    visible on screen — so the response is built from the enum, not from
+    whatever rows happen to exist.
+    """
+    response = admin_client.get(f"{API}/status-counts")
+    assert response.status_code == 200, response.text
+    modules = response.json()["modules"]
+
+    assert set(modules) == {
+        "sales_orders",
+        "customer_invoices",
+        "purchase_orders",
+        "vendor_bills",
+        "budgets",
+    }
+
+    orders = modules["sales_orders"]
+    assert set(orders["by_status"]) == {"DRAFT", "CONFIRMED", "INVOICED", "CANCELLED"}
+    assert orders["total"] == sum(orders["by_status"].values())
+
+    # Cross-check one module against the list endpoint's own total, so the two
+    # can never drift apart without a test noticing.
+    listed = admin_client.get(f"{API}/sales-orders", params={"page_size": 1})
+    assert listed.json()["total"] == orders["total"]
+
+
+def test_status_counts_needs_a_session(client):
+    """Counts are staff-only (`require_internal`); anonymous gets nothing."""
+    assert client.get(f"{API}/status-counts").status_code == 401
+
+
+def test_status_counts_is_staff_only(portal_client):
+    """A portal contact has no business knowing how many drafts exist."""
+    assert portal_client.get(f"{API}/status-counts").status_code == 403

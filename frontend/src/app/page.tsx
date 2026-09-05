@@ -9,6 +9,8 @@ import { CategoryChart, NetProfitChart, TrendChart } from "@/components/ui/chart
 import { PageHeading } from "@/components/ui/page-heading";
 import { KpiGrid } from "@/components/ui/kpi-grid";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusChips } from "@/components/ui/status-chips";
+import { MODULE_LABELS, MODULE_ROUTES, useStatusCounts } from "@/lib/use-status-counts";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { CHART_OPTIONS, type ChartKind } from "@/lib/chart-types";
@@ -34,6 +36,8 @@ export default function DashboardPage() {
   const [trendKind, setTrendKind] = useState<ChartKind>("area");
   const [netKind, setNetKind] = useState<ChartKind>("bar");
   const [breakdownKind, setBreakdownKind] = useState<ChartKind>("donut");
+
+  const statusCounts = useStatusCounts();
 
   const recentEntries = useFetch(
     () => api.journalEntries.list({ page: 1, page_size: 8, sort: "-entry_date" }),
@@ -113,6 +117,29 @@ export default function DashboardPage() {
           },
         ]}
       />
+
+      {/* The mockup's per-module counts. Each chip is a filtered list, so
+          "Draft 4" answers "which four?" in one click instead of leaving a
+          number the reader has to go hunting for. */}
+      <div className="card">
+        <div className="card-head">
+          <span className="card-title">Documents by state</span>
+        </div>
+        {statusCounts.modules.map((module) => (
+          <div key={module} className="status-module">
+            <Link href={MODULE_ROUTES[module]} className="status-module-name">
+              {MODULE_LABELS[module]}
+            </Link>
+            <StatusChips
+              chips={statusCounts.chipsFor(module)}
+              aria-label={`${MODULE_LABELS[module]} by state`}
+              hrefFor={(status) =>
+                status ? `${MODULE_ROUTES[module]}?status=${status}` : MODULE_ROUTES[module]
+              }
+            />
+          </div>
+        ))}
+      </div>
 
       <ChartCard
         title="Income and expense"
