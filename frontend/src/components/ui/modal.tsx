@@ -99,7 +99,7 @@ export function Modal({ open, title, onClose, children, footer, maxWidth }: Moda
       >
         <div className="modal-head">
           <h3 id={titleId} className="card-title">{title}</h3>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close dialog">
+          <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Close dialog">
             <CloseIcon />
           </button>
         </div>

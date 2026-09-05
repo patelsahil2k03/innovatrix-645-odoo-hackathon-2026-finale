@@ -57,9 +57,9 @@ export default function SignupPage() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div>
-          <h1 style={{ fontSize: "var(--t-xl)" }}>Create an account</h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "var(--t-sm)", marginTop: 4 }}>
+        <div style={{ textAlign: "center" }}>
+          <h1>Create an account</h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "var(--t-md)", fontWeight: 400, marginTop: "var(--s-2)" }}>
             Self-registration always creates an Accountant. Admin and portal accounts are set
             up by an Admin.
           </p>

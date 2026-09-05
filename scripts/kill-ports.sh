@@ -16,7 +16,9 @@ if [[ "${1:-}" == "--all" ]]; then
 fi
 
 for port in "${PORTS[@]}"; do
-  if fuser -k "${port}/tcp" >/dev/null 2>&1; then
+  pids=$(lsof -ti :"$port" 2>/dev/null || true)
+  if [ -n "$pids" ]; then
+    kill -9 $pids 2>/dev/null || true
     echo "→ killed process on :${port}"
   else
     echo "→ :${port} already free"

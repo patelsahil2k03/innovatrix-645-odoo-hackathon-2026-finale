@@ -10,12 +10,27 @@
    change --accent-h / --accent-s only. Everything else derives from them, and the
    neutrals already carry a slight hue bias toward the accent so the greys look
    chosen rather than default.
+
+   Full Apple aesthetic (frontend/DESIGN.md) applied to the CHROME and COMPONENT GRAMMAR:
+   Action Blue accent, its radius scale, pill-shaped buttons everywhere, "no shadow except
+   product imagery" (cards/kanban carry a hairline border instead), a frosted translucent
+   topbar (Apple's sub-nav-frosted), the tight heading tracking, the 300/400/600/700 weight
+   ladder, and the scale(0.97) press micro-interaction. The sidebar follows the light/dark
+   theme like everything else in the app (an earlier pass made it permanently near-black,
+   mirroring Apple's global-nav bar, which never changes with the page — reverted per
+   explicit feedback that a fixed-dark sidebar next to a light theme read as broken, not
+   deliberate). Its selected-item state is still a solid capsule fill, never a coloured
+   side-bar/stripe — DESIGN.md's own selected-state pattern
+   (`configurator-option-chip-selected`) is a full-shape upgrade, not an edge decoration.
+   What did NOT change: table row density, form field sizes, number formatting — those are
+   docs/05_FRONTEND.md's "precise and dense, numbers are the content" non-negotiables, and
+   they win over DESIGN.md's airier marketing proportions wherever the two would collide.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── The only two numbers you need to change to re-theme ───────────────── */
-  --accent-h: 217;   /* hue        0=red 40=orange 150=green 217=blue 265=violet */
-  --accent-s: 76%;   /* saturation */
+  --accent-h: 210;   /* hue        0=red 40=orange 150=green 210=blue(Apple) 265=violet */
+  --accent-s: 86%;   /* saturation */
 
   --accent:        hsl(var(--accent-h) var(--accent-s) 48%);
   --accent-hover:  hsl(var(--accent-h) var(--accent-s) 42%);
@@ -45,23 +60,102 @@
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
 
-  --radius-sm: 6px;  --radius: 10px;  --radius-lg: 14px;  --radius-full: 999px;
+  /* Radius/font/shadow tiers live in the @theme block below (they're also
+     Tailwind utility namespaces — --radius-sm, --font-sans, --shadow-lg — so
+     the *value* is defined once, there, not duplicated here). `--radius` and
+     `--radius-full` stay plain :root aliases: "full" isn't themed by Tailwind
+     (rounded-full is a static utility), and the bare "--radius" name doesn't
+     match Tailwind's dash-suffixed scan, so it's safe as our own
+     internal shorthand for the two call sites still written before the
+     @theme move (`.table-wrap`, `.t-account`). */
+  --radius: var(--radius-md);
+  --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px hsl(var(--accent-h) 20% 20% / 0.06);
-  --shadow:    0 1px 3px hsl(var(--accent-h) 20% 20% / 0.08),
-               0 8px 24px -12px hsl(var(--accent-h) 20% 20% / 0.14);
-  --shadow-lg: 0 24px 48px -24px hsl(var(--accent-h) 25% 15% / 0.30);
+  /* Frosted translucent surface for the topbar (DESIGN.md's sub-nav-frosted). */
+  --surface-translucent: hsl(var(--accent-h) 20% 96% / 0.72);
 
-  /* ── Type ───────────────────────────────────────────────────────────────── */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  /* Custom <select> chevron — a bare, unstyled native select is the one place
+     OS chrome breaks the illusion. Neutral gray on purpose: DESIGN.md's Do's
+     reserve the accent for things that ARE an action, not a decoration. */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%236b6b70' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   --t-xs: 11px; --t-sm: 12.5px; --t-base: 14px;
-  --t-md: 16px; --t-lg: 20px;   --t-xl: 26px;  --t-2xl: 34px;
+  --t-md: 16px; --t-lg: 20px;   --t-xl: 26px;  --t-2xl: 40px;
 
   --sidebar-w: 244px;
   --sidebar-w-collapsed: 68px;
   --topbar-h: 60px;
+}
+
+/* ═══ TAILWIND THEME ═════════════════════════════════════════════════════════
+   Exposes the tokens above (and frontend/DESIGN.md's Apple language) as real
+   Tailwind utilities — bg-accent, rounded-lg, shadow-lg, font-sans, text-2xl —
+   so new markup can reach for utilities instead of hand-rolling another
+   custom class, without inventing a second palette.
+
+   Colors alias the plain :root custom properties above via var(), which is
+   what makes dark mode "just work" for the generated utilities too: the
+   alias never changes, only the value it points at (reassigned further down
+   in the dark-theme blocks), so e.g. `bg-surface` repaints on theme flip for
+   free — no `dark:` variant needed for anything already tokenized.
+
+   Radius, font and shadow are the one exception: Tailwind's own theme
+   namespace for those already uses our exact generic names (--radius-sm,
+   --font-sans, --shadow-lg), so aliasing via var() here would self-reference.
+   Their real values are defined directly in this block instead — it's now
+   the single source of truth for those three, not design-system.css's :root. */
+@theme {
+  --color-accent:        var(--accent);
+  --color-accent-hover:  var(--accent-hover);
+  --color-accent-soft:   var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+  --color-accent-ink:    var(--accent-ink);
+
+  --color-bg:          var(--bg);
+  --color-surface:     var(--surface);
+  --color-surface-2:   var(--surface-2);
+  --color-surface-3:   var(--surface-3);
+  --color-surface-translucent: var(--surface-translucent);
+  --color-border:      var(--border);
+  --color-border-firm: var(--border-firm);
+
+  --color-text:        var(--text);
+  --color-text-muted:  var(--text-muted);
+  --color-text-faint:  var(--text-faint);
+
+  --color-ok:      var(--ok);      --color-ok-soft:     var(--ok-soft);     --color-ok-border:     var(--ok-border);
+  --color-warn:    var(--warn);    --color-warn-soft:   var(--warn-soft);   --color-warn-border:   var(--warn-border);
+  --color-danger:  var(--danger);  --color-danger-soft: var(--danger-soft); --color-danger-border: var(--danger-border);
+  --color-info:    var(--info);    --color-info-soft:   var(--info-soft);   --color-info-border:   var(--info-border);
+
+  /* Text scale — our `--t-*` names don't collide with Tailwind's `--text-*`
+     namespace, so these are plain aliases too. */
+  --text-xs:   var(--t-xs);
+  --text-sm:   var(--t-sm);
+  --text-base: var(--t-base);
+  --text-md:   var(--t-md);
+  --text-lg:   var(--t-lg);
+  --text-xl:   var(--t-xl);
+  --text-2xl:  var(--t-2xl);
+
+  /* Radius scale — DESIGN.md's xs/sm/md/lg steps; rounded-full is Tailwind's
+     own static utility already (matches our --radius-full: 9999px). */
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 18px;
+
+  /* Font stacks — SF Pro on Apple platforms via -apple-system, Segoe UI/
+     system-ui elsewhere. This IS the source of truth now (see block comment). */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+  /* Shadow — DESIGN.md's rule is exactly one real shadow tier (reserved for
+     product imagery / overlays like the modal); sm/lg are its light shims. */
+  --shadow-sm: 0 1px 2px hsl(var(--accent-h) 20% 20% / 0.06);
+  --shadow-md: 0 1px 3px hsl(var(--accent-h) 20% 20% / 0.08),
+               0 8px 24px -12px hsl(var(--accent-h) 20% 20% / 0.14);
+  --shadow-lg: 0 24px 48px -24px hsl(var(--accent-h) 25% 15% / 0.30);
 }
 
 /* Dark theme. Three states matter: explicit dark, explicit light, and unset
@@ -91,8 +185,11 @@
     --info:    #6cc4ea;  --info-soft:   #0c2a36;  --info-border:   #1c4f63;
 
     --shadow-sm: 0 1px 2px #0007;
-    --shadow:    0 1px 3px #0008, 0 8px 24px -12px #000a;
+    --shadow-md: 0 1px 3px #0008, 0 8px 24px -12px #000a;
     --shadow-lg: 0 24px 48px -24px #000c;
+
+    --surface-translucent: hsl(var(--accent-h) 20% 13% / 0.72);
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%23c7c7cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 
@@ -120,8 +217,11 @@
   --info:    #6cc4ea;  --info-soft:   #0c2a36;  --info-border:   #1c4f63;
 
   --shadow-sm: 0 1px 2px #0007;
-  --shadow:    0 1px 3px #0008, 0 8px 24px -12px #000a;
+  --shadow-md: 0 1px 3px #0008, 0 8px 24px -12px #000a;
   --shadow-lg: 0 24px 48px -24px #000c;
+
+  --surface-translucent: hsl(var(--accent-h) 20% 13% / 0.72);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%23c7c7cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* ═══ BASE ═══════════════════════════════════════════════════════════════ */
@@ -143,7 +243,8 @@ html, body {
 /* Judging criterion: zero horizontal scroll at 360px. */
 html, body { overflow-x: hidden; max-width: 100%; }
 
-h1, h2, h3, h4 { margin: 0; text-wrap: balance; letter-spacing: -0.011em; font-weight: 650; }
+/* Negative tracking at display sizes = DESIGN.md's "Apple tight" headline cadence. */
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; letter-spacing: -0.017em; font-weight: 600; }
 h1 { font-size: var(--t-2xl); }
 h2 { font-size: var(--t-xl); }
 h3 { font-size: var(--t-lg); }
@@ -171,9 +272,15 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 
 /* ═══ LAYOUT ═════════════════════════════════════════════════════════════ */
 
-.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+/* Fixed 100vh frame — sidebar + topbar never move, only .app-main scrolls
+   internally. `min-height` here (the old value) let the grid row grow taller
+   than the sidebar's own 100vh box on any page longer than one screen: below
+   that point the sidebar's column showed the page background bleeding
+   through, and the sidebar stopped tracking the scroll entirely. `height`
+   keeps the frame exactly one viewport tall so that never happens. */
+.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100vh; }
 .app-shell[data-collapsed="true"] { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
-.app-main { display: flex; flex-direction: column; min-width: 0; }
+.app-main { display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow-y: auto; }
 .page { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-5); max-width: 100%; }
 
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
@@ -186,7 +293,12 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-4); }
 
 @media (max-width: 860px) {
-  .app-shell, .app-shell[data-collapsed="true"] { grid-template-columns: 1fr; }
+  /* Below this width sidebar and main stack in one column instead of sitting
+     side by side — the fixed-100vh-frame trick above would clip .app-main's
+     row entirely, so fall back to plain document flow + page-level scroll. */
+  .app-shell, .app-shell[data-collapsed="true"] { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+  .app-main { height: auto; overflow-y: visible; }
+  .sidebar { position: static; height: auto; }
   .page { padding: var(--s-4) var(--s-3); }
 }
 
@@ -195,37 +307,52 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--s-4);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  padding: var(--s-5);
 }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-3); }
-.card-title { font-size: var(--t-md); font-weight: 650; }
+.card-title { font-size: var(--t-md); font-weight: 600; }
 
-/* ═══ BUTTONS ════════════════════════════════════════════════════════════ */
+/* ═══ BUTTONS ════════════════════════════════════════════════════════════
+   DESIGN.md's Do: "reserve the pill for the primary CTA and anything that
+   should read as an action." Since every button here IS an action, the pill
+   is the default grammar; only icon-only chrome buttons break the pattern
+   (they become circular, Apple's button-icon-circular). No shadows — colour
+   and border carry the button, never elevation. */
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--border-firm);
   background: var(--surface);
   color: var(--text);
   font: inherit; font-size: var(--t-sm); font-weight: 600;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 100ms ease;
   white-space: nowrap;
 }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  padding: 9px 18px;
+}
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-ghost:hover:not(:disabled) { background: var(--surface-2); }
-.btn-sm { padding: 5px 10px; font-size: var(--t-xs); }
+.btn-sm { padding: 5px 12px; font-size: var(--t-xs); }
+.btn-primary.btn-sm { padding: 6px 14px; }
+
+/* Icon-only chrome action (theme toggle, etc.) — Apple's button-icon-circular. */
+.btn-icon {
+  width: 36px; height: 36px; padding: 0; border-radius: var(--radius-full);
+  flex: none;
+}
 
 /* ═══ FORMS ══════════════════════════════════════════════════════════════ */
 
@@ -250,6 +377,29 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+/* A bare native <select> is the one place OS chrome still shows through —
+   Apple's inputs never look like that. Custom chevron, no native arrow. */
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 11px 11px;
+}
+/* The native date-picker glyph is a fixed dark icon regardless of theme —
+   invisible on a dark input otherwise. */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme="light"]) input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
 .input[aria-invalid="true"], .select[aria-invalid="true"], .textarea[aria-invalid="true"] {
   border-color: var(--danger);
 }
@@ -270,7 +420,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .data-table th, .data-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .data-table thead th {
   background: var(--surface-2);
-  font-size: var(--t-xs); font-weight: 650;
+  font-size: var(--t-xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.045em;
   color: var(--text-muted);
   position: sticky; top: 0; z-index: 1;
@@ -289,7 +439,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 9px;
   border-radius: var(--radius-full);
-  font-size: var(--t-xs); font-weight: 650;
+  font-size: var(--t-xs); font-weight: 600;
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -308,32 +458,50 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--s-3); }
 .kpi {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: var(--s-4);
+  border-radius: var(--radius-lg); padding: var(--s-5);
   display: flex; flex-direction: column; gap: 4px;
 }
-.kpi-label { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 650; }
+.kpi-label { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
 .kpi-value { font-size: var(--t-xl); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .kpi-sub { font-size: var(--t-xs); color: var(--text-faint); }
 
-/* ═══ SIDEBAR / TOPBAR ═══════════════════════════════════════════════════ */
+/* ═══ SIDEBAR / TOPBAR ═══════════════════════════════════════════════════
+   Sidebar follows the light/dark theme like every other surface — same
+   --surface/--text tokens as a card, so it repaints for free on theme flip.
+   Topbar = Apple's sub-nav-frosted: translucent + backdrop-blur, floating
+   over the page rather than a flat bar. */
 
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-3); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.sidebar-brand { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) var(--s-3); font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em; }
+.sidebar-brand { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) var(--s-3); font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em; color: var(--text); }
 .sidebar-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+/* DESIGN.md never marks "selected" with a colour bar down the side — that's a
+   generic dashboard convention (Linear/Vercel/GitHub), not Apple's. Its own
+   selected-state pattern (configurator-option-chip-selected) is a full-shape
+   upgrade: same shape, stronger fill/border, nothing bolted onto one edge. So
+   the active row here is a solid capsule — background + text colour only,
+   using the same --accent/--accent-ink pair every primary button uses. */
 .nav-item {
   display: flex; align-items: center; gap: var(--s-3);
   padding: 9px var(--s-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   color: var(--text-muted);
-  font-size: var(--t-sm); font-weight: 550;
-  border-left: 2px solid transparent;
+  font-size: var(--t-sm); font-weight: 400;
+  letter-spacing: -0.006em;
 }
 .nav-item:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
-.nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); font-weight: 650; }
-.nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 650; }
+.nav-item[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 600; }
 
-.topbar { height: var(--topbar-h); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20; }
+.topbar {
+  height: var(--topbar-h);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-translucent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20;
+}
 @media (max-width: 860px) { .topbar { padding: 0 var(--s-3); } }
 
 .live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-muted); }
@@ -358,7 +526,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 /* ═══ STATES ═════════════════════════════════════════════════════════════ */
 
 .state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-2); padding: var(--s-8) var(--s-4); text-align: center; color: var(--text-muted); }
-.state-title { font-weight: 650; color: var(--text); font-size: var(--t-md); }
+.state-title { font-weight: 600; color: var(--text); font-size: var(--t-md); }
 .state-sub { font-size: var(--t-sm); max-width: 44ch; }
 
 .skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.3s ease-in-out infinite; border-radius: var(--radius-sm); }
@@ -372,8 +540,8 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .alert-ok { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
 .alert-info { background: var(--info-soft); border-color: var(--info-border); color: var(--info); }
 
-.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: var(--s-4); background: var(--bg); }
-.auth-card { width: 100%; max-width: 396px; display: flex; flex-direction: column; gap: var(--s-4); }
+.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: var(--s-5); background: var(--surface-2); }
+.auth-card { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: var(--s-5); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
@@ -384,7 +552,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   gap: var(--s-2); padding: var(--s-3) var(--s-3) 4px;
   background: none; border: 0; cursor: pointer; font: inherit;
   font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--text-faint); font-weight: 650;
+  color: var(--text-faint); font-weight: 600;
 }
 .nav-group-toggle:hover { color: var(--text-muted); }
 .nav-group-toggle svg { transition: transform 120ms ease; }
@@ -398,20 +566,21 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 11px; border-radius: calc(var(--radius-sm) - 2px); border: 0;
   background: transparent; color: var(--text-muted);
-  font: inherit; font-size: var(--t-xs); font-weight: 650; cursor: pointer;
+  font: inherit; font-size: var(--t-xs); font-weight: 600; cursor: pointer;
 }
-.view-toggle-btn[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+.view-toggle-btn[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
 
 /* ═══ KANBAN ══════════════════════════════════════════════════════════════ */
 
 .kanban-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-4); }
 .kanban-card {
   display: flex; align-items: flex-start; gap: var(--s-3);
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: var(--s-4); box-shadow: var(--shadow-sm); color: var(--text);
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: var(--s-4); color: var(--text);
+  transition: border-color 120ms ease, transform 120ms ease;
 }
-.kanban-card:hover { border-color: var(--border-firm); box-shadow: var(--shadow); text-decoration: none; }
+.kanban-card:hover { border-color: var(--border-firm); text-decoration: none; }
+.kanban-card:active { transform: scale(0.98); }
 .kanban-avatar {
   flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);
   background: var(--accent-soft); color: var(--accent);
@@ -420,7 +589,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 }
 .kanban-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .kanban-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.kanban-title { font-weight: 650; font-size: var(--t-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-title { font-weight: 600; font-size: var(--t-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kanban-subtitle { font-size: var(--t-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kanban-meta { font-size: var(--t-xs); color: var(--text-faint); }
 
@@ -432,7 +601,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .t-account { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
 .t-account-col { display: flex; flex-direction: column; }
 .t-account-col + .t-account-col { border-left: 1px solid var(--border); }
-.t-account-head { padding: var(--s-3) var(--s-4); font-size: var(--t-xs); font-weight: 650; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.t-account-head { padding: var(--s-3) var(--s-4); font-size: var(--t-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); background: var(--surface-2); border-bottom: 1px solid var(--border); }
 .t-account-row { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-4); font-size: var(--t-sm); }
 .t-account-row .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
 .t-account-total { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); font-size: var(--t-sm); font-weight: 700; border-top: 1px solid var(--border-firm); }
@@ -462,6 +631,14 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 /* ═══ PORTAL SHELL — its own layout, no internal nav (05_FRONTEND.md §2) ════ */
 
 .portal-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.portal-topbar { height: var(--topbar-h); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20; }
+.portal-topbar {
+  height: var(--topbar-h);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-translucent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20;
+}
 .portal-main { flex: 1; padding: var(--s-5); max-width: 1080px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
 @media (max-width: 860px) { .portal-topbar, .portal-main { padding-left: var(--s-3); padding-right: var(--s-3); } }

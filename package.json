@@ -9,6 +9,9 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
     "kill-ports": "./scripts/kill-ports.sh",
-    "kill-ports:all": "./scripts/kill-ports.sh --all"
+    "kill-ports:all": "./scripts/kill-ports.sh --all",
+    "clean": "./scripts/clean-cache.sh",
+    "clean:frontend": "rm -rf frontend/.next frontend/tsconfig.tsbuildinfo",
+    "clean:backend": "find backend -type d \\( -name '__pycache__' -o -name '.pytest_cache' -o -name '.ruff_cache' \\) -exec rm -rf {} +"
   }
 }
