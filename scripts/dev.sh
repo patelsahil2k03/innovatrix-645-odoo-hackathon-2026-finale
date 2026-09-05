@@ -18,7 +18,7 @@ grep '^NEXT_PUBLIC_' .env > frontend/.env.local || true
 
 # A leftover listener on 3000/8000 is what causes "port in use, using 3001 instead",
 # which then breaks CORS in confusing ways. Clear them before starting, not just on exit.
-free_ports() { fuser -k 3000/tcp 8000/tcp >/dev/null 2>&1 || true; }
+free_ports() { ./scripts/kill-ports.sh >/dev/null 2>&1 || true; }
 free_ports
 
 if [ "$USE_DOCKER" = "1" ]; then

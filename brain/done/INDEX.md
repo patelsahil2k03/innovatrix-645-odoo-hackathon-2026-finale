@@ -5,6 +5,7 @@
 
 | Date | What | File |
 |---|---|---|
+| 2026-09-05 | Platform layer verified (32 backend tests, frontend build green) **and** full domain schema migrated — engine/routers/schemas still open | [`2026-09-05-platform-and-schema-verified.md`](2026-09-05-platform-and-schema-verified.md) |
 | 2026-09-05 | Documentation & planning — full spec written and tracked in `docs/` | [`2026-09-05-docs-and-planning.md`](2026-09-05-docs-and-planning.md) |
 
 **New entry?** Move the line from `../pending/INDEX.md` (delete it there), create

@@ -23,3 +23,11 @@ done, until it's actually verified present and passing on a branch.
 Before writing a `done/` entry claiming something is built, run the verification command
 yourself (`git ls-files`, `pytest`, `npm run build`) rather than copying a claim from another
 doc, even one of ours.
+
+---
+### Resolved — 2026-09-05, later the same day
+`backend/` and `frontend/` now exist (merged from `dev`). Both platform claims re-checked and
+now genuinely true: `uv run pytest` → 32 passed; `npm install && npm run build` → compiles
+clean. Full detail: [`../done/2026-09-05-platform-and-schema-verified.md`](../done/2026-09-05-platform-and-schema-verified.md).
+Kept this entry rather than deleting it — it's the exact shape of claim worth re-verifying
+every time a doc says something is "done."
