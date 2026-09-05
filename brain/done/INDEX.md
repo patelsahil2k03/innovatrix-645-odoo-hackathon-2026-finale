@@ -5,6 +5,7 @@
 
 | Date | What | File |
 |---|---|---|
+| 2026-09-05 | Frontend agent skills installed — `tailwind-4-docs` + `web-design-guidelines` under `frontend/.agents/skills/`, use these for FE design work | [`2026-09-05-frontend-agent-skills-added.md`](2026-09-05-frontend-agent-skills-added.md) |
 | 2026-09-05 | Platform layer verified (32 backend tests, frontend build green) **and** full domain schema migrated — engine/routers/schemas still open | [`2026-09-05-platform-and-schema-verified.md`](2026-09-05-platform-and-schema-verified.md) |
 | 2026-09-05 | Documentation & planning — full spec written and tracked in `docs/` | [`2026-09-05-docs-and-planning.md`](2026-09-05-docs-and-planning.md) |
 
