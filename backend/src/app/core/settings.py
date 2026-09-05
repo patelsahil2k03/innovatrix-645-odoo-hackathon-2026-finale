@@ -7,11 +7,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # One .env for the whole repo, at the root — not a per-app copy. Resolved by
 # path (not cwd) so `uv run` from backend/ and from the repo root both find it.
-_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
+_ROOT = Path(__file__).resolve().parents[4]
+_ROOT_ENV = _ROOT / ".env"
+# .env is tracked in git (deliberate exception, see docs/12_SESSION_CONTEXT.md) —
+# real per-machine secrets that must NOT be committed (e.g. personal SMTP
+# credentials) go in .env.local instead, which is gitignored and, read second
+# here, overrides matching keys from .env.
+_LOCAL_ENV = _ROOT / ".env.local"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=_ROOT_ENV, extra="ignore")
+    model_config = SettingsConfigDict(env_file=(_ROOT_ENV, _LOCAL_ENV), extra="ignore")
 
     app_name: str = "Hackathon API"
     app_version: str = "0.1.0"

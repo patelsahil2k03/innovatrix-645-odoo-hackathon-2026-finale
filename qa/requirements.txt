@@ -1,0 +1,14 @@
+# QA-only, deliberately separate from backend/pyproject.toml's tracked
+# dependencies (brain/RULES.md — dependency additions get called out, not folded
+# silently into the app's own dependency tree). Install into any Python 3.11+
+# environment, including the backend's own `uv` venv if you'd rather not make a
+# second one:
+#
+#   uv run --with-requirements qa/requirements.txt python qa/run_account_module_tests.py
+#
+# or, in a plain venv:
+#
+#   pip install -r qa/requirements.txt
+#   playwright install chromium      # one-time browser binary download
+
+playwright>=1.48,<2
