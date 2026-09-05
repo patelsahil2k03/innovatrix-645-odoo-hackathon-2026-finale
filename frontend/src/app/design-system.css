@@ -684,8 +684,40 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   border: 1px solid var(--border-firm); background: var(--surface); box-shadow: var(--shadow-md);
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--text); cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 .drawer-close:hover { background: var(--surface-2); }
+.drawer-close:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* One-shot "look here" ring — plays once when the drawer (and this button)
+   mounts, then reverts to its base opacity:0 (no fill-mode) so nothing is
+   left behind: a ring, never a permanent border. */
+.drawer-close::after {
+  content: ""; position: absolute; inset: -8px; border-radius: var(--radius-full);
+  border: 2px solid var(--accent); opacity: 0; pointer-events: none;
+  animation: drawer-close-pulse 700ms ease-out;
+}
+@keyframes drawer-close-pulse {
+  0%   { opacity: 0.9; transform: scale(0.55); }
+  100% { opacity: 0;   transform: scale(1.7); }
+}
+
+/* Hover/focus tooltip — same contract as .info-tooltip-panel (CSS-only,
+   shown on :hover and :focus-visible so mouse and keyboard users see the
+   same thing), naming the Esc shortcut so it's discoverable either way. */
+.drawer-close-tip {
+  position: absolute; top: calc(50% + 30px); left: 0; transform: translateX(-50%);
+  background: var(--text); color: var(--surface);
+  font-size: var(--t-xs); font-weight: 500; line-height: 1.4; white-space: nowrap;
+  padding: 6px 10px; border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease; z-index: 2;
+}
+.drawer-close-tip kbd {
+  font: inherit; font-size: 10px; font-weight: 700;
+  background: hsl(0 0% 100% / 0.16); border-radius: var(--radius-xs); padding: 1px 5px; margin-left: 2px;
+}
+.drawer-close:hover + .drawer-close-tip,
+.drawer-close:focus-visible + .drawer-close-tip { opacity: 1; }
 
 .drawer-head { padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--border); }
 .drawer-body { padding: var(--s-5); overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: var(--s-4); }
@@ -694,6 +726,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 @media (max-width: 640px) {
   .drawer { width: 100vw; max-width: 100vw; min-width: 0; }
   .drawer-close { top: var(--s-3); left: auto; right: var(--s-3); transform: none; }
+  .drawer-close-tip { top: calc(var(--s-3) + 46px); left: auto; right: var(--s-3); transform: none; }
 }
 
 /* ═══ TABS ═══════════════════════════════════════════════════════════════ */
