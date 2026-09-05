@@ -50,19 +50,35 @@ case "$DB_HOST" in
     ;;
 esac
 
+# Declared before the handler that reads them: cleanup can run at any point after
+# the trap is armed, and `set -u` would otherwise turn the cleanup handler itself
+# into the error being reported.
+API_PID=""
+WEB_PID=""
+
 cleanup() {
+  # Disarm FIRST. This handler used to end with `kill 0`, which signals the whole
+  # process group — the script included — so the TERM it sent re-entered this very
+  # function and printed "stopping…" forever on a single Ctrl+C.
+  trap - EXIT INT TERM
+
   echo; echo "→ stopping…"
-  # `kill 0` alone is unreliable: uvicorn --reload forks a watcher, and Next doesn't
-  # always forward SIGTERM to its children. Killing by port ownership works regardless.
+  # Kill the two children we started, then sweep by port: uvicorn --reload forks a
+  # watcher and Next doesn't always forward SIGTERM, so the PIDs alone miss
+  # grandchildren. Killing by port ownership catches whatever is left.
+  for pid in "$API_PID" "$WEB_PID"; do
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+  done
   free_ports
-  kill 0 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
 echo "→ api  http://localhost:8000/docs"
 (cd backend && uv sync --extra postgres --quiet && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) &
+API_PID=$!
 
 echo "→ web  http://localhost:3000"
 (cd frontend && { [ -d node_modules ] || npm install; }; npm run dev) &
+WEB_PID=$!
 
 wait
