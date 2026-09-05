@@ -6,8 +6,16 @@
 
 ---
 
-## 1. HOST MACHINE (starts Postgres — one person, whoever's machine holds the data)
+## 1. HOST MACHINE (runs everything — one person, whoever's machine everyone else views)
 
+```bash
+hostname -I | awk '{print $1}'   # this machine's LAN IP — needed for the next step
+```
+In `.env`, set `NEXT_PUBLIC_API_URL` to that IP, not `localhost` — it's baked into the
+JS bundle every viewer's browser runs, so `localhost` there resolves to *their* machine:
+```
+NEXT_PUBLIC_API_URL=http://<this-machine-ip>:8000/api/v1
+```
 ```bash
 cp .env.example .env                                   # skip if .env already exists
 docker compose -f infra/docker-compose.yml up -d db
@@ -17,7 +25,7 @@ cd backend
 uv sync --extra postgres
 uv run alembic upgrade head
 uv run python -m app.seed
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # second terminal, from the repo root
 cd frontend
@@ -26,13 +34,12 @@ npm run dev
 ```
 Or, one command: `./scripts/dev.sh --db docker`
 
-```bash
-hostname -I | awk '{print $1}'   # the IP to give teammates
-```
+**Teammates need nothing installed and nothing cloned** — send them
+`http://<this-machine-ip>:3000` and they use it directly in a browser.
 
 | What | Where |
 |---|---|
-| Web app | http://localhost:3000 |
+| Web app | http://localhost:3000 (you) · http://`<host-ip>`:3000 (everyone else) |
 | API docs (Swagger) | http://localhost:8000/docs |
 | Health check | http://localhost:8000/api/v1/health |
 | Adminer (DB browser) | `docker compose -f infra/docker-compose.yml --profile adminer up -d adminer` → http://localhost:8081 |
@@ -41,7 +48,9 @@ Demo logins are printed by the seed script. Default password: `Demo@1234`.
 
 ---
 
-## 2. TEAMMATE MACHINE (never starts Postgres — always points at the host)
+## 2. TEAMMATE MACHINE — running your own copy instead of just viewing §1's URL
+
+Only needed if you're actually coding. Never starts Postgres — always points at the host.
 
 ```bash
 cp .env.example .env                                   # skip if .env already exists
