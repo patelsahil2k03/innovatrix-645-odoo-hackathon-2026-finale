@@ -170,7 +170,10 @@ cd frontend && npm run lint         # lint — a separate step, Next 16 removed 
 ## Repository Structure
 
 ```
+├── CLAUDE.md        Read first by Claude Code — imports brain/RULES.md automatically
+├── AGENTS.md        Read first by any other AI tool (Codex, Cursor, Copilot, ...)
 ├── ai_guidelines/   Working rules for AI-assisted development (read once)
+├── brain/           Living project memory — rules, mistakes, pending/done work. Start at brain/README.md
 ├── docs/            Playbook, problem statement, data model, API contract  ← start here
 ├── backend/         FastAPI app + tests
 ├── frontend/        Next.js app

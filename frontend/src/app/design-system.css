@@ -376,3 +376,92 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .auth-card { width: 100%; max-width: 396px; display: flex; flex-direction: column; gap: var(--s-4); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ═══ COLLAPSIBLE NAV GROUPS (sidebar) ═══════════════════════════════════════ */
+
+.nav-group-toggle {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  gap: var(--s-2); padding: var(--s-3) var(--s-3) 4px;
+  background: none; border: 0; cursor: pointer; font: inherit;
+  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-faint); font-weight: 650;
+}
+.nav-group-toggle:hover { color: var(--text-muted); }
+.nav-group-toggle svg { transition: transform 120ms ease; }
+.nav-group-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.nav-group-items { display: flex; flex-direction: column; gap: 2px; }
+
+/* ═══ VIEW TOGGLE (list / kanban) ════════════════════════════════════════════ */
+
+.view-toggle { display: inline-flex; gap: 2px; padding: 2px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.view-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: calc(var(--radius-sm) - 2px); border: 0;
+  background: transparent; color: var(--text-muted);
+  font: inherit; font-size: var(--t-xs); font-weight: 650; cursor: pointer;
+}
+.view-toggle-btn[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+/* ═══ KANBAN ══════════════════════════════════════════════════════════════ */
+
+.kanban-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-4); }
+.kanban-card {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--s-4); box-shadow: var(--shadow-sm); color: var(--text);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.kanban-card:hover { border-color: var(--border-firm); box-shadow: var(--shadow); text-decoration: none; }
+.kanban-avatar {
+  flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; font-size: var(--t-sm); font-weight: 700;
+  overflow: hidden;
+}
+.kanban-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.kanban-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.kanban-title { font-weight: 650; font-size: var(--t-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-subtitle { font-size: var(--t-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-meta { font-size: var(--t-xs); color: var(--text-faint); }
+
+/* ═══ T-ACCOUNT POSTING PREVIEW ═══════════════════════════════════════════════
+   05_FRONTEND.md §7.1 — ours, not a spec item, but it makes the invisible half
+   of the system (debits = credits, before commit) the most convincing thing on
+   screen. Never let this component touch the server total — display only. */
+
+.t-account { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.t-account-col { display: flex; flex-direction: column; }
+.t-account-col + .t-account-col { border-left: 1px solid var(--border); }
+.t-account-head { padding: var(--s-3) var(--s-4); font-size: var(--t-xs); font-weight: 650; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.t-account-row { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-4); font-size: var(--t-sm); }
+.t-account-row .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.t-account-total { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); font-size: var(--t-sm); font-weight: 700; border-top: 1px solid var(--border-firm); }
+
+/* ═══ DRILL-DOWN — every report figure is a real, clickable link ════════════ */
+
+.drill-amount { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; font-size: inherit; text-underline-offset: 2px; }
+.drill-amount:hover { text-decoration: underline; }
+.breadcrumbs { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--text-muted); flex-wrap: wrap; }
+.breadcrumbs a { color: var(--text-muted); }
+.breadcrumbs a:hover { color: var(--accent); }
+.breadcrumbs .sep { color: var(--text-faint); }
+.row-highlight { background: var(--accent-soft) !important; }
+
+/* ═══ DONUT (budget list's pie-chart column) ═════════════════════════════════
+   Plain SVG, no charting dependency — the swept angle is data, not a token, so
+   it's the one place a numeric value is computed inline rather than a CSS var. */
+
+.donut-wrap { display: inline-flex; align-items: center; gap: var(--s-2); }
+.donut-label { font-size: var(--t-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* ═══ COMBOBOX-WITH-INLINE-CREATE (product category, 03_DATA_MODEL.md §2) ══ */
+
+.combo-row { display: flex; gap: var(--s-2); }
+.combo-row .select { flex: 1; }
+
+/* ═══ PORTAL SHELL — its own layout, no internal nav (05_FRONTEND.md §2) ════ */
+
+.portal-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.portal-topbar { height: var(--topbar-h); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20; }
+.portal-main { flex: 1; padding: var(--s-5); max-width: 1080px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
+@media (max-width: 860px) { .portal-topbar, .portal-main { padding-left: var(--s-3); padding-right: var(--s-3); } }

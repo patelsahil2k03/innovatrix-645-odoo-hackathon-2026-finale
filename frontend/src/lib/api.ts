@@ -4,6 +4,9 @@
  * The auth token lives in an httpOnly cookie the browser sends automatically —
  * this file never touches a token, which is why an XSS bug can't steal the session.
  * That's also why every request sets `credentials: "include"`.
+ *
+ * Domain shapes mirror docs/03_DATA_MODEL.md and docs/04_API_CONTRACT.md exactly —
+ * those documents change before this file does (RULES.md §4), never the other way.
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -101,13 +104,13 @@ function safeJson(text: string): Record<string, unknown> | null {
 }
 
 const get = <T,>(path: string, params?: ListParams) => apiFetch<T>(path + buildQuery(params));
-const post = <T,>(path: string, body?: unknown) =>
-  apiFetch<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined });
+const post = <T,>(path: string, body?: unknown, init: RequestInit = {}) =>
+  apiFetch<T>(path, { ...init, method: "POST", body: body ? JSON.stringify(body) : undefined });
 const patch = <T,>(path: string, body: unknown) =>
   apiFetch<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 const del = <T,>(path: string) => apiFetch<T>(path, { method: "DELETE" });
 
-/* ── Types ──────────────────────────────────────────────────────────────── */
+/* ── Platform types (given) ────────────────────────────────────────────────── */
 
 export interface Role {
   id: string;
@@ -131,13 +134,350 @@ export interface Notification {
   created_at: string;
 }
 
-/* ── The client ─────────────────────────────────────────────────────────── */
+/* ── Domain types — docs/03_DATA_MODEL.md ──────────────────────────────────── */
+
+export type ContactType = "CUSTOMER" | "VENDOR" | "BOTH";
+
+export interface Contact {
+  id: string;
+  name: string;
+  type: ContactType;
+  email: string | null;
+  mobile: string | null;
+  address_street: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  address_country: string;
+  address_pincode: string | null;
+  image_url: string | null;
+  receivable_account_id: string | null;
+  payable_account_id: string | null;
+  is_archived: boolean;
+  created_at: string;
+}
+export type ContactCreate = Omit<Contact, "id" | "is_archived" | "created_at">;
+
+export type ProductType = "GOODS" | "SERVICE" | "COMBO";
+
+export interface ProductCategory {
+  id: string;
+  name: string;
+  is_archived: boolean;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  type: ProductType;
+  sales_price: number;
+  cost_price: number;
+  category_id: string | null;
+  category_name?: string;
+  sales_tax_pct: number;
+  income_account_id: string | null;
+  expense_account_id: string | null;
+  image_url?: string | null;
+  is_archived: boolean;
+}
+export type ProductCreate = Omit<Product, "id" | "category_name" | "is_archived">;
+
+export type AccountType =
+  | "ASSET"
+  | "BANK"
+  | "CASH"
+  | "LIABILITY"
+  | "CAPITAL"
+  | "INCOME"
+  | "EXPENSE"
+  | "OTHER_EXPENSE";
+
+export interface Account {
+  id: string;
+  code: string;
+  name: string;
+  type: AccountType;
+  is_archived: boolean;
+}
+export type AccountCreate = Omit<Account, "id" | "is_archived">;
+
+export type JournalType = "SALES" | "PURCHASE" | "BANK" | "CASH" | "MISC";
+
+export interface Journal {
+  id: string;
+  name: string;
+  type: JournalType;
+  default_debit_account_id: string | null;
+  default_credit_account_id: string | null;
+  is_archived: boolean;
+}
+export type JournalCreate = Omit<Journal, "id" | "is_archived">;
+
+export type AnalyticType = "INCOME" | "EXPENSE";
+
+export interface AnalyticAccount {
+  id: string;
+  name: string;
+  type: AnalyticType;
+  is_archived: boolean;
+}
+export type AnalyticAccountCreate = Omit<AnalyticAccount, "id" | "is_archived">;
+
+/** A document line as drawn on every order/bill/invoice screen. */
+export interface DocumentLine {
+  id?: string;
+  product_id: string;
+  product_name?: string;
+  analytic_account_id?: string | null;
+  account_id?: string;
+  quantity: number;
+  unit_price: number;
+  tax_pct: number;
+}
+
+export type PurchaseOrderStatus = "DRAFT" | "CONFIRMED" | "BILLED" | "CANCELLED";
+export type VendorBillStatus = "DRAFT" | "POSTED" | "PARTIAL" | "PAID" | "CANCELLED";
+export type SalesOrderStatus = "DRAFT" | "CONFIRMED" | "INVOICED" | "CANCELLED";
+export type CustomerInvoiceStatus = "DRAFT" | "POSTED" | "PARTIAL" | "PAID" | "CANCELLED";
+
+interface DocumentHeader {
+  id: string;
+  number: string;
+  reference: string | null;
+}
+
+export interface SalesOrder extends DocumentHeader {
+  customer_id: string;
+  customer_name?: string;
+  order_date: string;
+  status: SalesOrderStatus;
+  untaxed_total: number;
+  tax_total: number;
+  total: number;
+  lines: DocumentLine[];
+}
+export type SalesOrderCreate = Pick<SalesOrder, "reference" | "customer_id" | "order_date" | "lines">;
+
+export interface CustomerInvoice extends DocumentHeader {
+  so_id: string | null;
+  so_number?: string;
+  customer_id: string;
+  customer_name?: string;
+  invoice_date: string;
+  due_date: string | null;
+  status: CustomerInvoiceStatus;
+  untaxed_total: number;
+  tax_total: number;
+  total: number;
+  amount_paid: number;
+  journal_entry_id: string | null;
+  lines: DocumentLine[];
+}
+export type CustomerInvoiceCreate = Pick<
+  CustomerInvoice,
+  "reference" | "customer_id" | "invoice_date" | "due_date" | "lines"
+>;
+
+export interface PurchaseOrder extends DocumentHeader {
+  vendor_id: string;
+  vendor_name?: string;
+  order_date: string;
+  status: PurchaseOrderStatus;
+  untaxed_total: number;
+  tax_total: number;
+  total: number;
+  lines: DocumentLine[];
+}
+export type PurchaseOrderCreate = Pick<PurchaseOrder, "reference" | "vendor_id" | "order_date" | "lines">;
+
+export interface VendorBill extends DocumentHeader {
+  po_id: string | null;
+  po_number?: string;
+  vendor_id: string;
+  vendor_name?: string;
+  bill_date: string;
+  due_date: string | null;
+  status: VendorBillStatus;
+  untaxed_total: number;
+  tax_total: number;
+  total: number;
+  amount_paid: number;
+  journal_entry_id: string | null;
+  lines: DocumentLine[];
+}
+export type VendorBillCreate = Pick<
+  VendorBill,
+  "reference" | "vendor_id" | "bill_date" | "due_date" | "lines"
+>;
+
+export type PaymentDirection = "RECEIVE" | "SEND";
+
+export interface Payment {
+  id: string;
+  number: string;
+  contact_id: string;
+  contact_name?: string;
+  direction: PaymentDirection;
+  journal_id: string;
+  journal_name?: string;
+  amount: number;
+  payment_date: string;
+  note: string | null;
+  invoice_id: string | null;
+  bill_id: string | null;
+  document_number?: string;
+}
+export interface PaymentCreate {
+  invoice_id?: string;
+  bill_id?: string;
+  direction: PaymentDirection;
+  journal_id: string;
+  amount: number;
+  payment_date: string;
+  note?: string;
+}
+
+export type BudgetState = "DRAFT" | "CONFIRMED" | "REVISED" | "CANCELLED";
+
+export interface BudgetLine {
+  id?: string;
+  analytic_account_id: string;
+  analytic_account_name?: string;
+  type?: AnalyticType;
+  committed_amount: number;
+  /** Computed on read — never sent by the client. */
+  achieved_amount?: number;
+  achieved_pct?: number;
+  amount_to_achieve?: number;
+}
+
+export interface Budget {
+  id: string;
+  name: string;
+  period_start: string;
+  period_end: string;
+  responsible_id: string | null;
+  responsible_name?: string;
+  state: BudgetState;
+  revision_of_id: string | null;
+  revised_with_id: string | null;
+  lines: BudgetLine[];
+}
+export type BudgetCreate = Pick<Budget, "name" | "period_start" | "period_end" | "responsible_id" | "lines">;
+
+export interface JournalEntryLine {
+  id: string;
+  account_id: string;
+  account_code?: string;
+  account_name?: string;
+  analytic_account_id: string | null;
+  partner_id: string | null;
+  label: string | null;
+  debit: number;
+  credit: number;
+}
+
+export interface JournalEntry {
+  id: string;
+  entry_number: string;
+  journal_id: string;
+  journal_name?: string;
+  entry_date: string;
+  reference: string | null;
+  state: "DRAFT" | "POSTED" | "REVERSED";
+  source_type: string;
+  source_id: string | null;
+  reversal_of_id: string | null;
+  lines: JournalEntryLine[];
+}
+
+/* ── Reports — docs/04_API_CONTRACT.md §3.8 ────────────────────────────────── */
+
+export interface ReportAccountRow {
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  balance: number;
+}
+export interface ReportGroup {
+  label: string;
+  rows: ReportAccountRow[];
+  total: number;
+}
+export interface BalanceSheetReport {
+  as_of: string;
+  assets: ReportGroup;
+  liabilities: ReportGroup;
+  equity: ReportGroup;
+  is_balanced: boolean;
+}
+export interface ProfitAndLossReport {
+  date_from: string;
+  date_to: string;
+  income: ReportGroup;
+  expenses: ReportGroup;
+  other_expenses: ReportGroup;
+  net_profit: number;
+}
+export interface DashboardKpisReport {
+  receivables: number;
+  payables: number;
+  cash: number;
+  net_profit: number;
+  is_balanced: boolean;
+}
+export interface TrialBalanceRow {
+  account_code: string;
+  account_name: string;
+  debit: number;
+  credit: number;
+}
+export interface TrialBalanceReport {
+  as_of: string;
+  rows: TrialBalanceRow[];
+  total_debit: number;
+  total_credit: number;
+  difference: number;
+  is_balanced: boolean;
+}
+export interface BudgetReportRow {
+  analytic_account_id: string;
+  analytic_account: string;
+  type: AnalyticType;
+  committed_amount: number;
+  achieved_amount: number;
+  achieved_pct: number;
+  amount_to_achieve: number;
+}
+export interface BudgetReport {
+  budget_id: string;
+  budget_name: string;
+  lines: BudgetReportRow[];
+  total_committed: number;
+  total_achieved: number;
+  total_to_achieve: number;
+}
+
+/* ── The client ─────────────────────────────────────────────────────────────
+   §3.1: all six master modules are "identical shape" per the contract, so one
+   factory specifies the shape once instead of repeating CRUD six times. ── */
+
+function masterResource<T, TCreate>(path: string) {
+  return {
+    list: (params?: ListParams) => get<Page<T>>(path, params),
+    get: (id: string) => get<T>(`${path}/${id}`),
+    create: (body: TCreate) => post<T>(path, body),
+    update: (id: string, body: Partial<TCreate>) => patch<T>(`${path}/${id}`, body),
+    archive: (id: string) => post<T>(`${path}/${id}/archive`),
+  };
+}
 
 export const api = {
   health: () => get<{ status: string; database: string; version: string }>("/health"),
 
   auth: {
     login: (email: string, password: string) => post<User>("/auth/login", { email, password }),
+    signup: (body: { login_id: string; email: string; full_name: string; password: string }) =>
+      post<User>("/auth/signup", body),
     logout: () => post<{ ok: boolean }>("/auth/logout"),
     me: () => get<User>("/auth/me"),
   },
@@ -151,16 +491,103 @@ export const api = {
     list: (params?: ListParams) => get<Page<Record<string, unknown>>>("/audit-logs", params),
   },
 
-  // ★ ADD YOUR DOMAIN RESOURCES HERE — mirror the shape above, e.g.:
-  //
-  // orders: {
-  //   list:   (params?: ListParams) => get<Page<Order>>("/orders", params),
-  //   get:    (id: string)          => get<Order>(`/orders/${id}`),
-  //   create: (body: OrderCreate)   => post<Order>("/orders", body),
-  //   update: (id: string, body: Partial<OrderCreate>) => patch<Order>(`/orders/${id}`, body),
-  //   remove: (id: string)          => del<void>(`/orders/${id}`),
-  //   activate: (id: string)        => post<Order>(`/orders/${id}/activate`),
-  // },
+  // ── Master data (04_API_CONTRACT.md §3.1) ────────────────────────────────
+  contacts: masterResource<Contact, ContactCreate>("/contacts"),
+  products: masterResource<Product, ProductCreate>("/products"),
+  productCategories: {
+    ...masterResource<ProductCategory, { name: string }>("/product-categories"),
+    /** The product form's combobox creates one inline from a bare {name}. */
+    createInline: (name: string) => post<ProductCategory>("/product-categories", { name }),
+  },
+  accounts: masterResource<Account, AccountCreate>("/accounts"),
+  journals: masterResource<Journal, JournalCreate>("/journals"),
+  analyticAccounts: masterResource<AnalyticAccount, AnalyticAccountCreate>("/analytic-accounts"),
+
+  // ── Sales chain (§3.3) ────────────────────────────────────────────────────
+  salesOrders: {
+    list: (params?: ListParams) => get<Page<SalesOrder>>("/sales-orders", params),
+    get: (id: string) => get<SalesOrder>(`/sales-orders/${id}`),
+    create: (body: SalesOrderCreate) => post<SalesOrder>("/sales-orders", body),
+    confirm: (id: string) => post<SalesOrder>(`/sales-orders/${id}/confirm`),
+    createInvoice: (id: string) => post<CustomerInvoice>(`/sales-orders/${id}/create-invoice`),
+    cancel: (id: string) => post<SalesOrder>(`/sales-orders/${id}/cancel`),
+  },
+  customerInvoices: {
+    list: (params?: ListParams) => get<Page<CustomerInvoice>>("/customer-invoices", params),
+    get: (id: string) => get<CustomerInvoice>(`/customer-invoices/${id}`),
+    create: (body: CustomerInvoiceCreate) => post<CustomerInvoice>("/customer-invoices", body),
+    post: (id: string) => post<CustomerInvoice>(`/customer-invoices/${id}/post`),
+    cancel: (id: string) => post<CustomerInvoice>(`/customer-invoices/${id}/cancel`),
+    send: (id: string) => post<{ queued: boolean; to: string }>(`/customer-invoices/${id}/send`),
+    pdfUrl: (id: string) => `${API_BASE}/customer-invoices/${id}/pdf`,
+  },
+
+  // ── Purchase chain (§3.2) ─────────────────────────────────────────────────
+  purchaseOrders: {
+    list: (params?: ListParams) => get<Page<PurchaseOrder>>("/purchase-orders", params),
+    get: (id: string) => get<PurchaseOrder>(`/purchase-orders/${id}`),
+    create: (body: PurchaseOrderCreate) => post<PurchaseOrder>("/purchase-orders", body),
+    confirm: (id: string) => post<PurchaseOrder>(`/purchase-orders/${id}/confirm`),
+    createBill: (id: string) => post<VendorBill>(`/purchase-orders/${id}/create-bill`),
+    cancel: (id: string) => post<PurchaseOrder>(`/purchase-orders/${id}/cancel`),
+  },
+  vendorBills: {
+    list: (params?: ListParams) => get<Page<VendorBill>>("/vendor-bills", params),
+    get: (id: string) => get<VendorBill>(`/vendor-bills/${id}`),
+    create: (body: VendorBillCreate) => post<VendorBill>("/vendor-bills", body),
+    post: (id: string) => post<VendorBill>(`/vendor-bills/${id}/post`),
+    cancel: (id: string) => post<VendorBill>(`/vendor-bills/${id}/cancel`),
+    send: (id: string) => post<{ queued: boolean; to: string }>(`/vendor-bills/${id}/send`),
+    pdfUrl: (id: string) => `${API_BASE}/vendor-bills/${id}/pdf`,
+  },
+
+  // ── Payments (§3.4) ───────────────────────────────────────────────────────
+  payments: {
+    list: (params?: ListParams) => get<Page<Payment>>("/payments", params),
+    create: (body: PaymentCreate, idempotencyKey: string) =>
+      post<Payment>("/payments", body, { headers: { "Idempotency-Key": idempotencyKey } }),
+  },
+
+  // ── Budgets (§3.6) ────────────────────────────────────────────────────────
+  budgets: {
+    list: (params?: ListParams) => get<Page<Budget>>("/budgets", params),
+    get: (id: string) => get<Budget>(`/budgets/${id}`),
+    create: (body: BudgetCreate) => post<Budget>("/budgets", body),
+    confirm: (id: string) => post<Budget>(`/budgets/${id}/confirm`),
+    revise: (id: string) => post<Budget>(`/budgets/${id}/revise`),
+    cancel: (id: string) => post<Budget>(`/budgets/${id}/cancel`),
+    lineDocuments: (id: string, lineId: string, params?: ListParams) =>
+      get<Page<CustomerInvoice | VendorBill>>(`/budgets/${id}/lines/${lineId}/documents`, params),
+  },
+
+  // ── The ledger — read only (§3.7) ─────────────────────────────────────────
+  journalEntries: {
+    list: (params?: ListParams) => get<Page<JournalEntry>>("/journal-entries", params),
+    get: (id: string) => get<JournalEntry>(`/journal-entries/${id}`),
+  },
+
+  // ── Reports (§3.8) ────────────────────────────────────────────────────────
+  reports: {
+    balanceSheet: (asOf?: string) => get<BalanceSheetReport>("/reports/balance-sheet", { as_of: asOf }),
+    profitAndLoss: (dateFrom?: string, dateTo?: string) =>
+      get<ProfitAndLossReport>("/reports/profit-and-loss", { date_from: dateFrom, date_to: dateTo }),
+    trialBalance: (asOf?: string) => get<TrialBalanceReport>("/reports/trial-balance", { as_of: asOf }),
+    budget: (budgetId: string) => get<BudgetReport>("/reports/budget", { budget_id: budgetId }),
+    kpis: () => get<DashboardKpisReport>("/reports/kpis"),
+    exportUrl: (name: string, params?: ListParams) => `${API_BASE}/reports/${name}/export${buildQuery(params)}`,
+    pdfUrl: (name: string, params?: ListParams) => `${API_BASE}/reports/${name}/pdf${buildQuery(params)}`,
+  },
+
+  // ── Customer portal — User role only (§3.9) ───────────────────────────────
+  portal: {
+    documents: {
+      list: (params?: ListParams) =>
+        get<Page<CustomerInvoice | VendorBill>>("/portal/documents", params),
+      get: (id: string) => get<CustomerInvoice | VendorBill>(`/portal/documents/${id}`),
+    },
+    pay: (body: PaymentCreate, idempotencyKey: string) =>
+      post<Payment>("/portal/payments", body, { headers: { "Idempotency-Key": idempotencyKey } }),
+  },
 };
 
 export { get, post, patch, del, buildQuery, API_BASE };

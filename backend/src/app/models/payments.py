@@ -8,9 +8,10 @@ import enum
 
 from sqlalchemy import CheckConstraint, Date, ForeignKey, Numeric, String
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDMixin
+from app.models.masters import Contact, Journal
 
 
 class PaymentDirection(str, enum.Enum):
@@ -49,6 +50,9 @@ class Payment(UUIDMixin, Base):
     # The double-click guard — a repeat request with the same key returns the
     # original payment instead of creating a second one (docs/06_BACKEND.md §5).
     idempotency_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+
+    contact: Mapped[Contact] = relationship(lazy="joined")
+    journal: Mapped[Journal] = relationship(lazy="joined")
 
     def __repr__(self) -> str:
         return f"<Payment {self.number} {self.direction} {self.amount}>"

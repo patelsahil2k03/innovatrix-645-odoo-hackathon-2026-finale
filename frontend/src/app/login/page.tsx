@@ -1,17 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { Field } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth-context";
 import { formMessageFrom, loginSchema, validate, type FieldErrors } from "@/lib/validation";
 
-/** ★ Replace with the demo accounts your seed script creates. */
+/** Seeded demo accounts — the three roles from PROBLEM_STATEMENT.md §2. */
 const DEMO_ACCOUNTS = [
-  { email: "admin@demo.in", label: "Administrator" },
-  { email: "manager@demo.in", label: "Manager" },
-  { email: "operator@demo.in", label: "Operator" },
-  { email: "viewer@demo.in", label: "Viewer" },
+  { email: "admin@urbanfurniture.in", label: "Admin" },
+  { email: "accountant@urbanfurniture.in", label: "Accountant" },
+  { email: "customer@urbanfurniture.in", label: "User (portal)" },
 ];
 const DEMO_PASSWORD = "Demo@1234";
 
@@ -57,7 +57,7 @@ export default function LoginPage() {
         <div>
           <h1 style={{ fontSize: "var(--t-xl)" }}>Sign in</h1>
           <p style={{ color: "var(--text-muted)", fontSize: "var(--t-sm)", marginTop: 4 }}>
-            Use a demo account below, or enter your credentials.
+            Urban Furniture Accounting — use a demo account below, or enter your credentials.
           </p>
         </div>
 
@@ -93,6 +93,10 @@ export default function LoginPage() {
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Signing in…" : "Sign in"}
           </button>
+
+          <p style={{ textAlign: "center", fontSize: "var(--t-sm)", color: "var(--text-muted)" }}>
+            New here? <Link href="/signup">Create an account</Link>
+          </p>
         </form>
 
         <div className="card">

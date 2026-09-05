@@ -15,6 +15,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.masters import AnalyticAccount, Contact
 
 
 class BudgetState(str, enum.Enum):
@@ -47,8 +48,9 @@ class Budget(UUIDMixin, TimestampMixin, Base):
     revision_of_id: Mapped[str | None] = mapped_column(ForeignKey("budgets.id"))
     revised_with_id: Mapped[str | None] = mapped_column(ForeignKey("budgets.id"))
 
+    responsible: Mapped[Contact | None] = relationship(lazy="joined")
     lines: Mapped[list["BudgetLine"]] = relationship(
-        back_populates="budget", cascade="all, delete-orphan"
+        back_populates="budget", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -70,4 +72,5 @@ class BudgetLine(UUIDMixin, Base):
     )
     committed_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
 
+    analytic_account: Mapped[AnalyticAccount] = relationship(lazy="joined")
     budget: Mapped[Budget] = relationship(back_populates="lines")

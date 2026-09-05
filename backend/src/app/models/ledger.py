@@ -21,9 +21,10 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDMixin
+from app.models.masters import Account, Journal
 
 
 class NumberSequence(Base):
@@ -104,6 +105,13 @@ class JournalEntry(UUIDMixin, Base):
         Index("ix_journal_entries_state_date", "state", "entry_date"),
     )
 
+    # selectin, not joined: an entry has several lines, and a joined load would
+    # multiply the entry row by its line count on every list query.
+    lines: Mapped[list["JournalLine"]] = relationship(
+        back_populates="entry", cascade="all, delete-orphan", lazy="selectin"
+    )
+    journal: Mapped[Journal] = relationship(lazy="joined")
+
     def __repr__(self) -> str:
         return f"<JournalEntry {self.entry_number} {self.state}>"
 
@@ -131,6 +139,9 @@ class JournalLine(UUIDMixin, Base):
     label: Mapped[str | None] = mapped_column(String(200))
     debit: Mapped[float] = mapped_column(Numeric(14, 2), default=0, nullable=False)
     credit: Mapped[float] = mapped_column(Numeric(14, 2), default=0, nullable=False)
+
+    entry: Mapped[JournalEntry] = relationship(back_populates="lines")
+    account: Mapped[Account] = relationship(lazy="joined")
 
     def __repr__(self) -> str:
         return f"<JournalLine {self.account_id} dr={self.debit} cr={self.credit}>"

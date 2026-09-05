@@ -11,14 +11,15 @@ cd "$ROOT"
 USE_DOCKER=0
 [[ "${1:-}" == "--db" && "${2:-}" == "docker" ]] && USE_DOCKER=1
 
-# Propagate env to both apps (create from example on first run)
+# One .env at the repo root — backend reads it by path (app/core/settings.py),
+# no per-app copy needed. Only the frontend needs a generated file, since Next
+# only inlines NEXT_PUBLIC_* vars from its own .env.local.
 [ -f .env ] || { cp .env.example .env; echo "→ created .env from .env.example"; }
-cp .env backend/.env
 grep '^NEXT_PUBLIC_' .env > frontend/.env.local || true
 
 # A leftover listener on 3000/8000 is what causes "port in use, using 3001 instead",
 # which then breaks CORS in confusing ways. Clear them before starting, not just on exit.
-free_ports() { fuser -k 3000/tcp 8000/tcp >/dev/null 2>&1 || true; }
+free_ports() { ./scripts/kill-ports.sh >/dev/null 2>&1 || true; }
 free_ports
 
 if [ "$USE_DOCKER" = "1" ]; then
@@ -40,7 +41,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "→ api  http://localhost:8000/docs"
-(cd backend && uv sync --quiet && uv run uvicorn app.main:app --reload --port 8000) &
+(cd backend && uv sync --extra postgres --quiet && uv run uvicorn app.main:app --reload --port 8000) &
 
 echo "→ web  http://localhost:3000"
 (cd frontend && { [ -d node_modules ] || npm install; }; npm run dev) &
