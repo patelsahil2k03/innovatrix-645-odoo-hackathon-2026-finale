@@ -81,7 +81,7 @@ export default function DashboardPage() {
                   {page.items.map((entry) => (
                     <tr key={entry.id}>
                       <td>
-                        <Link href={`/account/journal-entries/${entry.id}`}>{entry.entry_number}</Link>
+                        <Link href={`/account/journal-entries?open=${entry.id}`}>{entry.entry_number}</Link>
                       </td>
                       <td>{date(entry.entry_date)}</td>
                       <td>{entry.reference ?? "—"}</td>

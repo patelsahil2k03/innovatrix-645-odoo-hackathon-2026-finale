@@ -102,7 +102,12 @@ export function useDocumentLines(initial: DocumentLine[] = []) {
     return { untaxed_total: round2(untaxed), tax_total: round2(tax), total: round2(untaxed + tax) };
   }, [lines]);
 
-  return { lines, addLine, removeLine, updateLine, selectProduct, totals };
+  // Create-drawer forms live inside a list page now instead of their own
+  // page, so the state needs an explicit reset on close/submit — a fresh
+  // page mount used to do this for free.
+  const reset = useCallback(() => setLines([emptyLine()]), []);
+
+  return { lines, addLine, removeLine, updateLine, selectProduct, totals, reset };
 }
 
 /* ── The posting preview T-account (05_FRONTEND.md §7.1) ─────────────────────

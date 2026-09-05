@@ -35,7 +35,7 @@ export default function BudgetLineDocumentsPage({ params }: { params: Promise<{ 
         items={[
           { label: "Account" },
           { label: "Analytical Budget", href: "/account/budgets" },
-          { label: budget.data?.name ?? "Budget", href: `/account/budgets/${id}` },
+          { label: budget.data?.name ?? "Budget", href: `/account/budgets?open=${id}` },
           { label: line?.analytic_account_name ?? "Documents" },
         ]}
       />
@@ -47,7 +47,7 @@ export default function BudgetLineDocumentsPage({ params }: { params: Promise<{ 
         </div>
         {/* One segment up is `/lines/{lineId}`, which is not a page — this
             drill-down closes back to the budget it came from. */}
-        <ClosePanel fallbackHref={`/account/budgets/${id}`} label="Close and return to budget" />
+        <ClosePanel fallbackHref={`/account/budgets?open=${id}`} label="Close and return to budget" />
       </div>
 
       <div className="card">
@@ -71,9 +71,9 @@ export default function BudgetLineDocumentsPage({ params }: { params: Promise<{ 
                     <tr key={doc.id}>
                       <td>
                         {isInvoice(doc) ? (
-                          <Link href={`/sales/invoices/${doc.id}`}>{doc.number}</Link>
+                          <Link href={`/sales/invoices?open=${doc.id}`}>{doc.number}</Link>
                         ) : (
-                          <Link href={`/purchase/bills/${doc.id}`}>{doc.number}</Link>
+                          <Link href={`/purchase/bills?open=${doc.id}`}>{doc.number}</Link>
                         )}
                       </td>
                       <td>{isInvoice(doc) ? doc.customer_name : doc.vendor_name}</td>

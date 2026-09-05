@@ -4,6 +4,7 @@ import { memo } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { CategoryBarChart } from "@/components/ui/bar-chart";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { SkeletonCard } from "@/components/ui/skeleton";
@@ -84,6 +85,16 @@ export default function BalanceSheetPage() {
                 unreachable; check the trial balance badge.
               </div>
             ) : null}
+            <div className="card">
+              <div className="card-head"><span className="card-title">Assets vs. liabilities + equity</span></div>
+              <CategoryBarChart
+                items={[
+                  { label: "Assets", value: data.assets.total, colorVar: "var(--chart-1)" },
+                  { label: "Liabilities", value: data.liabilities.total, colorVar: "var(--chart-2)" },
+                  { label: "Equity", value: data.equity.total, colorVar: "var(--chart-3)" },
+                ]}
+              />
+            </div>
             <div className="grid-2">
               <GroupTable group={data.assets} asOf={data.as_of} />
               <div className="stack">
