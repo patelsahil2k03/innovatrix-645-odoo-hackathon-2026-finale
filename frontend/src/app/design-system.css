@@ -680,7 +680,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
    it reads as "close this panel" rather than "close this dialog's header". */
 .drawer-close {
   position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%); z-index: 1;
-  width: 36px; height: 36px; border-radius: var(--radius-full);
+  width: 36px; height: 36px; border-radius: var(--radius-lg);
   border: 1px solid var(--border-firm); background: var(--surface); box-shadow: var(--shadow-md);
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--text); cursor: pointer;
@@ -690,16 +690,28 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .drawer-close:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 /* One-shot "look here" ring — plays once when the drawer (and this button)
-   mounts, then reverts to its base opacity:0 (no fill-mode) so nothing is
-   left behind: a ring, never a permanent border. */
-.drawer-close::after {
-  content: ""; position: absolute; inset: -8px; border-radius: var(--radius-full);
-  border: 2px solid var(--accent); opacity: 0; pointer-events: none;
-  animation: drawer-close-pulse 700ms ease-out;
+   mounts: an SVG rect traces the button's own 1px border (same box, same
+   --radius-lg corners as .card) as a stroke draw-in, then once complete it
+   hides, leaving the plain static border behind. pathLength=1 on the rect
+   normalizes stroke-dasharray/-offset to 0-1 regardless of actual perimeter,
+   so this doesn't need the real geometry recomputed by hand. */
+.drawer-close-ring {
+  position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px);
+  pointer-events: none; overflow: visible;
 }
-@keyframes drawer-close-pulse {
-  0%   { opacity: 0.9; transform: scale(0.55); }
-  100% { opacity: 0;   transform: scale(1.7); }
+.drawer-close-ring rect {
+  fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation:
+    drawer-close-ring-draw 450ms ease-out forwards,
+    drawer-close-ring-hide 250ms ease-in 450ms forwards;
+}
+@keyframes drawer-close-ring-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes drawer-close-ring-hide {
+  to { opacity: 0; }
 }
 
 /* Hover/focus tooltip — same contract as .info-tooltip-panel (CSS-only,

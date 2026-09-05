@@ -81,7 +81,7 @@ function ReceiptsPageInner() {
         title="Receipts"
         subtitle="Payments received against sale invoices."
         action={can.record(user?.role.name) ? (
-          <Link href="/sales/receipts/new" className="btn btn-primary">
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New receipt
           </Link>

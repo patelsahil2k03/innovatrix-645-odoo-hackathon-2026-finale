@@ -18,7 +18,7 @@ import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ViewToggle, type ListView } from "@/components/ui/view-toggle";
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import { api, type AnalyticAccount, type BudgetLine } from "@/lib/api";
+import { api, type AnalyticAccount, type Budget, type BudgetLine, type BudgetUpdate, type Contact } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { aggregateBudgetLines, budgetAchievedTone } from "@/lib/budget-helpers";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -97,6 +97,136 @@ const BudgetLineRow = memo(function BudgetLineRow({
     </tr>
   );
 });
+
+interface BudgetEditFormProps {
+  budget: Budget;
+  contacts: Contact[];
+  analyticAccounts: AnalyticAccount[];
+  onSave: (values: BudgetUpdate) => Promise<void>;
+}
+
+// A DRAFT budget can still be edited — CONFIRMED ones are revised instead
+// (see the parent's state check). Keyed by `budget.id` where it's mounted so
+// switching to a different budget while the drawer stays open reseeds instead
+// of carrying over stale line state.
+function BudgetEditForm({ budget, contacts, analyticAccounts, onSave }: BudgetEditFormProps) {
+  const [name, setName] = useState(budget.name);
+  const [periodStart, setPeriodStart] = useState(budget.period_start);
+  const [periodEnd, setPeriodEnd] = useState(budget.period_end);
+  const [responsibleId, setResponsibleId] = useState(budget.responsible_id ?? "");
+  // The responsible contact may be archived by now, and archived contacts are
+  // dropped from `contacts` (only active ones are fetched for the picker) — keep
+  // its option available so re-saving without touching this field can't
+  // silently null it out.
+  const responsibleMissing = Boolean(budget.responsible_id) && !contacts.some((c) => c.id === budget.responsible_id);
+  const [lines, setLines] = useState<DraftBudgetLine[]>(
+    budget.lines.length
+      ? budget.lines.map((line) => ({ ...line, key: `bl-${++seq}` }))
+      : [emptyLine()],
+  );
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const updateLine = useCallback((key: string, patch: Partial<BudgetLine>) => {
+    setLines((prev) => prev.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+  }, []);
+  const removeLine = useCallback((key: string) => {
+    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.key !== key)));
+  }, []);
+  const addLine = useCallback(() => setLines((prev) => [...prev, emptyLine()]), []);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setFormError(null);
+    const result = validate(budgetSchema, {
+      name,
+      period_start: periodStart,
+      period_end: periodEnd,
+      responsible_id: responsibleId || null,
+      lines: lines.map(({ analytic_account_id, committed_amount }) => ({ analytic_account_id, committed_amount })),
+    });
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    setSubmitting(true);
+    try {
+      await onSave({ ...result.data, responsible_id: result.data.responsible_id ?? null });
+    } catch (error) {
+      setErrors(fieldErrorsFrom(error));
+      setFormError(formMessageFrom(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form className="stack" onSubmit={handleSubmit} noValidate>
+      {formError ? <div className="alert alert-danger" role="alert">{formError}</div> : null}
+
+      <div className="card grid-2">
+        <Field label="Name" error={errors.name} required>
+          {(props) => <input {...props} className="input" value={name} onChange={(event) => setName(event.target.value)} />}
+        </Field>
+        <Field label="Responsible" hint="Selected from Contacts, not internal users">
+          {(props) => (
+            <select {...props} className="select" value={responsibleId} onChange={(event) => setResponsibleId(event.target.value)}>
+              <option value="">—</option>
+              {responsibleMissing ? (
+                <option value={budget.responsible_id ?? ""}>{budget.responsible_name ?? "Archived contact"}</option>
+              ) : null}
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>{contact.name}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Period start" error={errors.period_start} required>
+          {(props) => <input {...props} className="input" type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} />}
+        </Field>
+        <Field label="Period end" error={errors.period_end} required>
+          {(props) => <input {...props} className="input" type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} />}
+        </Field>
+      </div>
+
+      <div className="card stack">
+        <div className="card-head"><span className="card-title">Budget lines</span></div>
+        <div className="table-wrap">
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr><th>Analytic account</th><th style={{ textAlign: "right" }}>Committed amount</th><th aria-label="Remove line" /></tr>
+              </thead>
+              <tbody>
+                {lines.map((line) => (
+                  <BudgetLineRow
+                    key={line.key}
+                    line={line}
+                    analyticAccounts={analyticAccounts}
+                    removeDisabled={lines.length <= 1}
+                    onUpdate={updateLine}
+                    onRemove={removeLine}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {errors.lines ? <span className="field-error" role="alert">{errors.lines}</span> : null}
+        <button type="button" className="btn btn-sm" onClick={addLine} style={{ alignSelf: "flex-start" }}>
+          <PlusIcon size={14} />
+          Add a line
+        </button>
+      </div>
+
+      <button type="submit" className="btn btn-primary" disabled={submitting} style={{ alignSelf: "flex-start" }}>
+        {submitting ? "Saving…" : "Save changes"}
+      </button>
+    </form>
+  );
+}
 
 export default function BudgetsPage() {
   return (
@@ -449,46 +579,61 @@ function BudgetsPageInner() {
                 </div>
               ) : null}
 
-              <div className="card">
-                <div className="card-head"><span className="card-title">Budget lines</span></div>
-                <div className="table-scroll">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Analytic account</th>
-                        <th style={{ textAlign: "right" }}>Committed</th>
-                        <th style={{ textAlign: "right" }}>Achieved</th>
-                        <th style={{ textAlign: "right" }}>Achieved %</th>
-                        <th style={{ textAlign: "right" }}>To achieve</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.lines.map((line) => (
-                        <tr key={line.id}>
-                          <td>{line.analytic_account_name ?? "—"}</td>
-                          <td className="num">{money(line.committed_amount)}</td>
-                          <td className="num">
-                            {line.id ? (
-                              <DrillAmount
-                                value={line.achieved_amount ?? 0}
-                                href={`/account/budgets/${data.id}/lines/${line.id}/documents`}
-                              />
-                            ) : (
-                              money(line.achieved_amount ?? 0)
-                            )}
-                          </td>
-                          <td className="num">
-                            <span className={`badge badge-${budgetAchievedTone(line.achieved_pct ?? 0)}`}>
-                              {percent(line.achieved_pct ?? 0)}
-                            </span>
-                          </td>
-                          <td className="num">{money(line.amount_to_achieve ?? 0)}</td>
+              {data.state === "DRAFT" && canRecord ? (
+                <BudgetEditForm
+                  key={data.id}
+                  budget={data}
+                  contacts={contacts.data?.items ?? []}
+                  analyticAccounts={analyticAccounts.data?.items ?? []}
+                  onSave={async (values) => {
+                    await api.budgets.update(data.id, values);
+                    toast.success("Budget updated");
+                    editingBudget.reload();
+                    budgets.reload();
+                  }}
+                />
+              ) : (
+                <div className="card">
+                  <div className="card-head"><span className="card-title">Budget lines</span></div>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Analytic account</th>
+                          <th style={{ textAlign: "right" }}>Committed</th>
+                          <th style={{ textAlign: "right" }}>Achieved</th>
+                          <th style={{ textAlign: "right" }}>Achieved %</th>
+                          <th style={{ textAlign: "right" }}>To achieve</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {data.lines.map((line) => (
+                          <tr key={line.id}>
+                            <td>{line.analytic_account_name ?? "—"}</td>
+                            <td className="num">{money(line.committed_amount)}</td>
+                            <td className="num">
+                              {line.id ? (
+                                <DrillAmount
+                                  value={line.achieved_amount ?? 0}
+                                  href={`/account/budgets/${data.id}/lines/${line.id}/documents`}
+                                />
+                              ) : (
+                                money(line.achieved_amount ?? 0)
+                              )}
+                            </td>
+                            <td className="num">
+                              <span className={`badge badge-${budgetAchievedTone(line.achieved_pct ?? 0)}`}>
+                                {percent(line.achieved_pct ?? 0)}
+                              </span>
+                            </td>
+                            <td className="num">{money(line.amount_to_achieve ?? 0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </AsyncState>

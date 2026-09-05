@@ -19,7 +19,15 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon, PlusIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
-import { api, type Account, type Product } from "@/lib/api";
+import {
+  api,
+  type Account,
+  type AnalyticAccount,
+  type Contact,
+  type Product,
+  type VendorBill,
+  type VendorBillUpdate,
+} from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -36,6 +44,106 @@ const PAGE_SIZE = 20;
 
 function byId<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+interface VendorBillEditFormProps {
+  bill: VendorBill;
+  vendors: Contact[];
+  products: Product[];
+  analyticAccounts: AnalyticAccount[];
+  onSave: (values: VendorBillUpdate) => Promise<void>;
+}
+
+// A DRAFT bill can still be edited — everything past DRAFT is read-only
+// (see the parent's status check). Keyed by `bill.id` where it's mounted so
+// switching to a different bill while the drawer stays open reseeds instead
+// of carrying over stale line state.
+function VendorBillEditForm({ bill, vendors, products, analyticAccounts, onSave }: VendorBillEditFormProps) {
+  const [vendorId, setVendorId] = useState(bill.vendor_id);
+  const [billDate, setBillDate] = useState(bill.bill_date);
+  const [dueDate, setDueDate] = useState(bill.due_date ?? "");
+  const [reference, setReference] = useState(bill.reference ?? "");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { lines, addLine, removeLine, updateLine, selectProduct, totals } = useDocumentLines(bill.lines);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setFormError(null);
+    const linesResult = validate(documentLinesSchema, lines);
+    if (!linesResult.ok) {
+      setFormError("Fix the highlighted lines before saving.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSave({
+        vendor_id: vendorId,
+        bill_date: billDate,
+        due_date: dueDate || null,
+        reference: reference || null,
+        lines: linesResult.data,
+      });
+    } catch (error) {
+      setFormError(formMessageFrom(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form className="stack" onSubmit={handleSubmit} noValidate>
+      {formError ? <div className="alert alert-danger" role="alert">{formError}</div> : null}
+
+      <div className="card grid-2">
+        <Field label="Vendor" required>
+          {(props) => (
+            <select {...props} className="select" value={vendorId} onChange={(event) => setVendorId(event.target.value)}>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Bill date" required>
+          {(props) => (
+            <input {...props} className="input" type="date" value={billDate} onChange={(event) => setBillDate(event.target.value)} />
+          )}
+        </Field>
+        <Field label="Due date">
+          {(props) => (
+            <input {...props} className="input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+          )}
+        </Field>
+        <Field label="Reference">
+          {(props) => (
+            <input {...props} className="input" value={reference} onChange={(event) => setReference(event.target.value)} />
+          )}
+        </Field>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><span className="card-title">Bill lines</span></div>
+        <LineItemsEditor
+          lines={lines}
+          products={products}
+          analyticAccounts={analyticAccounts}
+          onAdd={addLine}
+          onRemove={removeLine}
+          onUpdate={updateLine}
+          onSelectProduct={(key, productId) => {
+            const product = products.find((p) => p.id === productId);
+            selectProduct(key, productId, product ? lineDefaultsFromProduct(product, "purchase") : {});
+          }}
+          totals={totals}
+        />
+      </div>
+
+      <button type="submit" className="btn btn-primary" disabled={submitting} style={{ alignSelf: "flex-start" }}>
+        {submitting ? "Saving…" : "Save changes"}
+      </button>
+    </form>
+  );
 }
 
 export default function VendorBillsPage() {
@@ -402,20 +510,36 @@ function VendorBillsPageInner() {
                   </div>
                 ) : null}
 
-                <div className="card">
-                  <div className="card-head"><span className="card-title">Bill lines</span></div>
-                  <LineItemsEditor
-                    lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
+                {data.status === "DRAFT" && canRecord ? (
+                  <VendorBillEditForm
+                    key={data.id}
+                    bill={data}
+                    vendors={vendors}
                     products={products.data?.items ?? []}
                     analyticAccounts={analyticAccounts.data?.items ?? []}
-                    onAdd={() => {}}
-                    onRemove={() => {}}
-                    onUpdate={() => {}}
-                    onSelectProduct={() => {}}
-                    totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
-                    readOnly
+                    onSave={async (values) => {
+                      await api.vendorBills.update(data.id, values);
+                      toast.success("Bill updated");
+                      editingBill.reload();
+                      bills.reload();
+                    }}
                   />
-                </div>
+                ) : (
+                  <div className="card">
+                    <div className="card-head"><span className="card-title">Bill lines</span></div>
+                    <LineItemsEditor
+                      lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
+                      products={products.data?.items ?? []}
+                      analyticAccounts={analyticAccounts.data?.items ?? []}
+                      onAdd={() => {}}
+                      onRemove={() => {}}
+                      onUpdate={() => {}}
+                      onSelectProduct={() => {}}
+                      totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
+                      readOnly
+                    />
+                  </div>
+                )}
 
                 <div className="card">
                   {data.status === "DRAFT" ? (

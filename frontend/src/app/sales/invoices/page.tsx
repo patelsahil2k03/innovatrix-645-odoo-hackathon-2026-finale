@@ -20,7 +20,15 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon, PlusIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
-import { api, type Account, type Product } from "@/lib/api";
+import {
+  api,
+  type Account,
+  type AnalyticAccount,
+  type Contact,
+  type CustomerInvoice,
+  type CustomerInvoiceUpdate,
+  type Product,
+} from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -37,6 +45,106 @@ const PAGE_SIZE = 20;
 
 function byId<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+interface CustomerInvoiceEditFormProps {
+  invoice: CustomerInvoice;
+  customers: Contact[];
+  products: Product[];
+  analyticAccounts: AnalyticAccount[];
+  onSave: (values: CustomerInvoiceUpdate) => Promise<void>;
+}
+
+// A DRAFT invoice can still be edited — everything past DRAFT is read-only
+// (see the parent's status check). Keyed by `invoice.id` where it's mounted so
+// switching to a different invoice while the drawer stays open reseeds instead
+// of carrying over stale line state.
+function CustomerInvoiceEditForm({ invoice, customers, products, analyticAccounts, onSave }: CustomerInvoiceEditFormProps) {
+  const [customerId, setCustomerId] = useState(invoice.customer_id);
+  const [invoiceDate, setInvoiceDate] = useState(invoice.invoice_date);
+  const [dueDate, setDueDate] = useState(invoice.due_date ?? "");
+  const [reference, setReference] = useState(invoice.reference ?? "");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { lines, addLine, removeLine, updateLine, selectProduct, totals } = useDocumentLines(invoice.lines);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setFormError(null);
+    const linesResult = validate(documentLinesSchema, lines);
+    if (!linesResult.ok) {
+      setFormError("Fix the highlighted lines before saving.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSave({
+        customer_id: customerId,
+        invoice_date: invoiceDate,
+        due_date: dueDate || null,
+        reference: reference || null,
+        lines: linesResult.data,
+      });
+    } catch (error) {
+      setFormError(formMessageFrom(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form className="stack" onSubmit={handleSubmit} noValidate>
+      {formError ? <div className="alert alert-danger" role="alert">{formError}</div> : null}
+
+      <div className="card grid-2">
+        <Field label="Customer" required>
+          {(props) => (
+            <select {...props} className="select" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>{customer.name}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Invoice date" required>
+          {(props) => (
+            <input {...props} className="input" type="date" value={invoiceDate} onChange={(event) => setInvoiceDate(event.target.value)} />
+          )}
+        </Field>
+        <Field label="Due date">
+          {(props) => (
+            <input {...props} className="input" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+          )}
+        </Field>
+        <Field label="Reference">
+          {(props) => (
+            <input {...props} className="input" value={reference} onChange={(event) => setReference(event.target.value)} />
+          )}
+        </Field>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><span className="card-title">Invoice lines</span></div>
+        <LineItemsEditor
+          lines={lines}
+          products={products}
+          analyticAccounts={analyticAccounts}
+          onAdd={addLine}
+          onRemove={removeLine}
+          onUpdate={updateLine}
+          onSelectProduct={(key, productId) => {
+            const product = products.find((p) => p.id === productId);
+            selectProduct(key, productId, product ? lineDefaultsFromProduct(product, "sales") : {});
+          }}
+          totals={totals}
+        />
+      </div>
+
+      <button type="submit" className="btn btn-primary" disabled={submitting} style={{ alignSelf: "flex-start" }}>
+        {submitting ? "Saving…" : "Save changes"}
+      </button>
+    </form>
+  );
 }
 
 export default function CustomerInvoicesPage() {
@@ -211,7 +319,7 @@ function CustomerInvoicesPageInner() {
         title="Sale Invoices"
         subtitle="Post an invoice to write it into the ledger."
         action={can.record(user?.role.name) ? (
-          <Link href="/sales/invoices/new" className="btn btn-primary">
+          <Link href={panel.hrefFor("new")} className="btn btn-primary">
             <PlusIcon size={14} />
             New invoice
           </Link>
@@ -403,20 +511,36 @@ function CustomerInvoicesPageInner() {
                   </div>
                 ) : null}
 
-                <div className="card">
-                  <div className="card-head"><span className="card-title">Invoice lines</span></div>
-                  <LineItemsEditor
-                    lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
+                {data.status === "DRAFT" && canRecord ? (
+                  <CustomerInvoiceEditForm
+                    key={data.id}
+                    invoice={data}
+                    customers={customers}
                     products={products.data?.items ?? []}
                     analyticAccounts={analyticAccounts.data?.items ?? []}
-                    onAdd={() => { }}
-                    onRemove={() => { }}
-                    onUpdate={() => { }}
-                    onSelectProduct={() => { }}
-                    totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
-                    readOnly
+                    onSave={async (values) => {
+                      await api.customerInvoices.update(data.id, values);
+                      toast.success("Invoice updated");
+                      editingInvoice.reload();
+                      invoices.reload();
+                    }}
                   />
-                </div>
+                ) : (
+                  <div className="card">
+                    <div className="card-head"><span className="card-title">Invoice lines</span></div>
+                    <LineItemsEditor
+                      lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
+                      products={products.data?.items ?? []}
+                      analyticAccounts={analyticAccounts.data?.items ?? []}
+                      onAdd={() => { }}
+                      onRemove={() => { }}
+                      onUpdate={() => { }}
+                      onSelectProduct={() => { }}
+                      totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
+                      readOnly
+                    />
+                  </div>
+                )}
 
                 <div className="card">
                   {data.status === "DRAFT" ? (
