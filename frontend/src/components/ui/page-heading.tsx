@@ -2,7 +2,7 @@
  * The heading block at the top of a screen: optional illustration, title,
  * subtitle, and an optional action on the right.
  *
- * The illustration is **opt-in**. `.page-head` is rendered by 43 pages — every
+ * The illustration is **opt-in**. `.page-head` is rendered by 44 pages — every
  * `[id]` detail view and every `/new` form uses it too — so wiring an image in
  * at the CSS level would put a drawing on "New sales order" and on every
  * invoice, competing with dense figures on exactly the screens that need none.

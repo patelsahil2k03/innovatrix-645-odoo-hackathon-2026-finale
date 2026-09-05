@@ -73,7 +73,7 @@ purpose.
 Each line goes between the two blocks above, prefixed with
 `SUBJECT — draw exactly this:`
 
-> ⚠️ **The slot is opt-in, not automatic.** `.page-head` is rendered by **43**
+> ⚠️ **The slot is opt-in, not automatic.** `.page-head` is rendered by **44**
 > pages, not 18 — every `[id]` detail page and every `/new` form uses it too.
 > Wiring the image into `.page-head` unconditionally would put an illustration on
 > "New sales order" and on every invoice detail screen, which is decoration
@@ -82,6 +82,13 @@ Each line goes between the two blocks above, prefixed with
 
 These 18 are the complete nav — verified against `sidebar.tsx`, so the list
 cannot silently drift out of step with the menu.
+
+**Shipped so far: 5 of the 18 tabs** — `dashboard`, `sales-order`,
+`sale-invoice`, `receipt`, `purchase-order` — plus both scenes (`login`,
+`error`). The other 13 tabs pass no image and render a plain heading, which is
+a valid state, not a gap to patch. `purchase-bill` was generated but not
+shipped: it came back as a second workbench, indistinguishable from
+`dashboard`; the crate subject below is the corrected replacement.
 
 > ⚠️ **Every subject must have its OWN silhouette.** This bit us: Dashboard and
 > Purchase Bill were both written as "a workbench", and at 112px they were the
