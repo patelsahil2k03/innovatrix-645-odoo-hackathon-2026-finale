@@ -165,7 +165,7 @@ function AnalyticAccountsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={panel.close} title="New analytic account" width={35}>
+      <Drawer open={panel.isNew} onClose={panel.close} title="New analytic account">
         <AnalyticAccountForm onSubmit={handleCreate} submitLabel="Create analytic account" />
       </Drawer>
 
@@ -173,7 +173,7 @@ function AnalyticAccountsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingRow.data?.name ?? "Analytic account"}
-        width={35}
+       
         footer={
           editingRow.data && canManage && !editingRow.data.is_archived ? (
             <button type="button" className="btn btn-danger" onClick={archiveAction.request}>

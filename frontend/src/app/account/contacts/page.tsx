@@ -187,7 +187,7 @@ function ContactsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={panel.close} title="New contact" width={40}>
+      <Drawer open={panel.isNew} onClose={panel.close} title="New contact">
         <ContactForm onSubmit={handleCreate} submitLabel="Create contact" />
       </Drawer>
 
@@ -195,7 +195,7 @@ function ContactsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingContact.data?.name ?? "Contact"}
-        width={40}
+       
         footer={
           editingContact.data && canManage && !editingContact.data.is_archived ? (
             <button type="button" className="btn btn-danger" onClick={archiveAction.request}>

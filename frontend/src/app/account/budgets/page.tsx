@@ -333,7 +333,7 @@ function BudgetsPageInner() {
         open={panel.isNew}
         onClose={() => { resetCreateForm(); panel.close(); }}
         title="New budget"
-        width={55}
+       
         footer={
           <button type="submit" form="new-budget-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Saving…" : "Save budget"}
@@ -404,7 +404,7 @@ function BudgetsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingBudget.data?.name ?? "Budget"}
-        width={55}
+       
         footer={
           editingBudget.data && canRecord ? (
             <>

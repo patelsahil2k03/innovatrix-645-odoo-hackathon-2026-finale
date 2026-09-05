@@ -270,7 +270,7 @@ function VendorBillsPageInner() {
         open={panel.isNew}
         onClose={() => { resetCreateForm(); panel.close(); }}
         title="New vendor bill"
-        width={60}
+       
         footer={
           <button type="submit" form="new-bill-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Saving…" : "Save bill"}
@@ -338,7 +338,7 @@ function VendorBillsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingBill.data?.number ?? "Purchase bill"}
-        width={60}
+       
         footer={
           editingBill.data ? (
             <>

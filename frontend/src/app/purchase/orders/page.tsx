@@ -237,7 +237,7 @@ function PurchaseOrdersPageInner() {
         open={panel.isNew}
         onClose={() => { resetCreateForm(); panel.close(); }}
         title="New purchase order"
-        width={60}
+       
         footer={
           <button type="submit" form="new-purchase-order-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Saving…" : "Save purchase order"}
@@ -296,7 +296,7 @@ function PurchaseOrdersPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingOrder.data?.number ?? "Purchase order"}
-        width={60}
+       
         footer={
           editingOrder.data && canRecord ? (
             <>

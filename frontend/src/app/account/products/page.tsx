@@ -187,7 +187,7 @@ function ProductsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={panel.close} title="New product" width={40}>
+      <Drawer open={panel.isNew} onClose={panel.close} title="New product">
         <ProductForm onSubmit={handleCreate} submitLabel="Create product" />
       </Drawer>
 
@@ -195,7 +195,7 @@ function ProductsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingProduct.data?.name ?? "Product"}
-        width={40}
+       
         footer={
           editingProduct.data && canManage && !editingProduct.data.is_archived ? (
             <button type="button" className="btn btn-danger" onClick={archiveAction.request}>

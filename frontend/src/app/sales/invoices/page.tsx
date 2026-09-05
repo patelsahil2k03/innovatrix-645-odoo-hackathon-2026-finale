@@ -271,7 +271,7 @@ function CustomerInvoicesPageInner() {
         open={panel.isNew}
         onClose={() => { resetCreateForm(); panel.close(); }}
         title="New sale invoice"
-        width={60}
+       
         footer={
           <button type="submit" form="new-invoice-form" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Saving…" : "Save invoice"}
@@ -339,7 +339,7 @@ function CustomerInvoicesPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingInvoice.data?.number ?? "Sale invoice"}
-        width={60}
+       
         footer={
           editingInvoice.data ? (
             <>

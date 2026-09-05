@@ -125,7 +125,7 @@ function PurchasePaymentsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={closeNewPayment} title="New payment" width={35}>
+      <Drawer open={panel.isNew} onClose={closeNewPayment} title="New payment">
         <p style={{ fontSize: "var(--t-sm)", color: "var(--text-muted)" }}>
           Register a payment against an open vendor bill.
         </p>

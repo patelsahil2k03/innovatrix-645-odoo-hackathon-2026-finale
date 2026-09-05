@@ -137,7 +137,7 @@ function JournalsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={panel.close} title="New journal" width={35}>
+      <Drawer open={panel.isNew} onClose={panel.close} title="New journal">
         <JournalForm onSubmit={handleCreate} submitLabel="Create journal" />
       </Drawer>
 
@@ -145,7 +145,7 @@ function JournalsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingJournal.data?.name ?? "Journal"}
-        width={35}
+       
         footer={
           editingJournal.data && canManage && !editingJournal.data.is_archived ? (
             <button type="button" className="btn btn-danger" onClick={archiveAction.request}>

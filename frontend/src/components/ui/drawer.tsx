@@ -27,13 +27,13 @@ interface DrawerProps {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  /** Percentage of viewport width the drawer covers on desktop — set per
-   *  call-site based on how much content it holds. Clamped to 30-80.
-   *  Defaults to 40. Always full-width below the 640px breakpoint. */
+  /** Percentage of viewport width the drawer covers on desktop. Every
+   *  drawer in the app uses 60 — a single fixed width, not a per-form
+   *  choice. Clamped to 30-80. Always full-width below the 640px breakpoint. */
   width?: number;
 }
 
-export function Drawer({ open, title, onClose, children, footer, width = 40 }: DrawerProps) {
+export function Drawer({ open, title, onClose, children, footer, width = 60 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const restoreFocusTo = useRef<HTMLElement | null>(null);
   const titleId = useId();

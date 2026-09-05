@@ -128,7 +128,7 @@ function ReceiptsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={closeNewReceipt} title="New receipt" width={35}>
+      <Drawer open={panel.isNew} onClose={closeNewReceipt} title="New receipt">
         <p style={{ fontSize: "var(--t-sm)", color: "var(--text-muted)" }}>
           Register a payment against an open sale invoice.
         </p>

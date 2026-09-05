@@ -155,7 +155,7 @@ function JournalEntriesPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.openId !== null} onClose={panel.close} title={openEntry.data?.entry_number ?? "Journal entry"} width={55}>
+      <Drawer open={panel.openId !== null} onClose={panel.close} title={openEntry.data?.entry_number ?? "Journal entry"}>
         <AsyncState loading={openEntry.loading} error={openEntry.error} data={openEntry.data} onRetry={openEntry.reload} skeleton={<SkeletonCard lines={5} />}>
           {(data) => {
             const totalDebit = data.lines.reduce((sum, line) => sum + line.debit, 0);

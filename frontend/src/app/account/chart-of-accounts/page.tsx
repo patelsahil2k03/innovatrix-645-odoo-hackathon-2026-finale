@@ -148,7 +148,7 @@ function ChartOfAccountsPageInner() {
         ) : null}
       </div>
 
-      <Drawer open={panel.isNew} onClose={panel.close} title="New account" width={35}>
+      <Drawer open={panel.isNew} onClose={panel.close} title="New account">
         <AccountForm onSubmit={handleCreate} submitLabel="Create account" />
       </Drawer>
 
@@ -156,7 +156,7 @@ function ChartOfAccountsPageInner() {
         open={panel.openId !== null}
         onClose={panel.close}
         title={editingAccount.data ? `${editingAccount.data.code} — ${editingAccount.data.name}` : "Account"}
-        width={35}
+       
         footer={
           editingAccount.data && canManage && !editingAccount.data.is_archived ? (
             <button type="button" className="btn btn-danger" onClick={archiveAction.request}>
