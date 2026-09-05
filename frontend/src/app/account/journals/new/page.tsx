@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { JournalForm } from "@/components/forms/journal-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type JournalCreate } from "@/lib/api";
 
 export default function NewJournalPage() {
@@ -21,6 +22,7 @@ export default function NewJournalPage() {
           <h1>New journal</h1>
           <p>Add a posting journal.</p>
         </div>
+        <ClosePanel />
       </div>
       <JournalForm onSubmit={handleCreate} submitLabel="Create journal" />
     </AppShell>

@@ -7,6 +7,7 @@ import { Suspense, use } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { date, humanize, money } from "@/lib/format";
@@ -53,6 +54,7 @@ function JournalEntryDetailInner({ params }: { params: Promise<{ id: string }> }
                     View source document
                   </Link>
                 ) : null}
+                <ClosePanel />
               </div>
 
               {data.reversal_of_id ? (

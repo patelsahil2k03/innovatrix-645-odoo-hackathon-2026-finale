@@ -1,21 +1,25 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ProductForm, productToFormValues } from "@/components/forms/product-form";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type ProductCreate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { can } from "@/lib/roles";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
+  const toast = useToast();
   const product = useFetch(() => api.products.get(id), [id]);
-  const [archiving, setArchiving] = useState(false);
 
   const canManage = can.manageMasterData(user?.role.name);
 
@@ -24,15 +28,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     product.reload();
   }
 
-  async function handleArchive() {
-    setArchiving(true);
-    try {
-      await api.products.archive(id);
-      product.reload();
-    } finally {
-      setArchiving(false);
-    }
-  }
+  const archiveAction = useConfirmAction(async () => {
+    await api.products.archive(id);
+    product.reload();
+    toast.success("Product archived");
+  });
 
   return (
     <AppShell>
@@ -45,10 +45,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <p>{data.is_archived ? <StatusBadge status="archived" /> : <StatusBadge status="active" />}</p>
               </div>
               {canManage && !data.is_archived ? (
-                <button type="button" className="btn btn-danger" onClick={handleArchive} disabled={archiving}>
-                  {archiving ? "Archiving…" : "Archive"}
+                <button type="button" className="btn btn-danger" onClick={archiveAction.request}>
+                  Archive
                 </button>
               ) : null}
+              <ClosePanel />
             </div>
 
             {!canManage ? (
@@ -62,6 +63,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               onSubmit={handleUpdate}
               submitLabel="Save changes"
               readOnly={!canManage || data.is_archived}
+            />
+
+            <ConfirmDialog
+              open={archiveAction.open}
+              onCancel={archiveAction.cancel}
+              onConfirm={archiveAction.confirm}
+              pending={archiveAction.pending}
+              error={archiveAction.error}
+              tone="danger"
+              title="Archive this product?"
+              confirmLabel="Archive product"
+              pendingLabel="Archiving…"
+              description={
+                <p>
+                  {data.name} will no longer appear in active lists or pickers on new documents.
+                  Existing sales and purchase lines for this product are untouched, but there is
+                  no way to unarchive it from the app yet.
+                </p>
+              }
             />
           </>
         )}

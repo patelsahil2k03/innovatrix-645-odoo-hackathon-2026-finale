@@ -11,7 +11,7 @@ import { humanize, money } from "@/lib/format";
 
 export default function BudgetReportPage() {
   const [budgetId, setBudgetId] = useState("");
-  const budgets = useFetch(() => api.budgets.list({ page_size: 200, sort: "-period_start" }), []);
+  const budgets = useFetch(() => api.budgets.list({ page_size: 100, sort: "-period_start" }), []);
   const report = useFetch(() => (budgetId ? api.reports.budget(budgetId) : Promise.resolve(null)), [budgetId]);
 
   return (

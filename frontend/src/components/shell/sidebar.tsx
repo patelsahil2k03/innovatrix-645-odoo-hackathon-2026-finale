@@ -70,40 +70,54 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: string }) {
-  const [open, setOpen] = useState(true);
+function NavGroupSection({
+  group,
+  pathname,
+  isOpen,
+  onToggle,
+}: {
+  group: NavGroup;
+  pathname: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   const groupId = `nav-group-${group.label.toLowerCase()}`;
 
   return (
-    <div>
+    <div className="nav-group">
       <button
         type="button"
         className="nav-group-toggle"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-controls={groupId}
-        onClick={() => setOpen((value) => !value)}
+        onClick={onToggle}
       >
         <span>{group.label}</span>
-        <ChevronDown size={13} />
+        <ChevronDown size={13} className="nav-group-chevron" />
       </button>
-      {open ? (
-        <div id={groupId} className="nav-group-items">
+      <div
+        id={groupId}
+        className="nav-group-items"
+        data-expanded={isOpen}
+        aria-hidden={!isOpen}
+      >
+        <div className="nav-group-items-inner">
           {group.items.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="nav-item"
+                className="nav-item nav-sub-item"
                 aria-current={active ? "page" : undefined}
-                style={{ paddingLeft: "var(--s-5)" }}
               >
+                <span className="sub-item-bullet" />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
@@ -116,6 +130,14 @@ export function Sidebar() {
     ...group,
     items: group.items.filter((item) => canSeeNavItem(item.href, user?.role.name)),
   })).filter((group) => group.items.length > 0);
+
+  // Accordion behavior: single section open at a time.
+  // Auto-expand the section containing the current active route, defaulting to the first visible group.
+  const activeGroupLabel = visibleGroups.find((group) =>
+    group.items.some((item) => isActive(pathname, item.href))
+  )?.label ?? visibleGroups[0]?.label ?? null;
+
+  const [openGroup, setOpenGroup] = useState<string | null>(activeGroupLabel);
 
   const showAuditLog = canSeeNavItem("/audit-log", user?.role.name);
 
@@ -135,7 +157,15 @@ export function Sidebar() {
 
       <div className="stack" style={{ gap: 0 }}>
         {visibleGroups.map((group) => (
-          <NavGroupSection key={group.label} group={group} pathname={pathname} />
+          <NavGroupSection
+            key={group.label}
+            group={group}
+            pathname={pathname}
+            isOpen={openGroup === group.label}
+            onToggle={() =>
+              setOpenGroup((current) => (current === group.label ? null : group.label))
+            }
+          />
         ))}
       </div>
 

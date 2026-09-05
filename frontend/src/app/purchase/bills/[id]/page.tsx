@@ -5,16 +5,20 @@ import { use, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
+import { ClosePanel } from "@/components/ui/close-panel";
 import { api, type Account, type Product } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
+import { useToast } from "@/lib/toast-context";
 import { buildPurchasePostingPreview, round2 } from "@/lib/use-document-lines";
 import { formMessageFrom } from "@/lib/validation";
 import { date, money } from "@/lib/format";
@@ -27,11 +31,12 @@ function byId<T extends { id: string }>(items: T[]): Record<string, T> {
 export default function VendorBillDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
+  const toast = useToast();
   const bill = useFetch(() => api.vendorBills.get(id), [id]);
-  const products = useFetch(() => api.products.list({ page_size: 200 }), []);
-  const accounts = useFetch(() => api.accounts.list({ page_size: 200 }), []);
-  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 200 }), []);
-  const contacts = useFetch(() => api.contacts.list({ page_size: 200 }), []);
+  const products = useFetch(() => api.products.list({ page_size: 100 }), []);
+  const accounts = useFetch(() => api.accounts.list({ page_size: 100 }), []);
+  const analyticAccounts = useFetch(() => api.analyticAccounts.list({ page_size: 100 }), []);
+  const contacts = useFetch(() => api.contacts.list({ page_size: 100 }), []);
 
   useEventStream({
     "document.posted": (payload) => { if (payload.id === id) bill.reload(); },
@@ -64,18 +69,11 @@ export default function VendorBillDetailPage({ params }: { params: Promise<{ id:
     }
   }
 
-  async function handleCancel() {
-    setWorking(true);
-    setActionError(null);
-    try {
-      await api.vendorBills.cancel(id);
-      bill.reload();
-    } catch (error) {
-      setActionError(formMessageFrom(error));
-    } finally {
-      setWorking(false);
-    }
-  }
+  const cancelAction = useConfirmAction(async () => {
+    await api.vendorBills.cancel(id);
+    bill.reload();
+    toast.success("Bill cancelled");
+  });
 
   async function handleSend() {
     setWorking(true);
@@ -133,11 +131,12 @@ export default function VendorBillDetailPage({ params }: { params: Promise<{ id:
                     </button>
                   ) : null}
                   {canCancel && data.status !== "CANCELLED" && data.status !== "PAID" ? (
-                    <button type="button" className="btn btn-danger" onClick={handleCancel} disabled={working}>
+                    <button type="button" className="btn btn-danger" onClick={cancelAction.request} disabled={working}>
                       Cancel
                     </button>
                   ) : null}
                 </div>
+                <ClosePanel />
               </div>
 
               {actionError ? <div className="alert alert-danger" role="alert">{actionError}</div> : null}
@@ -212,6 +211,25 @@ export default function VendorBillDetailPage({ params }: { params: Promise<{ id:
                 direction="SEND"
                 remainingBalance={remaining}
                 onSuccess={() => bill.reload()}
+              />
+
+              <ConfirmDialog
+                open={cancelAction.open}
+                onCancel={cancelAction.cancel}
+                onConfirm={cancelAction.confirm}
+                pending={cancelAction.pending}
+                error={cancelAction.error}
+                tone="danger"
+                title="Cancel this bill?"
+                confirmLabel="Cancel bill"
+                pendingLabel="Cancelling…"
+                description={
+                  <p>
+                    This reverses the {money(data.total)} journal entry already posted for
+                    this bill with a second, balancing entry — the original stays on record
+                    permanently. This can&apos;t be undone.
+                  </p>
+                }
               />
             </>
           );

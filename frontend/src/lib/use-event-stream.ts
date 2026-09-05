@@ -42,7 +42,9 @@ export function useEventStream(
   const eventNames = Object.keys(handlers).sort().join(",");
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     const source = new EventSource(`${API_BASE}/events`, { withCredentials: true });
 
