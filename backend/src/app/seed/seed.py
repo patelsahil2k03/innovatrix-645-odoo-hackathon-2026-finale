@@ -46,7 +46,7 @@ from app.models.masters import (
     ProductCategory,
 )
 from app.models.payments import Payment
-from app.models.system import Notification
+from app.models.system import AuditLog, Notification
 from app.seed.domain import seed_domain
 from app.seed.generators import Gen
 
@@ -109,8 +109,16 @@ def reset_tables(db: Session) -> None:
     journal entries, entries reference journals and accounts, and everything
     references contacts. Deleting a parent first fails on the foreign keys that
     `PRAGMA foreign_keys=ON` (core/database.py) deliberately enforces.
+
+    `AuditLog` is in this list because it holds a FK to `users`, and the audit
+    middleware only writes it for requests that came through the API. So a
+    database seeded and tested purely in-process has an empty audit_logs and
+    resets fine, while any database a person has actually clicked through fails
+    on `DELETE FROM users` — the escape hatch breaking precisely on the
+    databases worth rescuing.
     """
     for model in (
+        AuditLog,
         Payment,
         JournalLine,
         CustomerInvoiceLine,

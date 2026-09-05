@@ -15,6 +15,10 @@ function lanIPs(): string[] {
   return ips;
 }
 
+// The API this machine's web server proxies to. Always its OWN backend, so a
+// developer always exercises the code they are editing (docs/08_RUNBOOK.md §1).
+const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN ?? "http://127.0.0.1:8000";
+
 const nextConfig: NextConfig = {
   // Keep the build honest: a type error must fail the build rather than be silently
   // ignored, so "the build is green" is a trustworthy signal that a merge is safe.
@@ -27,6 +31,16 @@ const nextConfig: NextConfig = {
   // machine's LAN IP directly (http://<host-ip>:3000) to demo/review. Next 16 blocks
   // cross-origin dev requests (HMR) from anywhere not explicitly allow-listed.
   allowedDevOrigins: lanIPs(),
+  // The browser only ever talks to the origin it loaded the page from, and this
+  // forwards /api/* to that same machine's backend. Three problems disappear at
+  // once: no API host is baked into the bundle (so a teammate viewing
+  // <host-ip>:3000 reaches the host's API while a developer on localhost:3000
+  // reaches their own), requests are same-origin (no CORS, and the session cookie
+  // is first-party, which is what breaks across routed subnets), and there is no
+  // build-time/runtime URL split to cause a hydration mismatch.
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${BACKEND_ORIGIN}/api/:path*` }];
+  },
 };
 
 export default nextConfig;

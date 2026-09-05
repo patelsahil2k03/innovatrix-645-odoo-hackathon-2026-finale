@@ -6,25 +6,37 @@
 
 ---
 
-## 1. HOST MACHINE (runs everything — one person, whoever's machine everyone else views)
+## 1. THE SETUP IN ONE LINE
+
+**One shared database. Everyone runs their own frontend and backend.** You always
+see your own code changes immediately, and everyone shares the same data.
+Nothing about the API needs configuring — the web app calls `/api` on whatever
+address you opened it at, and that is proxied to your own backend.
+
+---
+
+## 2. START IT
+
+### 2.1 Database — ONE person, once (everyone else skips this)
 
 ```bash
-hostname -I | awk '{print $1}'   # this machine's LAN IP — needed for the next step
-```
-In `.env`, set `NEXT_PUBLIC_API_URL` to that IP, not `localhost` — it's baked into the
-JS bundle every viewer's browser runs, so `localhost` there resolves to *their* machine:
-```
-NEXT_PUBLIC_API_URL=http://<this-machine-ip>:8000/api/v1
-```
-```bash
-cp .env.example .env                                   # skip if .env already exists
 docker compose -f infra/docker-compose.yml up -d db
-grep '^NEXT_PUBLIC_' .env > frontend/.env.local
+hostname -I | awk '{print $1}'      # share this IP with the team
+```
 
+### 2.2 Everyone — including whoever ran 2.1
+
+```bash
+cp .env.example .env                # skip if you already have .env
+```
+Set one line in `.env` — the database host's IP (that person uses `localhost`):
+```
+DATABASE_URL=postgresql+psycopg://app:<password>@<db-host-ip>:5432/app
+```
+```bash
 cd backend
 uv sync --extra postgres
-uv run alembic upgrade head
-uv run python -m app.seed
+uv run python -m app.seed           # safe: does nothing if data already exists
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # second terminal, from the repo root
@@ -32,55 +44,32 @@ cd frontend
 npm install
 npm run dev
 ```
-Or, one command: `./scripts/dev.sh --db docker`
+Open **http://localhost:3000**. Logins: `admin@urbanfurniture.in` /
+`accountant@urbanfurniture.in` / `portal@urbanfurniture.in`, password `Demo@1234`.
 
-**Teammates need nothing installed and nothing cloned** — send them
-`http://<this-machine-ip>:3000` and they use it directly in a browser.
-
-| What | Where |
-|---|---|
-| Web app | http://localhost:3000 (you) · http://`<host-ip>`:3000 (everyone else) |
-| API docs (Swagger) | http://localhost:8000/docs |
-| Health check | http://localhost:8000/api/v1/health |
-| Adminer (DB browser) | `docker compose -f infra/docker-compose.yml --profile adminer up -d adminer` → http://localhost:8081 |
-
-Demo logins are printed by the seed script. Default password: `Demo@1234`.
-
----
-
-## 2. TEAMMATE MACHINE — running your own copy instead of just viewing §1's URL
-
-Only needed if you're actually coding. Never starts Postgres — always points at the host.
-
-```bash
-cp .env.example .env                                   # skip if .env already exists
-```
-Edit `.env`: replace the `DATABASE_URL` line's `localhost` with the host's IP —
-```
-DATABASE_URL=postgresql+psycopg://app:<password>@<host-ip>:5432/app
-```
-then:
-```bash
-grep '^NEXT_PUBLIC_' .env > frontend/.env.local
-
-cd backend
-uv sync --extra postgres
-uv run uvicorn app.main:app --reload --port 8000
-
-# second terminal, from the repo root
-cd frontend
-npm install
-npm run dev
-```
-Or, one command: `./scripts/dev.sh` (**never** `--db docker` on this machine).
+Or, one command instead of both terminals: `./scripts/dev.sh`
 
 | What | Where |
 |---|---|
 | Web app | http://localhost:3000 |
 | API docs (Swagger) | http://localhost:8000/docs |
-| Adminer (DB browser) | http://`<host-ip>`:8081 |
+| Adminer (DB browser) | http://`<db-host-ip>`:8081 |
+| Who changed what | `/audit-logs` in the app (Admin login) |
 
-Demo logins: same as host — `Demo@1234`.
+### 2.3 Showing your work to the team
+
+Others open **http://`<your-ip>`:3000** — they get *your* running code against the
+shared data. Nothing for them to install.
+
+---
+
+## 2.4 SCHEMA CHANGES AND RESEEDING — read before running either
+
+- `uv run alembic upgrade head` — run by **one** person, whoever changed the schema.
+- `uv run python -m app.seed` — safe for anyone, any number of times. It skips
+  anything that already exists.
+- `uv run python -m app.seed --reset` — **destroys everyone's data.** Announce it in
+  the group chat first. Never run it because something looked odd.
 
 ---
 
@@ -94,15 +83,19 @@ fuser -k 3000/tcp 8000/tcp
 ```
 `dev.sh` already does this on start and exit.
 
-**Every screen shows an error state / "CORS error" in the browser console**
-Almost always `NEXT_PUBLIC_API_URL` pointing at the wrong port, not an actual CORS
-misconfiguration — the backend's `allow_origin_regex` already accepts any origin.
-Check `curl localhost:8000/api/v1/health` responds with JSON, then confirm
-`frontend/.env.local` has `NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1`
-(port **8000**, the API — not `8081`, which is Adminer and has no CORS headers
-at all, so pointing at it by mistake looks exactly like a CORS failure in devtools).
-Fix it in `.env` at the repo root, then `grep '^NEXT_PUBLIC_' .env > frontend/.env.local`
-and restart `npm run dev` (Next inlines this at build/start time, not per-request).
+**Every screen shows an error state**
+Your own backend isn't running — the web app proxies `/api` to `localhost:8000` on
+your machine. Check it: `curl localhost:8000/api/v1/health` should return JSON.
+
+**"CORS error" in the browser console**
+Means `NEXT_PUBLIC_API_URL` has been set. It should stay **unset** — the app is
+same-origin through the proxy and needs no API host. Unset it in `.env`, delete
+`frontend/.env.local`, restart `npm run dev`.
+
+**Live "Offline" badge, but the rest of the app works**
+Only the SSE stream is affected: it's the one call that can't use the proxy (Next
+buffers streaming responses), so it goes direct to port 8000. Confirm 8000 is
+reachable from the browser's machine. Everything except live updates works without it.
 
 **401 on every request even after signing in**
 The auth cookie isn't being sent. Check that the frontend origin is in `cors_origins`

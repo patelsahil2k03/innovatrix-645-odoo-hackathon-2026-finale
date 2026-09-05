@@ -25,6 +25,12 @@ from app.core.errors import AppError
 from app.models.auth import Role, User
 from app.models.base import utc_now
 from app.models.budgets import Budget, BudgetLine, BudgetState
+from app.models.documents import (
+    CustomerInvoice,
+    PurchaseOrder,
+    SalesOrder,
+    VendorBill,
+)
 from app.models.masters import (
     Account,
     AnalyticAccount,
@@ -35,6 +41,7 @@ from app.models.masters import (
     ProductCategory,
     ProductType,
 )
+from app.models.payments import Payment
 from app.seed.generators import Gen
 from app.services import budgets as budget_svc
 from app.services import documents as doc_svc
@@ -246,7 +253,25 @@ def seed_transactions(
     anyone having to create one during the demo: draft and confirmed orders,
     posted invoices, one partially paid, several fully paid, and one left open
     past its due date.
+
+    Idempotent: if this database already has documents, it already has a month of
+    trading, so re-running adds nothing. Without this guard every `app.seed` run
+    appended a WHOLE SECOND COPY — and because these post through the real service
+    layer, the duplicates are real journal entries in the shared ledger, not just
+    extra rows. Four developers each running the documented first-run command is
+    four copies; the shared database reached six before this was caught. `--reset`
+    remains the deliberate way to rebuild from scratch.
     """
+    already = db.execute(select(SalesOrder.id).limit(1)).first()
+    if already is not None:
+        return {
+            "sales_orders": db.query(SalesOrder).count(),
+            "customer_invoices": db.query(CustomerInvoice).count(),
+            "purchase_orders": db.query(PurchaseOrder).count(),
+            "vendor_bills": db.query(VendorBill).count(),
+            "payments": db.query(Payment).count(),
+        }
+
     customers = [c for c in contacts if c.type in (ContactType.CUSTOMER, ContactType.BOTH)]
     vendors = [c for c in contacts if c.type in (ContactType.VENDOR, ContactType.BOTH)]
     income_tags = [a for a in analytics if a.type is AnalyticType.INCOME]

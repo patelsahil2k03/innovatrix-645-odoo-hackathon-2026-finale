@@ -9,7 +9,37 @@
  * those documents change before this file does (RULES.md §4), never the other way.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+/**
+ * Relative on purpose. `next.config.ts` proxies `/api/*` to this machine's own
+ * backend, so the browser only ever talks to the origin that served the page:
+ * open localhost:3000 and you hit your own API, open <host-ip>:3000 and you hit
+ * that host's. Nothing about the API's address is baked into the bundle.
+ *
+ * Only set NEXT_PUBLIC_API_URL to point somewhere else deliberately (a deployed
+ * API, a tunnel). Pointing it at a hostname other than the one serving the page
+ * makes the session cookie third-party, which some networks and browsers drop.
+ */
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+/** Port the backend listens on, for the stream URL below. */
+const API_PORT = process.env.NEXT_PUBLIC_API_PORT ?? "8000";
+
+/**
+ * Absolute URL for `EventSource` only — it cannot go through the proxy above.
+ * Next's rewrites buffer streaming responses: measured against `/events`, a
+ * frame the backend emits immediately never arrives through the proxy, while
+ * the identical request straight to the backend delivers it in 0.00s.
+ *
+ * Derived from `window.location` so it still follows whoever opened the page
+ * (localhost → your backend, <host-ip> → that host's). Safe to read `window`
+ * here because this is only ever called from an effect, never while rendering,
+ * so there is no server/client hydration mismatch.
+ */
+export function apiStreamUrl(path: string): string {
+  if (process.env.NEXT_PUBLIC_API_URL) return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:${API_PORT}/api/v1${path}`;
+}
 
 /** The server's error envelope: {error: {code, message, fields}} */
 export class ApiError extends Error {
