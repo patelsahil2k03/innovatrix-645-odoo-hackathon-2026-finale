@@ -77,14 +77,35 @@ These were deliberately left open. **Urban Furniture: Accounting System** settle
 | **Database** | **PostgreSQL for the shared/demo instance · SQLite fine for local dev** | See §3.1 — this was tested, not assumed, and the reason is **not** the one you'd expect. |
 | **Charts** | **Hand-rolled SVG** | The reports are tables of figures, not an analytics dashboard. At most: one budget planned-vs-actual bar per line, and a small net-profit trend. Both are a `<rect>` and a `<path>`; `recharts` would be ~200KB to draw two shapes we'd have to re-theme anyway. |
 | **Maps / geo** | **Nothing** | Not a location-shaped domain. |
-| **File uploads** | **Profile image URL only** | The Contact Master lists "Profile Image". A URL field plus a fallback initials avatar satisfies it. No upload pipeline, no storage, no MIME validation — none of it is asked for. |
-| **PDF generation** | **Not built** | Unlike the two rejected statements, this one never asks for PDF. CSV export (already in the boilerplate) covers "export the report". |
-| **Background jobs** | **The existing asyncio task** | It posts one small payment on a timer — see [`06_BACKEND.md`](06_BACKEND.md) §10. |
-| **New dependencies** | **None** | The whole domain is `Numeric`, `Enum` and `SUM(...) GROUP BY`. Nothing here needs a library. |
+| **File uploads** | **Local disk, images only** | ⚠️ **Reversed.** The mockup draws an **Upload Image** control on both the Contact and Product forms, not a URL field. Local disk, size-capped, extension-allowlisted, served back as a static path. Initials remain the fallback when no image exists. |
+| **PDF generation** | **Required — `weasyprint`** | ⚠️ **Reversed.** An earlier reading of the PDF concluded this statement never asks for PDF. The mockup does: invoices and bills carry **Print** and **Send** actions, and the Profit & Loss screen is annotated *"Pdf download on click"*. WeasyPrint renders our existing HTML and CSS, so the print layout and the PDF stay one artefact rather than two templates that drift apart. |
+| **Email** | **Required — SMTP via `aiosmtplib`** | The mockup's **Send** action reads *"Allow user to send from Mail"*. See §3.2 — this is the one dependency that can fail on the day, and it is wired so it cannot take the demo with it. |
+| **Background jobs** | **The existing asyncio task** | It posts one small payment on a timer — see [`06_BACKEND.md`](06_BACKEND.md) §12. |
+| **New dependencies** | **Two: `weasyprint`, `aiosmtplib`** | Both are demanded by the mockup rather than chosen. Everything else in this domain is `Numeric`, `Enum` and `SUM(...) GROUP BY`. |
 
-> **Zero new dependencies is a defensible answer**, and a better one than a clever pick.
-> The organizers say *"use trendy technologies only if they add real value"* — every
-> dependency is one you must justify to the evaluator.
+> **Two dependencies, each traceable to a specific requirement.** The organizers say *"use
+> trendy technologies only if they add real value"* — and the defence for each of these is an
+> annotation on the official mockup, which is the strongest justification available.
+
+### 3.2 Email is the one thing that can fail on the day
+
+The organizers ask for solutions that *"plan for offline or local"*. Real SMTP is the
+opposite of that. This is a decision taken with the risk understood rather than by accident,
+and it is contained:
+
+- **Sending is never on the demo path.** Every document can be viewed, printed and downloaded
+  as a PDF without touching the network. Send is an extra, not a step in any flow we walk.
+- **A failed send never blocks a state change.** The document is posted before mail is
+  attempted. A failure surfaces as a dismissible notice — never a rolled-back transaction,
+  never a 500.
+- **Dispatch is best-effort and recorded**, so the UI can show *sent* or *not sent* honestly
+  rather than optimistically.
+- **A local catcher is the fallback.** If venue networking is unusable, point `SMTP_HOST` at
+  a local MailHog container and the feature still demonstrates end to end, offline.
+
+Configuration lives in `.env` — `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`,
+`MAIL_FROM`. With `SMTP_HOST` unset the feature disables itself cleanly instead of raising on
+first use.
 
 ### 3.1 The database question, actually tested
 

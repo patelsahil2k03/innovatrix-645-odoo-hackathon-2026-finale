@@ -112,10 +112,11 @@ SELECT * FROM journal_entries WHERE source_id = '<document-uuid>';
 ```
 If a live entry exists, the document is genuinely posted — refresh the UI.
 
-**A payment won't allocate**
-`Σ allocations` must equal `payment.amount` exactly, and no single allocation may exceed its
-document's `total - amount_paid`. Both are enveloped 4xx (`ALLOCATION_MISMATCH`,
-`OVERALLOCATED_PAYMENT`), never a 500.
+**A payment is rejected**
+`amount` may not exceed the document's remaining balance (`total - amount_paid`), and the
+journal must be a `BANK` or `CASH` journal. Both are enveloped 4xx
+(`OVERALLOCATED_PAYMENT`, `INVALID_JOURNAL_TYPE`), never a 500. A payment smaller than the
+balance is valid — the document simply moves to `PARTIAL`.
 
 **Reports are empty but documents exist**
 The documents are still `DRAFT`. Only `POSTED` entries reach a report — that is correct

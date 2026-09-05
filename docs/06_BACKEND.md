@@ -14,13 +14,14 @@ document chain first means writing it twice.
 1. **Chart of Accounts + Journals** — nothing can post without these
 2. **`journal_entries` + `journal_lines`** with their CHECK constraints
 3. **`services/posting.py`** — the `post_entry()` primitive, plus its tests
-4. **Contacts + Products** with their account mappings
+4. **Contacts + Products + Categories** with their account mappings
 5. **Sales chain** — SO → Invoice → post. *One full vertical slice before anything else.*
-6. **Payments + allocations**
+6. **Payments** — raised from a document, idempotent
 7. **Purchase chain** — mirrors the sales chain; mostly a copy
 8. **Reports** — pure aggregation, fast once the ledger is right
-9. **Analytic accounts + budgets**
-10. **Portal endpoints**
+9. **Analytic accounts + budgets** — including the revision chain
+10. **PDF + email** — `weasyprint` over the print view, then `aiosmtplib`
+11. **Portal endpoints + sign-up**
 
 > Ship the sales slice end-to-end before starting the purchase chain. Two half-built
 > chains demo as nothing; one finished chain demos as a product.
@@ -132,8 +133,8 @@ lock first anyway — a constraint violation is an ugly 500 unless you catch it.
 
 ## 5. PAYMENTS AND IDEMPOTENCY
 
-A double-clicked "Register Payment" produces two payments, two balanced entries, and books
-that are quietly wrong. The guard is a unique `idempotency_key`:
+A double-clicked "Pay" produces two payments, two balanced entries, and books that are
+quietly wrong. The guard is a unique `idempotency_key`:
 
 ```python
 key = request.headers.get("Idempotency-Key")
@@ -142,14 +143,86 @@ if existing:
     return existing          # 200 with the original — a retry is not an error
 ```
 
-Then, inside one transaction: validate `Σ allocations == payment.amount`, lock each target
-document, check each allocation against its **remaining** balance
-(`total - amount_paid`), raise `OVERALLOCATED_PAYMENT` if it exceeds, update `amount_paid`,
-move status to `PARTIAL` or `PAID`, and post the entry.
+Then, inside one transaction: lock the target document, check `amount` against its
+**remaining** balance (`total - amount_paid`), raise `OVERALLOCATED_PAYMENT` if it exceeds,
+update `amount_paid`, move status to `PARTIAL` or `PAID`, and post the entry.
+
+> **One payment settles one document.** The mockup raises payment from a single document's
+> Pay button with partner and amount pre-filled. An earlier design here had an allocation
+> join table so one payment could span several documents — that is how a fuller system works
+> and it is not what we were asked for.
 
 ---
 
-## 6. REPORTS — aggregate the ledger, never sum the documents
+## 6. BUDGETS — computed, and never edited once confirmed
+
+Only `committed_amount` is stored. Everything else derives on read, so it cannot go stale:
+
+```python
+def achieved(db, line, budget):
+    """Sum document lines carrying this analytic within the budget period."""
+    Doc, Line = ((CustomerInvoice, CustomerInvoiceLine)
+                 if line.analytic_account.type is AnalyticType.INCOME
+                 else (VendorBill, VendorBillLine))
+    return db.scalar(
+        select(func.coalesce(func.sum(Line.quantity * Line.unit_price), 0))
+        .join(Doc, Line.document_id == Doc.id)
+        .where(Line.analytic_account_id == line.analytic_account_id,
+               Doc.status != DocStatus.CANCELLED,
+               Doc.date.between(budget.period_start, budget.period_end))) or Decimal("0.00")
+```
+
+`achieved_pct = achieved / committed * 100` · `to_achieve = committed - achieved`.
+Guard the division: a committed amount of zero yields `0%`, not a crash.
+
+**Revision is a create, not an update:**
+
+```
+revise(budget):
+    require_status(budget.status, CONFIRMED)     -> BUDGET_NOT_CONFIRMED
+    require(budget.revised_with_id is None)      -> ALREADY_REVISED
+    successor = copy(budget, name=f"{budget.name} Revised", state=CONFIRMED)
+    budget.state = REVISED
+    budget.revised_with_id = successor.id
+    successor.revision_of_id = budget.id
+```
+
+The original is never edited. Both links are navigable in the UI, in both directions.
+
+---
+
+## 7. PDF AND EMAIL
+
+**PDF** renders the same Jinja template the print view uses, through WeasyPrint. One
+artefact, so the print layout and the PDF cannot drift apart:
+
+```python
+html = render_template("documents/invoice.html", invoice=inv)
+pdf  = HTML(string=html, base_url=settings.static_root).write_pdf()
+```
+
+**Email** is best-effort and never blocks a state change:
+
+```python
+async def send_document(db, doc, to: str) -> None:
+    if not settings.smtp_host:
+        raise AppError("MAIL_NOT_CONFIGURED", "...")   # explicit, not a silent no-op
+    try:
+        await aiosmtplib.send(build_message(doc, to), hostname=settings.smtp_host, ...)
+        doc.last_sent_at, doc.last_send_error = utcnow(), None
+    except Exception as exc:                            # noqa: BLE001 — mail must not escalate
+        doc.last_send_error = str(exc)[:200]
+        logger.warning("mail send failed for %s: %s", doc.number, exc)
+    db.commit()
+```
+
+The document is **already posted** before mail is attempted. A failure records itself on the
+document and surfaces as a dismissible notice — never a rolled-back transaction, never a 500.
+See [`01_STACK.md`](01_STACK.md) §3.2 for why this is contained so deliberately.
+
+---
+
+## 8. REPORTS — aggregate the ledger, never sum the documents
 
 ```python
 def balance_sheet(db, as_of: date):
@@ -163,7 +236,8 @@ def balance_sheet(db, as_of: date):
                JournalEntry.entry_date <= as_of)
         .group_by(Account.type, Account.code, Account.name)
     ).all()
-    # ASSET/EXPENSE are debit-positive; LIABILITY/EQUITY/INCOME are credit-positive
+    # ASSET/BANK/CASH/EXPENSE/OTHER_EXPENSE are debit-positive
+    # LIABILITY/CAPITAL/INCOME are credit-positive
 ```
 
 **Never** `SELECT SUM(total) FROM customer_invoices`. It is faster to write, looks correct
@@ -172,7 +246,7 @@ reviewer sees a report reading a document table, that is a blocking review comme
 
 ---
 
-## 7. ERROR DISCIPLINE
+## 9. ERROR DISCIPLINE
 
 - Raise `AppError(code, message, fields=...)` — never a bare `HTTPException` for domain
   failures, and never let a 500 reach the client for bad input.
@@ -181,7 +255,7 @@ reviewer sees a report reading a document table, that is a blocking review comme
 
 ---
 
-## 8. RBAC
+## 10. RBAC
 
 Name dependencies by intent, at the top of the router:
 
@@ -197,7 +271,7 @@ master data must return 403. The portal is data-scoped in the query
 
 ---
 
-## 9. LISTS
+## 11. LISTS
 
 ```python
 return paginate(db, select(CustomerInvoice), params,
@@ -212,7 +286,7 @@ return paginate(db, select(CustomerInvoice), params,
 
 ---
 
-## 10. MAKING DATA MOVE
+## 12. MAKING DATA MOVE
 
 Wire `services/simulator.py::_tick()` to post a small, believable transaction on a timer —
 a customer payment landing against an open invoice is the best one, because it visibly
@@ -225,7 +299,7 @@ Keep each tick small: a judge should see *one* thing change, not ten.
 
 ---
 
-## 11. QUICK CHECKS
+## 13. QUICK CHECKS
 
 ```bash
 uv run pytest                                   # full suite

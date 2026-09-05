@@ -60,13 +60,43 @@ shortcut a tired teammate would take at 03:00.
 | Posted is immutable | `CANNOT_MODIFY_POSTED` on edit | draft edits fine |
 | No double posting | `ALREADY_POSTED` on second call | first call posts |
 | Archived account | `ACCOUNT_ARCHIVED` | active account posts |
-| Allocation ≤ balance | `OVERALLOCATED_PAYMENT` at total+1 | exact balance pays in full |
-| Allocations sum to amount | `ALLOCATION_MISMATCH` | matching sum succeeds |
+| Payment ≤ balance | `OVERALLOCATED_PAYMENT` at balance+1 | exact balance pays in full |
+| Partial payment | — | amount < balance → status `PARTIAL` |
 | Idempotent payment | same key twice → one payment | different keys → two |
 | Status transitions | `INVALID_STATUS_TRANSITION` billing a DRAFT PO | CONFIRMED PO bills |
 | Accountant cannot modify masters | 403 on `PATCH /contacts/{id}` | Admin `PATCH` succeeds |
-| Contact sees only own docs | **404** on another contact's invoice | own invoice returns 200 |
+| Portal user sees only own docs | **404** on another contact's invoice | own invoice returns 200 |
 | Tax computed server-side | client-sent total is ignored | server total is authoritative |
+| Budget revise needs CONFIRMED | `BUDGET_NOT_CONFIRMED` on a draft | confirmed budget revises |
+| Budget revised only once | `ALREADY_REVISED` on a second revise | first revise succeeds |
+| Sign-up credential rules | `WEAK_PASSWORD`, `LOGIN_ID_TAKEN`, `EMAIL_TAKEN` | valid signup creates an Accountant |
+| Mail never blocks posting | SMTP down → document still `POSTED`, error recorded | configured host → `last_sent_at` set |
+
+### 1.2b The budget computation deserves its own tests
+
+Three derived figures and a revision chain — easy to get subtly wrong, and wrong in a way
+that looks plausible on screen.
+
+```python
+def test_achieved_sums_only_documents_in_the_period(db, budget):
+    """A matching invoice one day after period_end must not count."""
+
+def test_achieved_ignores_cancelled_documents(db, budget):
+    """Cancelling an invoice must reduce the achieved figure."""
+
+def test_income_analytics_read_invoices_and_expense_analytics_read_bills(db, budget):
+    """An expense analytic must not pick up an invoice carrying the same tag."""
+
+def test_revision_copies_lines_and_links_both_directions(db, budget):
+    successor = budgets.revise(db, budget.id, actor_id=admin.id)
+    assert budget.state is BudgetState.REVISED
+    assert budget.revised_with_id == successor.id
+    assert successor.revision_of_id == budget.id
+    assert successor.name.endswith(" Revised")
+
+def test_zero_committed_does_not_divide_by_zero(db, budget_with_zero_line):
+    assert budget_with_zero_line.lines[0].achieved_pct == Decimal("0.00")
+```
 
 > The **404-not-403** case is easy to get wrong and worth an explicit test — a 403 confirms
 > the record exists, which leaks data across contacts.

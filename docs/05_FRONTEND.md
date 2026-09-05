@@ -19,26 +19,47 @@
 
 ## 2. THE SCREEN INVENTORY
 
-Sidebar grouping mirrors the mental model of the domain, not the table list:
+**Four top-level menus, exactly as the mockup draws them.** Do not regroup them into
+something that feels tidier — the evaluator drew this structure, and matching it is free.
 
 ```
-Dashboard
-Master Data ──── Contacts · Products · Chart of Accounts
-                 Journals · Analytic Accounts
-Purchases ────── Purchase Orders · Vendor Bills
-Sales ────────── Sales Orders · Customer Invoices
-Payments
-Accounting ───── Journal Entries (ledger explorer)
-Reports ──────── Balance Sheet · Profit & Loss · Budget · Trial Balance
-Budgets
+Sales ──────── Sales Order · Sale Invoice · Receipt
+Purchase ───── Purchase Order · Purchase Bill · Payment
+Account ────── Contact · Product · Analyticals · Analytical Budget
+               Chart of Account · Journals · Journal Entries
+Report ─────── Balance Sheet · Profit and Loss · Budget Report
 ```
 
-The **Contact portal is a separate shell** — its own layout, its own two routes
-(`My Documents`, `Pay`), no sidebar into the internal app. A contact must never see an
-internal nav item, even disabled.
+> Note where Analyticals and Budget sit: **under Account, not Report**, even though they feel
+> like reporting. That is the mockup's grouping.
+
+Plus two screens outside the menus: **Login** and **Sign Up** (self-registration, which
+creates an Accountant — see [`04_API_CONTRACT.md`](04_API_CONTRACT.md) §3.0).
+
+**The trial-balance badge lives in the shell**, visible on every screen, updating over SSE.
+That is what makes it evidence rather than a claim made once.
+
+The **customer portal is a separate shell** — its own layout, one route (`My Documents`),
+no navigation into the internal app. A portal user must never see an internal nav item, even
+disabled.
+
+### 2.1 List and Kanban — both are required
+
+The mockup is explicit: *"All Master will have list view as default and clicking on New
+button it will open blank form view… Allow user to shift to Kanban View."*
+
+| Screen | Views required |
+|---|---|
+| Contact · Product · Analyticals | **List (default) + Kanban** |
+| Budget | **List (with a pie chart column) + Kanban** |
+| Chart of Accounts · Journals · Journal Entries | List only |
+| Documents (orders, bills, invoices) | List only |
+
+A Kanban card is the same record rendered as a card — image or initials, name, and two
+secondary lines. It is a toggle on the same data, not a second data source.
 
 **Build order.** One list + one form + one detail, done properly, becomes the template for
-the other eight. Get Customer Invoices right first — it is the demo path — then copy.
+everything else. Get Customer Invoices right first — it is the demo path — then copy.
 
 ---
 
@@ -156,8 +177,39 @@ fields.
 - Deleting the last line is allowed; saving with zero lines is not — that is a
   client-side rule mirroring the server's.
 
-**Posting is destructive-ish and irreversible** — a posted document cannot be edited. Put
-it behind a confirm dialog that says what will happen, in those words.
+**Posting is irreversible** — a posted document cannot be edited, only reversed. Put it
+behind a confirm dialog that says what will happen, in those words.
+
+### 7.1 The posting preview
+
+Before Confirm, show the journal entry that *will* be created, drawn as a classic T-account:
+debits in the left column, credits in the right, totals underneath. If the two totals differ,
+Confirm is disabled and the difference is stated.
+
+Nothing in the mockup asks for this. It costs a bordered two-column div, and it turns the
+invisible half of the system into the most convincing thing on screen — the reader sees
+debits equal credits *before* anything is committed. Mark it in code as ours rather than
+required, so nobody later mistakes it for a specification item.
+
+---
+
+## 7.2 PRINT IS A REAL SURFACE
+
+Invoices, bills and the two financial reports are printed **and** emailed as PDF — the server
+renders the same HTML through WeasyPrint, so the print stylesheet is the PDF layout. There is
+no second template to keep in sync, which also means a broken print view is a broken PDF.
+
+```css
+@media print {
+  /* drop the shell */        .topbar, .sidebar, .actions, .badge-live { display: none; }
+  /* force legible ground */  :root { --ground:#fff; --surface:#fff; --ink:#000; }
+  /* keep the structure */    table { border-collapse: collapse; }
+  /* never split a row */     tr, .ta { break-inside: avoid; }
+}
+```
+
+Semantic colour must survive greyscale — which it does, because status always carries a word
+alongside the colour.
 
 ---
 
