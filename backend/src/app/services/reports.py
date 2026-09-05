@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.models.budgets import Budget
 from app.models.ledger import JournalEntry, JournalLine
-from app.models.masters import DEBIT_POSITIVE_TYPES, Account, AccountType
+from app.models.masters import DEBIT_POSITIVE_TYPES, Account, AccountType, Contact
 from app.services.budgets import line_achievement
 from app.services.money import q2
 from app.services.posting import LEDGER_STATES
@@ -328,14 +328,51 @@ def kpis(db: Session, as_of: date) -> dict:
     def total_for(*types: AccountType) -> Decimal:
         return q2(sum((r["balance"] for r in rows if r["account_type"] in types), ZERO))
 
+    # The control accounts contacts actually post through, read from the
+    # contacts themselves rather than assumed from a code.
+    #
+    # This used to sum EVERY asset account into "receivables" and every
+    # liability into "payables", which quietly folded Input Tax into money
+    # customers owe us and Output Tax into money we owe suppliers. Recoverable
+    # GST is an asset, but no customer owes it to us — the tile overstated
+    # receivables by the whole input-tax balance while its own docstring
+    # claimed it was reading "the contacts' own accounts".
+    receivable_ids = {
+        row[0]
+        for row in db.execute(
+            select(Contact.receivable_account_id).where(
+                Contact.receivable_account_id.is_not(None)
+            )
+        ).all()
+    }
+    payable_ids = {
+        row[0]
+        for row in db.execute(
+            select(Contact.payable_account_id).where(
+                Contact.payable_account_id.is_not(None)
+            )
+        ).all()
+    }
+
+    def total_for_ids(ids: set[str]) -> Decimal:
+        return q2(sum((r["balance"] for r in rows if r["account_id"] in ids), ZERO))
+
+    cash_ids = [
+        r["account_id"]
+        for r in rows
+        if r["account_type"] in (AccountType.BANK, AccountType.CASH)
+    ]
+
     balance = trial_balance(db, as_of)
     return {
-        # Receivables and payables are the ASSET and LIABILITY balances the
-        # contacts' own accounts carry — not a count of unpaid documents, which
-        # would drift from the ledger the moment a payment posted.
-        "receivables": total_for(AccountType.ASSET),
-        "payables": total_for(AccountType.LIABILITY),
+        "receivables": total_for_ids(receivable_ids),
+        "payables": total_for_ids(payable_ids),
         "cash": total_for(AccountType.BANK, AccountType.CASH),
         "net_profit": net_profit_to_date(db, as_of),
         "is_balanced": balance["is_balanced"],
+        # Returned so the dashboard tiles can link to the ledger behind them.
+        # Sorted for a stable response — a set's order is not.
+        "receivable_account_ids": sorted(receivable_ids),
+        "payable_account_ids": sorted(payable_ids),
+        "cash_account_ids": sorted(cash_ids),
     }
