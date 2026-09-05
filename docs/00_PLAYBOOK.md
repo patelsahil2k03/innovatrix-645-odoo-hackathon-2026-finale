@@ -133,9 +133,10 @@ Where you disagree, that's ambiguity to resolve now, not at 15:00. Produce **one
 > **Honesty scores better than bluff.** The virtual round README carried an explicit
 > out-of-scope list and it did not hurt us. Judges have seen a thousand overclaiming demos.
 
-**09:50–10:00 — Assign and stage.** Map the four role cards (`docs/team/`) onto the four
-people based on what the PS actually demands. Write the domain model on a whiteboard/paper.
-Everyone knows their first three tasks before the clock starts.
+**09:50–10:00 — Agree and stage.** Read the four working lanes in
+[`team/LANES.md`](team/LANES.md) and agree out loud who is picking up what first — they are
+reference, not assignments, and nobody owns a lane. Write the domain model on a
+whiteboard/paper. Everyone knows their first three tasks before the clock starts.
 
 **Then at 10:00 — first commit, and at 10:05 — add `rmbh-odoo` as collaborator.**
 
@@ -154,16 +155,21 @@ Everyone knows their first three tasks before the clock starts.
 
 The organizers published exactly what they score. Build directly against it.
 
-| Their words | What we actually do | Who |
-|---|---|---|
-| *"Real-time or dynamic data, avoid static JSON"* | Seeded DB + a background job that mutates data live + SSE push. In the video, **say the words** "this is live from our database." | BE + FE-core |
-| *"Responsive, clean UI, consistent color scheme and layout"* | Design tokens locked hour 1, **never changed after**. Test at 360 / 768 / 1280. Zero horizontal scroll. | FE ×2 |
-| *"Validate user input robustly"* | **Double layer**: client-side inline errors + server-side rejection with a proper error envelope. Demo one invalid submission **on purpose** in the video. | FE + BE |
-| *"Intuitive navigation, proper menu placement and spacing"* | Persistent sidebar, active-state highlight, generous spacing, breadcrumbs when nesting >1. | FE-core |
-| *"Use Git properly; one member managing the repo is not enough"* | **Four separate commit streams**, conventional messages, hourly pushes. QA owner enforces. | QA |
-| *"Backend APIs, data modeling, local DB"* (nice-to-have) | Real REST API + real relational schema + migrations + seed. Already in this boilerplate. | BE |
-| *"Understand AI snippets, don't blindly copy-paste"* | **Every member must be able to defend any line they committed.** If you can't explain it to Ronak, don't commit it. | all |
-| *"Plan for offline/local, don't rely on cloud"* | Local DB, local everything, zero cloud signups, pre-cached deps. | all |
+| Their words | What we actually do — **for this build specifically** |
+|---|---|
+| *"Real-time or dynamic data, avoid static JSON"* | The simulator posts a real customer payment on a timer. One event moves three things at once: the invoice status, the cash and receivables KPIs, and the trial-balance badge. In the video, **say the words** "this is live from our database." |
+| *"Responsive, clean UI, consistent color scheme and layout"* | Design tokens locked early, **never changed after**. Dense data-grid aesthetic — right-aligned tabular numerals, debit and credit as two columns. Test at 360 / 768 / 1280, zero horizontal scroll. |
+| *"Validate user input robustly"* | **Double layer**, and this domain gives us unusually good demos: an invoice with no lines rejects inline; editing a posted document is refused; over-allocating a payment returns `OVERALLOCATED_PAYMENT`. Demo one **on purpose** in the video. |
+| *"Intuitive navigation, proper menu placement and spacing"* | Sidebar grouped by mental model — Master Data / Purchases / Sales / Accounting / Reports — not by table list. Breadcrumbs on the drill-down, which is three levels deep. |
+| *"Use Git properly; one member managing the repo is not enough"* | **Four healthy commit streams**, conventional messages, everyone pushing under their own account. Per-member contribution is scored. |
+| *"Backend APIs, data modeling, local DB"* (nice-to-have) | This is our strongest criterion. A real relational schema with CHECK constraints enforcing accounting rules at the database level, migrations, and a ledger that reports are computed from. |
+| *"Understand AI snippets, don't blindly copy-paste"* | **Every member must be able to defend any line they committed.** Our intelligence features are deterministic and cite their own rows precisely so nothing is a black box — see `PROBLEM_STATEMENT.md` §3.1. |
+| *"Plan for offline/local, don't rely on cloud"* | Local Postgres in Docker, local everything, zero cloud signups, zero new dependencies, pre-cached deps. No LLM API call anywhere on the demo path. |
+
+**The criterion we should win outright** is data modelling. Most teams will store balances
+on documents; we compute every report from an immutable ledger, and the drill-down proves
+it in three clicks. Make sure that lands — it is the difference between "works" and "built
+by people who understood the domain."
 
 ---
 
@@ -248,4 +254,5 @@ The submission is done when:
 | `09_DEMO_AND_PRESENTATION.md` | Pitch owner from 18:00 onward |
 | `10_LESSONS.md` | **Before you write any code** — mistakes we already paid for |
 | `11_AI_TOOLING.md` | During setup, and when you need a capability you don't have |
-| `team/CARD_*.md` | Your own card, at 09:50 |
+| `team/LANES.md` | The four working lanes — reference, not assignments |
+| `PROBLEM_STATEMENT.md` | **Constantly** — the statement, the rules, the scope cut |

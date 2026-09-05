@@ -35,20 +35,31 @@ the actual problem domain rather than into plumbing.
 | Gaurav Rathva | Member | [@gaurav-digiflux](https://github.com/gaurav-digiflux) |
 | Pranjal Shah | Member | [@PranjalShah86](https://github.com/PranjalShah86) |
 
-Reference role cards covering the different concerns — frontend, backend, dashboard and
-pitch, QA and review — are available in [`docs/team/`](docs/team/) for whoever finds
-them useful.
+Four working lanes — frontend, backend, reports and pitch, QA and review — are described in
+[`docs/team/LANES.md`](docs/team/LANES.md) as reference. Nobody owns a lane and nobody owns
+a branch.
 
 Qualified via the virtual round with [TransitOps](https://github.com/patelsahil2k03/innovatrix-odoo-hackathon-2026),
 a fleet-operations platform built in 8 hours.
 
 ## Problem Statement
 
-Released on the day of the event. It gets recorded verbatim in
-[`docs/PROBLEM_STATEMENT.md`](docs/PROBLEM_STATEMENT.md), together with the team's
-first-pass triage — actors, entities, flows, business rules, and an explicit scope cut.
+**Urban Furniture — Accounting System.**
 
-This section is updated with the real statement once it lands.
+A double-entry accounting system for a furniture business: master data (contacts, products,
+chart of accounts, journals), the purchase and sales cycles through to payment, and
+financial reporting — Balance Sheet, Profit & Loss, and Budget.
+
+The defining rule of the build: **documents do not store balances that reports read.**
+Every posted invoice, bill and payment emits one immutable, balanced journal entry, and
+every report is an aggregation over the ledger. That is what separates an accounting system
+from an invoice list with a balance sheet drawn on top.
+
+Full statement, triage, business rules and the explicit scope cut:
+[`docs/PROBLEM_STATEMENT.md`](docs/PROBLEM_STATEMENT.md).
+
+> The product name is still open — candidates and the shortlist are in
+> [`docs/README.md`](docs/README.md).
 
 ## Tech Stack
 
@@ -164,7 +175,7 @@ cd frontend && npm run lint         # lint — a separate step, Next 16 removed 
 
 ```
 ├── ai_guidelines/   Working rules for AI-assisted development (read once)
-├── docs/            Playbook, architecture, API contract, role cards  ← start here
+├── docs/            Playbook, problem statement, data model, API contract  ← start here
 ├── backend/         FastAPI app + tests
 ├── frontend/        Next.js app
 ├── infra/           Optional PostgreSQL compose file
@@ -175,8 +186,9 @@ Per-app detail: [`backend/README.md`](backend/README.md) · [`frontend/README.md
 
 ## Documentation
 
-Start with the **[playbook](docs/00_PLAYBOOK.md)**, then your own role card in
-[`docs/team/`](docs/team/). Full index: [`docs/README.md`](docs/README.md).
+Start with the **[playbook](docs/00_PLAYBOOK.md)**, then the
+**[problem statement and triage](docs/PROBLEM_STATEMENT.md)**. Full index:
+[`docs/README.md`](docs/README.md).
 
 Before writing any code, read [`docs/10_LESSONS.md`](docs/10_LESSONS.md) — real mistakes
 found by auditing our virtual-round submission, each one either already fixed here or

@@ -3,39 +3,61 @@
 Working documents for the hackathon. Read `00_PLAYBOOK.md` first — everything else
 expands a section of it.
 
-| Doc | Owner | Read it when |
-|---|---|---|
-| [00_PLAYBOOK.md](00_PLAYBOOK.md) | Lead | **First.** Timeline, roles, triage protocol, risks, definition of done |
-| [01_STACK.md](01_STACK.md) | All | Locking technology decisions; known dependency landmines |
-| [02_ARCHITECTURE.md](02_ARCHITECTURE.md) | All | Before writing your first module |
-| [03_DATA_MODEL.md](03_DATA_MODEL.md) | Backend | Turning the statement into tables |
-| [04_API_CONTRACT.md](04_API_CONTRACT.md) | Backend + Frontend | Continuously — the FE↔BE contract |
-| [05_FRONTEND.md](05_FRONTEND.md) | Frontend ×2 | Before your first screen |
-| [06_BACKEND.md](06_BACKEND.md) | Backend | Before your first router |
-| [07_TESTING_AND_REVIEW.md](07_TESTING_AND_REVIEW.md) | QA | Continuously; everyone before a merge |
-| [08_RUNBOOK.md](08_RUNBOOK.md) | All | When something won't start |
-| [09_DEMO_AND_PRESENTATION.md](09_DEMO_AND_PRESENTATION.md) | Pitch | Video + live presentation prep |
-| [10_LESSONS.md](10_LESSONS.md) | All | **Before writing any code** — mistakes already paid for |
-| [11_AI_TOOLING.md](11_AI_TOOLING.md) | All | Setup, and when you need a capability you lack |
-| [12_SESSION_CONTEXT.md](12_SESSION_CONTEXT.md) | All | Handing this project to a new AI session |
-| [PROBLEM_STATEMENT.md](PROBLEM_STATEMENT.md) | Lead | Paste the statement here when it drops |
-| [team/](team/) | Each member | Your own role card |
+**The problem statement is decided:** [Urban Furniture — Accounting System](PROBLEM_STATEMENT.md).
 
-**Role cards:** [A — Frontend Core](team/CARD_A_FRONTEND_CORE.md) ·
-[B — Backend Core](team/CARD_B_BACKEND_CORE.md) ·
-[C — Frontend + Pitch](team/CARD_C_FRONTEND_PITCH.md) ·
-[D — QA & Review](team/CARD_D_QA_REVIEW.md)
+| Doc | Read it when |
+|---|---|
+| [00_PLAYBOOK.md](00_PLAYBOOK.md) | **First.** Roles, triage protocol, risks, definition of done |
+| [PROBLEM_STATEMENT.md](PROBLEM_STATEMENT.md) | **Second.** The statement, the triage, the rules, the scope cut |
+| [01_STACK.md](01_STACK.md) | Technology decisions and the dependency landmines we verified |
+| [02_ARCHITECTURE.md](02_ARCHITECTURE.md) | Before writing your first module |
+| [03_DATA_MODEL.md](03_DATA_MODEL.md) | The schema, the constraints, **the four posting rules** |
+| [04_API_CONTRACT.md](04_API_CONTRACT.md) | Continuously — the FE↔BE contract and the error registry |
+| [05_FRONTEND.md](05_FRONTEND.md) | Before your first screen — screens, money formatting, drill-down |
+| [06_BACKEND.md](06_BACKEND.md) | Before your first router — **the posting engine** |
+| [07_TESTING_AND_REVIEW.md](07_TESTING_AND_REVIEW.md) | Continuously; everyone before a merge |
+| [08_RUNBOOK.md](08_RUNBOOK.md) | When something won't start |
+| [09_DEMO_AND_PRESENTATION.md](09_DEMO_AND_PRESENTATION.md) | Video and live presentation prep |
+| [10_LESSONS.md](10_LESSONS.md) | **Before writing any code** — mistakes already paid for |
+| [11_AI_TOOLING.md](11_AI_TOOLING.md) | Setup, and when you need a capability you lack |
+| [12_SESSION_CONTEXT.md](12_SESSION_CONTEXT.md) | Handing this project to a new AI session |
+| [team/LANES.md](team/LANES.md) | The four working lanes — reference, not assignments |
+| [technicals/](technicals/) | Decision records and deep-dives |
+
+---
+
+## ⏳ Open decision — the project name
+
+**Undecided.** `Urban Furniture Accounting System` is the problem statement's title, not our
+product name. The name goes in the repo README, the app header, and the pitch, so it wants
+deciding before the UI header is built — but not before.
+
+**Brief:** should feel connected to urban furniture, be understandable to someone who
+knows nothing about accounting or joinery, and be easy to say out loud in a presentation.
+
+| Candidate | The idea | Watch out for |
+|---|---|---|
+| **UrbanLedger** | Plainest option. Says exactly what it is, zero explanation needed. | Safe to the point of forgettable |
+| **Workbench** | A workbench is where furniture gets made — and "a workbench for your books". Warm, ordinary word everyone knows. | Slightly generic in software (many dev tools use it) |
+| **Khaata** | खाता — the Indian word for an account book. Every judge in the room reads it instantly, and it *is* the domain. | Only resonates with an Indian audience |
+| **Bahi** | बही — the traditional Indian ledger book, which was itself double-entry. Culturally rooted and conceptually exact. | Less familiar to younger/urban audiences than Khaata |
+| **Timber** | Furniture material. Short, warm, brandable, easy to say. | No accounting hint at all |
+| **Dovetail** | A dovetail joint interlocks two pieces so they can't pull apart — exactly what a debit and credit do. | Needs one sentence of explanation; obscure if you don't know joinery |
+
+**Do not use:** `Tally` — TallyPrime is *the* dominant accounting brand in India and the
+collision would read as derivative. Also avoid `Ledger` alone (hardware-wallet company) and
+`Square` (Block).
 
 ---
 
 ✅ **`docs/` is tracked in git**, deliberately. The virtual round ignored it, and two
 committed READMEs then linked to files that were missing from a fresh clone
 ([`10_LESSONS.md`](10_LESSONS.md) §11). Tracking it keeps every link in the repo
-resolvable, and means each teammate gets the playbook and their role card straight from
-a clone rather than from a chat message.
+resolvable, and means each teammate gets the playbook straight from a clone rather than
+from a chat message.
 
 The repository is private, so these stay internal to the team and the evaluator.
 
-**Session chatter still doesn't belong here** — `*_COMPLETE.md`, one-off audit reports
-and scratch notes are not documents. Add a file to this folder only if someone will
-need it in 30 days, and add its row to the table above when you do.
+**Session chatter still doesn't belong here** — `*_COMPLETE.md`, one-off audit reports and
+scratch notes are not documents. Add a file to this folder only if someone will need it in
+30 days, and add its row to the table above when you do.

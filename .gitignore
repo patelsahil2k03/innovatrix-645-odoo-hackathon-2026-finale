@@ -64,7 +64,7 @@ Thumbs.db
 # virtual round ignored them, and two committed READMEs then linked to files
 # that did not exist in a fresh clone (docs/10_LESSONS.md §11). Tracking them
 # keeps every link in this repo resolvable and gives each teammate the
-# playbook and role cards straight from a clone.
+# playbook and working docs straight from a clone.
 #
 # Session chatter still stays out — notes, scratch files and one-off reports
 # are not documents, and do not belong in the submission.
