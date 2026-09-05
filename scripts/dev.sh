@@ -29,24 +29,31 @@ DB_HOST="$(printf '%s' "$DB_URL" | sed -n 's|.*@\([^:/]*\).*|\1|p')"
 free_ports() { ./scripts/kill-ports.sh >/dev/null 2>&1 || true; }
 free_ports
 
-case "$DB_HOST" in
-  localhost|127.0.0.1|"")
-    echo "→ this machine hosts the database — starting postgres…"
-    docker compose -f infra/docker-compose.yml up -d db
-    until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
-      sleep 1
-    done
-    echo "→ postgres healthy. Teammates connect with:"
-    echo "     DATABASE_URL=…@$(hostname -I | awk '{print $1}'):5432/app"
+case "$DB_URL" in
+  sqlite:*)
+    echo "→ using SQLite database ($DB_URL)"
     ;;
   *)
-    echo "→ using the shared database on $DB_HOST (not starting one here)"
-    # Fail loudly now rather than as a wall of tracebacks after both servers boot.
-    if ! (exec 3<>"/dev/tcp/$DB_HOST/5432") 2>/dev/null; then
-      echo "✗ cannot reach $DB_HOST:5432 — is that machine up, and are you both on"
-      echo "  the same network? See docs/01_STACK.md §3.2." >&2
-      exit 1
-    fi
+    case "$DB_HOST" in
+      localhost|127.0.0.1|"")
+        echo "→ this machine hosts the database — starting postgres…"
+        docker compose -f infra/docker-compose.yml up -d db
+        until [ "$(docker inspect -f '{{.State.Health.Status}}' hackathon-db 2>/dev/null)" = "healthy" ]; do
+          sleep 1
+        done
+        echo "→ postgres healthy. Teammates connect with:"
+        echo "     DATABASE_URL=…@$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost"):5432/app"
+        ;;
+      *)
+        echo "→ using the shared database on $DB_HOST (not starting one here)"
+        # Fail loudly now rather than as a wall of tracebacks after both servers boot.
+        if ! (exec 3<>"/dev/tcp/$DB_HOST/5432") 2>/dev/null; then
+          echo "✗ cannot reach $DB_HOST:5432 — is that machine up, and are you both on"
+          echo "  the same network? See docs/01_STACK.md §3.2." >&2
+          exit 1
+        fi
+        ;;
+    esac
     ;;
 esac
 
@@ -58,6 +65,9 @@ cleanup() {
   kill 0 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
+
+echo "→ running database migrations & seed setup…"
+(cd backend && uv run alembic upgrade head >/dev/null 2>&1 && uv run python -m app.seed >/dev/null 2>&1) || true
 
 echo "→ api  http://localhost:8000/docs"
 (cd backend && uv sync --extra postgres --quiet && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) &
