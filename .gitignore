@@ -16,6 +16,9 @@ ENV/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
 *.db
 *.sqlite
 *.sqlite3
@@ -42,6 +45,19 @@ logs/
 *.swo
 .DS_Store
 Thumbs.db
+
+# ---- AI assistant local state ----
+# Skills are installed per-developer from upstream, never vendored here: they
+# are third-party content we don't own the right to redistribute, and at least
+# one (tailwind-4-docs) ships a snapshot its own author marks source-available
+# but not open-source. Install instructions live in docs/11_AI_TOOLING.md.
+.claude/
+
+# ---- Merge artefacts ----
+# A stray .orig/.rej committed during a conflict is how a half-resolved merge
+# reaches main. See docs/10_LESSONS.md §1.
+*.orig
+*.rej
 
 # ---- Working docs ----
 # `docs/` and `ai_guidelines/` are deliberately TRACKED, not ignored. The
