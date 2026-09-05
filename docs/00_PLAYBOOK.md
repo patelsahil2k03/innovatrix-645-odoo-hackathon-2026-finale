@@ -15,7 +15,7 @@
 | **Team** | Innovatrix — **Team #645** |
 | **Members** | Sahil Patel (lead), Devasya Joshi, Gaurav Rathva, Pranjal Shah |
 | **Venue** | Odoo India Pvt Ltd, Gandhinagar 382007, Gujarat |
-| **Evaluator** | Ronak Bharadiya — `rmbh@odoo.com` — GitHub **`rmbh-odoo`** |
+| **Evaluator** | Ronak Bharadiya — GitHub **`rmbh-odoo`** |
 | **Qualified via** | Virtual round (TransitOps, 8h) — top-tier finish |
 
 ### Hard timeline (from the organizer portal — treat as immovable)
