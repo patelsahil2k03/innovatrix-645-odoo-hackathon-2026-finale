@@ -422,3 +422,42 @@ def test_portal_documents_actually_pages(portal_client):
         f"{API}/portal/documents", params={"page_size": 1, "page": 2}
     ).json()
     assert second["items"][0]["id"] != first["items"][0]["id"]
+
+
+def test_ageing_buckets_account_for_every_outstanding_rupee(admin_client):
+    """The buckets must sum to what is actually outstanding.
+
+    An invoice that is not yet due produced a negative day count, and every
+    bucket's lower bound rejected it, so the document fell out of the report
+    entirely — money genuinely owed simply stopped being counted, and no total
+    on the screen revealed it. `Current` means "not yet due"; that is what the
+    clamp restores.
+    """
+    ageing = admin_client.get(f"{API}/analytics/ageing")
+    assert ageing.status_code == 200, ageing.text
+    body = ageing.json()
+
+    for side, path, filter_key in (
+        ("receivables", "/customer-invoices", "customer"),
+        ("payables", "/vendor-bills", "vendor"),
+    ):
+        bucketed = round(sum(b["amount"] for b in body[side]), 2)
+
+        outstanding = 0.0
+        for state in ("POSTED", "PARTIAL"):
+            # 100 is the API's own page-size ceiling; ask for more and it is
+            # a validation error, not a bigger page.
+            page = admin_client.get(
+                f"{API}{path}", params={"status": state, "page_size": 100}
+            ).json()
+            assert page["total"] <= 100, "this check assumes a single page"
+            outstanding += sum(d["total"] - d["amount_paid"] for d in page["items"])
+
+        assert bucketed == round(outstanding, 2), (
+            f"{side}: buckets total {bucketed} but {round(outstanding, 2)} is outstanding"
+        )
+
+    # And a not-yet-due document has to land in Current specifically.
+    assert {b["bucket"] for b in body["receivables"]} == {
+        "Current", "1-30", "31-60", "61-90", "90+"
+    }

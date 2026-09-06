@@ -234,12 +234,9 @@ def top_contacts(db: Session, *, direction: str, limit: int, date_from: date,
     }
 
 
-def _ageing_for(db: Session, model, status_enum, date_column, as_of: date) -> list[dict]:
+def _ageing_for(db: Session, model, status_enum, as_of: date) -> list[dict]:
     """Outstanding balance per ageing bucket for one document type."""
     outstanding = (model.total - model.amount_paid).cast(Numeric(14, 2))
-    days_overdue = func.coalesce(
-        func.date_part("day", func.cast(as_of, date_column.type) - model.due_date), 0
-    )
 
     buckets = {label: ZERO for label, _, _ in AGEING_BUCKETS}
     rows = db.execute(
@@ -253,7 +250,12 @@ def _ageing_for(db: Session, model, status_enum, date_column, as_of: date) -> li
     ).all()
 
     for row in rows:
-        overdue = (as_of - row.due_date).days if row.due_date else 0
+        # Not yet due is `Current`, exactly as this function's docstring says.
+        # Without the clamp the day count goes negative, every bucket's `lower`
+        # bound rejects it, and the document falls out of the report altogether
+        # — so money that is genuinely owed simply stopped being counted, and
+        # the buckets no longer summed to the outstanding balance.
+        overdue = max(0, (as_of - row.due_date).days) if row.due_date else 0
         for label, lower, upper in AGEING_BUCKETS:
             if overdue < lower:
                 continue
@@ -275,10 +277,6 @@ def ageing(db: Session, *, as_of: date) -> dict:
     """
     return {
         "as_of": as_of,
-        "receivables": _ageing_for(
-            db, CustomerInvoice, CustomerInvoiceStatus, CustomerInvoice.due_date, as_of
-        ),
-        "payables": _ageing_for(
-            db, VendorBill, VendorBillStatus, VendorBill.due_date, as_of
-        ),
+        "receivables": _ageing_for(db, CustomerInvoice, CustomerInvoiceStatus, as_of),
+        "payables": _ageing_for(db, VendorBill, VendorBillStatus, as_of),
     }
