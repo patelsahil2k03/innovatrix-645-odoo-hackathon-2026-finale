@@ -1,11 +1,11 @@
 # ---- Environment & secrets ----
-# Root .env is DELIBERATELY tracked in this repo — see the note in docs/12_SESSION_CONTEXT.md.
-# It is the ONLY env file: backend/src/app/core/settings.py reads it by
-# absolute path, so a per-app backend/.env copy is neither needed nor tracked.
-# This is an informed exception, not the default: normally an env file with real
-# credentials never belongs in git, doubly so in a public repo. Made here so every
-# teammate and the evaluator get a working shared-database connection on clone,
-# for the duration of this event only.
+# Root .env used to be DELIBERATELY tracked in this repo (see docs/12_SESSION_CONTEXT.md
+# for that original exception and why it was made). That policy was reversed on
+# 2026-09-06 — .env is untracked going forward (git rm --cached) and every real
+# value now lives in .env.local instead. .env.example remains the checked-in
+# template. Values committed under the old policy (JWT_SECRET, POSTGRES_PASSWORD)
+# are already in git history and were not rotated by this change alone.
+.env
 backend/.env
 # API keys for image generation etc. Never committed — the key lives here
 # instead of .env precisely so it cannot ride along with the tracked .env.
