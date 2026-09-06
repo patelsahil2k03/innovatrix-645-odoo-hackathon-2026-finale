@@ -109,8 +109,17 @@ export function useEventStream(
   // start out reporting "connected" too, and computing that during the
   // initial render is the documented pattern — the alternative was flagged
   // outright by react-hooks/set-state-in-effect.
+  //
+  // `bus` is always null during SSR (it's only ever created inside an
+  // effect, and effects never run on the server), so the `bus?.` guard alone
+  // makes the left side safe there — but `===` still evaluates BOTH sides
+  // before comparing, and `EventSource` itself does not exist in Node. The
+  // typeof check has to come first so the right side is never reached on the
+  // server; without it this throws `ReferenceError: EventSource is not
+  // defined` on every server-rendered page, which is a page-wide 500, not a
+  // scoped failure.
   const [connected, setConnected] = useState(
-    () => bus?.source.readyState === EventSource.OPEN,
+    () => typeof EventSource !== "undefined" && bus?.source.readyState === EventSource.OPEN,
   );
 
   // Keep handlers in a ref so re-renders don't tear down the subscription.
