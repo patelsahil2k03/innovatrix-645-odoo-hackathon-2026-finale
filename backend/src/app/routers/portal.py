@@ -10,6 +10,8 @@ sequential enough to walk. Refusing to distinguish "not yours" from "not there"
 is the whole point.
 """
 
+import math
+
 from fastapi import APIRouter, Depends, Header, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -89,6 +91,7 @@ def list_own_bills(
 
 @router.get("/documents")
 def list_own_documents(
+    params: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
     user: User = Depends(require_portal),
 ) -> dict:
@@ -97,6 +100,13 @@ def list_own_documents(
     A contact who is `BOTH` customer and vendor has each kind, and the portal's
     landing screen shows them together rather than making the person guess which
     tab their document is under. `document_type` distinguishes them.
+
+    Paged in Python rather than by `paginate()`, because the page is a slice of
+    two tables merged and re-sorted by date — a limit/offset against either one
+    alone would drop rows the merge should have kept. The envelope it returns is
+    the standard one regardless (04_API_CONTRACT.md §1): this route used to
+    answer `{items, total}` with no `page`/`pages`, and the UI's pagination bar
+    rendered "Showing NaN–NaN of 2" off the missing fields.
     """
     contact_id = _contact_id(user)
 
@@ -141,7 +151,18 @@ def list_own_documents(
         for d in bills
     ]
     items.sort(key=lambda row: row["date"], reverse=True)
-    return {"items": items, "total": len(items)}
+
+    total = len(items)
+    start = (params.page - 1) * params.page_size
+    return {
+        "items": items[start : start + params.page_size],
+        "total": total,
+        "page": params.page,
+        "page_size": params.page_size,
+        # A caller with nothing yet still gets page 1 of 1, not page 1 of 0 —
+        # "Page 1 of 0" reads as a broken screen.
+        "pages": max(1, math.ceil(total / params.page_size)),
+    }
 
 
 @router.get("/documents/{document_id}")

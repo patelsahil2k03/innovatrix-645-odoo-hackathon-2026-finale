@@ -72,7 +72,7 @@ Query params supported by `core/pagination.py` on any list endpoint:
 | `GET` | `/events` | user | **SSE stream**, 15s heartbeat |
 | `GET` | `/notifications` | user | Paginated, scoped to the calling user only |
 | `POST` | `/notifications/read-all` | user | `{marked_read: n}` |
-| `GET` | `/audit-logs` | admin role | Paginated audit trail |
+| `GET` | `/audit-logs` | admin role | Paginated audit trail. Each row carries the acting `user` (id, name, email) rather than a bare `user_id` — a screen showing UUIDs answers "who" with something nobody can read. Filters: `entity_name`, `outcome` (`accepted` · `rejected`), `user_id`. Records **rejected** writes too, so a refused permission is visible; only 2xx were kept before, which made the outcome column unable to ever say anything but "accepted". |
 
 ### SSE event frames
 ```
@@ -382,6 +382,28 @@ frontend guessed.
 | `PATCH` | `/sales-orders/{id}` · `/purchase-orders/{id}` · `/customer-invoices/{id}` · `/vendor-bills/{id}` | Admin+Accountant | §3 lists create and the transitions but no edit. A draft has to be editable before it is confirmed. **Draft only** — a posted document returns `CANNOT_MODIFY_POSTED`. |
 | `GET` | `/payments/{id}` | internal | Detail for a row in the payments list. |
 | `GET` | `/budgets/{id}/lines/{line_id}/documents` | internal | Specified in §3.6; listed here because the response shape was not. Returns `[{document_type, id, number, date, contact_id, status, amount}]`. |
+| `GET` | `/analytics/trend` | internal | Monthly income, expense and net profit aggregated from `journal_lines`. `months` (1–36, default 12). Months are contiguous — a month with no postings returns zeros rather than being skipped, so a chart shows a flat stretch instead of closing the gap and implying continuity. |
+| `GET` | `/analytics/breakdown` | internal | Income and expense split by analytic account, from the same lines. Slices carry `type` so a caller can separate revenue from cost — one chart mixing both has no meaningful total. |
+| `GET` | `/analytics/top-contacts` | internal | Highest-value contacts by posted amount. `limit` (1–25, default 5). |
+| `GET` | `/analytics/ageing` | internal | Receivable and payable ageing buckets (0–30 · 31–60 · 61–90 · 90+). The one report that reads documents rather than the ledger, deliberately: an ageing bucket is a property of the *document's* due date, which no journal line carries. |
+| `GET` | `/status-counts` | internal | All / Draft / Confirmed and every other state, per document module, in one request. Backs the mockup's per-module counts (`PROBLEM_STATEMENT.md` §4 item 14). One call rather than one per module, because every consumer wants the whole set at once. |
+
+**`GET /status-counts` response.** Keyed by module so a caller indexes rather than
+searches; `by_status` holds the raw state names the document already uses, so a new
+state appears here without a contract change:
+
+```json
+{
+  "modules": {
+    "sales_orders":      { "total": 40, "by_status": { "DRAFT": 2, "CONFIRMED": 10, "INVOICED": 28 } },
+    "customer_invoices": { "total": 38, "by_status": { "DRAFT": 1, "POSTED": 20, "PAID": 17 } }
+  }
+}
+```
+
+> ⚠️ **`/analytics/*` was built before it was written down here** — the same
+> §5 breach this section exists to correct, repeated. Logged now rather than
+> quietly left out.
 
 **Query parameters added:**
 

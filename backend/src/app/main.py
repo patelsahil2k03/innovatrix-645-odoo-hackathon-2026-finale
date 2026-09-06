@@ -32,6 +32,7 @@ from app.routers import (
     purchases,
     reports,
     sales,
+    status_counts,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -113,6 +114,8 @@ def create_app() -> FastAPI:
     app.include_router(reports.router, prefix=prefix)
     # Same ledger as reports, reshaped for the charts screen.
     app.include_router(analytics.router, prefix=prefix)
+    # Document counts per state — the one read that counts documents, not lines.
+    app.include_router(status_counts.router, prefix=prefix)
     app.include_router(portal.router, prefix=prefix)
     # Print / PDF / Send. Last, because its document routes are deliberately
     # generic and must not shadow anything more specific above them.

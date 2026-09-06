@@ -73,8 +73,8 @@ purpose.
 Each line goes between the two blocks above, prefixed with
 `SUBJECT — draw exactly this:`
 
-> ⚠️ **The slot is opt-in, not automatic.** `.page-head` is rendered by **44**
-> pages, not 18 — every `[id]` detail page and every `/new` form uses it too.
+> ⚠️ **The slot is opt-in, not automatic.** `.page-head` is rendered by **21**
+> screens, not 18 — and was 44 before detail views became drawers.
 > Wiring the image into `.page-head` unconditionally would put an illustration on
 > "New sales order" and on every invoice detail screen, which is decoration
 > competing with dense figures. Only the 18 tabs below pass an image; detail and

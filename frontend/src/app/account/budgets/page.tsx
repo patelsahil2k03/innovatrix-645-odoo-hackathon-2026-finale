@@ -16,6 +16,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusChips } from "@/components/ui/status-chips";
 import { ViewToggle, type ListView } from "@/components/ui/view-toggle";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { api, type AnalyticAccount, type Budget, type BudgetLine, type BudgetUpdate, type Contact } from "@/lib/api";
@@ -23,6 +24,7 @@ import { useAuth } from "@/lib/auth-context";
 import { aggregateBudgetLines, budgetAchievedTone } from "@/lib/budget-helpers";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useDrawerParam } from "@/lib/use-drawer-param";
+import { useStatusFilter } from "@/lib/use-status-counts";
 import { useFetch } from "@/lib/use-fetch";
 import { useToast } from "@/lib/toast-context";
 import { budgetSchema, fieldErrorsFrom, formMessageFrom, validate, type FieldErrors } from "@/lib/validation";
@@ -241,15 +243,24 @@ function BudgetsPageInner() {
   const router = useRouter();
   const toast = useToast();
   const panel = useDrawerParam();
+  const statusFilter = useStatusFilter("budgets");
   const [view, setView] = useState<ListView>("list");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const budgets = useFetch(
-    () => api.budgets.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: "-period_start" }),
-    [page, debouncedSearch],
+    () => api.budgets.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: "-period_start" , state: statusFilter.status ?? undefined }),
+    [page, debouncedSearch, statusFilter.status],
   );
+
+  // Same render-time reset as the document lists: a narrower filter can leave
+  // the current page past the last one, showing an empty table for real rows.
+  const [filteredBy, setFilteredBy] = useState(statusFilter.status);
+  if (filteredBy !== statusFilter.status) {
+    setFilteredBy(statusFilter.status);
+    setPage(1);
+  }
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -415,6 +426,13 @@ function BudgetsPageInner() {
 
       <div className="row-between">
         <SearchInput value={search} onChange={handleSearchChange} label="Search budgets" />
+
+        <StatusChips
+          chips={statusFilter.chips}
+          active={statusFilter.status}
+          hrefFor={statusFilter.hrefFor}
+          aria-label="Budgets by state"
+        />
         <ViewToggle value={view} onChange={setView} />
       </div>
 

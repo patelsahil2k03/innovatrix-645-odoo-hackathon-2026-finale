@@ -147,6 +147,9 @@ export interface Notification {
 export interface AuditLog {
   id: string;
   user_id: string;
+  /** Flattened off the joined user — null only if the account was removed. */
+  user_name: string | null;
+  user_email: string | null;
   action: string;
   entity_name: string;
   entity_id: string | null;
@@ -500,6 +503,22 @@ export interface AgeingReport {
   payables: AgeingBucket[];
 }
 
+/** Keys are the document states themselves, so a state added on the server
+ *  appears here without a type change (04_API_CONTRACT.md §4.1). */
+export interface ModuleCounts {
+  total: number;
+  by_status: Record<string, number>;
+}
+export type StatusCountsModule =
+  | "sales_orders"
+  | "customer_invoices"
+  | "purchase_orders"
+  | "vendor_bills"
+  | "budgets";
+export interface StatusCountsReport {
+  modules: Record<StatusCountsModule, ModuleCounts>;
+}
+
 export interface TrialBalanceRow {
   account_code: string;
   account_name: string;
@@ -564,6 +583,9 @@ export const api = {
 
   auditLogs: {
     list: (params?: ListParams) => get<Page<AuditLog>>("/audit-logs", params),
+    /** Only the modules that actually have rows — the filter offers nothing
+     *  that would come back empty. */
+    entities: () => get<string[]>("/audit-logs/entities"),
   },
 
   // ── Master data (04_API_CONTRACT.md §3.1) ────────────────────────────────
@@ -667,6 +689,9 @@ export const api = {
       get<TopContactsReport>("/analytics/top-contacts", { direction, limit }),
     ageing: (asOf?: string) => get<AgeingReport>("/analytics/ageing", { as_of: asOf }),
   },
+
+  // ── Document counts per state — the mockup's All / Draft / Confirmed (§4.1) ─
+  statusCounts: () => get<StatusCountsReport>("/status-counts"),
 
   // ── Customer portal — User role only (§3.9) ───────────────────────────────
   portal: {

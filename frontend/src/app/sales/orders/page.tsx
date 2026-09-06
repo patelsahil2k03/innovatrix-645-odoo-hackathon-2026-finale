@@ -17,6 +17,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusChips } from "@/components/ui/status-chips";
 import { PlusIcon } from "@/components/icons";
 import { api, type AnalyticAccount, type Contact, type Product, type SalesOrder, type SalesOrderUpdate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -24,6 +25,7 @@ import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { lineDefaultsFromProduct, useDocumentLines } from "@/lib/use-document-lines";
 import { useDrawerParam } from "@/lib/use-drawer-param";
+import { useStatusFilter } from "@/lib/use-status-counts";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 import { useToast } from "@/lib/toast-context";
@@ -134,14 +136,15 @@ function SalesOrdersPageInner() {
   const router = useRouter();
   const toast = useToast();
   const panel = useDrawerParam();
+  const statusFilter = useStatusFilter("sales_orders");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<string | null>("-order_date");
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const orders = useFetch(
-    () => api.salesOrders.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: sort ?? undefined }),
-    [page, debouncedSearch, sort],
+    () => api.salesOrders.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: sort ?? undefined, status: statusFilter.status ?? undefined }),
+    [page, debouncedSearch, sort, statusFilter.status],
   );
   useEventStream({ "document.posted": () => orders.reload() }, !!user);
 
@@ -159,6 +162,17 @@ function SalesOrdersPageInner() {
     () => (editingId ? api.salesOrders.get(editingId) : Promise.resolve(null)),
     [editingId],
   );
+
+  // A narrower filter can leave the current page beyond the last one,
+  // which renders an empty table for a list that does have rows. This is
+  // React's documented "adjust state during render" pattern rather than an
+  // effect: an effect would paint the stale page first, and the lint rule
+  // react-hooks/set-state-in-effect rejects it outright.
+  const [filteredBy, setFilteredBy] = useState(statusFilter.status);
+  if (filteredBy !== statusFilter.status) {
+    setFilteredBy(statusFilter.status);
+    setPage(1);
+  }
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -277,6 +291,13 @@ function SalesOrdersPageInner() {
       />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search sales orders" placeholder="Search by number or reference" />
+
+      <StatusChips
+        chips={statusFilter.chips}
+        active={statusFilter.status}
+        hrefFor={statusFilter.hrefFor}
+        aria-label="Sales orders by state"
+      />
 
       <div className="card">
         <AsyncState

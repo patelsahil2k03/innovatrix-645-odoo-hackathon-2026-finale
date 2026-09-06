@@ -16,6 +16,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusChips } from "@/components/ui/status-chips";
 import { TAccountPreview } from "@/components/ui/t-account-preview";
 import { DownloadIcon, MailIcon, PlusIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
@@ -33,6 +34,7 @@ import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { buildPurchasePostingPreview, lineDefaultsFromProduct, round2, useDocumentLines } from "@/lib/use-document-lines";
 import { useDrawerParam } from "@/lib/use-drawer-param";
+import { useStatusFilter } from "@/lib/use-status-counts";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
 import { useToast } from "@/lib/toast-context";
@@ -158,14 +160,15 @@ function VendorBillsPageInner() {
   const { user } = useAuth();
   const toast = useToast();
   const panel = useDrawerParam();
+  const statusFilter = useStatusFilter("vendor_bills");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<string | null>("-bill_date");
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const bills = useFetch(
-    () => api.vendorBills.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: sort ?? undefined }),
-    [page, debouncedSearch, sort],
+    () => api.vendorBills.list({ page, page_size: PAGE_SIZE, q: debouncedSearch, sort: sort ?? undefined, status: statusFilter.status ?? undefined }),
+    [page, debouncedSearch, sort, statusFilter.status],
   );
   useEventStream(
     {
@@ -186,6 +189,17 @@ function VendorBillsPageInner() {
 
   const productsById = useMemo(() => byId<Product>(products.data?.items ?? []), [products.data]);
   const accountsById = useMemo(() => byId<Account>(accounts.data?.items ?? []), [accounts.data]);
+
+  // A narrower filter can leave the current page beyond the last one,
+  // which renders an empty table for a list that does have rows. This is
+  // React's documented "adjust state during render" pattern rather than an
+  // effect: an effect would paint the stale page first, and the lint rule
+  // react-hooks/set-state-in-effect rejects it outright.
+  const [filteredBy, setFilteredBy] = useState(statusFilter.status);
+  if (filteredBy !== statusFilter.status) {
+    setFilteredBy(statusFilter.status);
+    setPage(1);
+  }
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -326,6 +340,13 @@ function VendorBillsPageInner() {
       </div>
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search bills" placeholder="Search by number or reference" />
+
+      <StatusChips
+        chips={statusFilter.chips}
+        active={statusFilter.status}
+        hrefFor={statusFilter.hrefFor}
+        aria-label="Vendor bills by state"
+      />
 
       <div className="card">
         <AsyncState

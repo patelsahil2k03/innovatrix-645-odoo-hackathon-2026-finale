@@ -10,15 +10,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { DownloadIcon } from "@/components/icons";
 import { PaymentModal } from "@/components/forms/payment-modal";
 import { ClosePanel } from "@/components/ui/close-panel";
-import { api, type CustomerInvoice, type VendorBill } from "@/lib/api";
+import { api } from "@/lib/api";
+import { portalDocumentView } from "@/lib/portal-document";
 import { useFetch } from "@/lib/use-fetch";
 import { useToast } from "@/lib/toast-context";
-import { round2 } from "@/lib/use-document-lines";
 import { date, money } from "@/lib/format";
-
-function isInvoice(doc: CustomerInvoice | VendorBill): doc is CustomerInvoice {
-  return "customer_id" in doc;
-}
 
 export default function PortalDocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -39,9 +35,8 @@ export default function PortalDocumentDetailPage({ params }: { params: Promise<{
         skeleton={<SkeletonCard lines={4} />}
       >
         {(data) => {
-          const invoice = isInvoice(data);
-          const remaining = round2(data.total - data.amount_paid);
-          const canPay = data.status === "POSTED" || data.status === "PARTIAL";
+          const { isInvoice: invoice, date: documentDate, remaining, canPay } =
+            portalDocumentView(data);
           const pdfUrl = invoice ? api.customerInvoices.pdfUrl(data.id) : api.vendorBills.pdfUrl(data.id);
 
           return (
@@ -50,7 +45,7 @@ export default function PortalDocumentDetailPage({ params }: { params: Promise<{
                 <div>
                   <h1>{data.number}</h1>
                   <p>
-                    <StatusBadge status={data.status} /> · {date(invoice ? data.invoice_date : data.bill_date)}
+                    <StatusBadge status={data.status} /> · {date(documentDate)}
                     {data.reference ? <> · Ref {data.reference}</> : null}
                   </p>
                 </div>

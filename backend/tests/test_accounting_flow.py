@@ -347,3 +347,117 @@ def test_send_refuses_explicitly_when_smtp_is_not_configured(admin_client):
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "MAIL_NOT_CONFIGURED"
+
+
+def test_status_counts_covers_every_state_including_the_empty_ones(admin_client):
+    """A state with no documents must render as 0, not disappear.
+
+    A missing column reads as "this state cannot happen"; a zero reads as
+    "nothing is there yet". Only the second is true, and the difference is
+    visible on screen — so the response is built from the enum, not from
+    whatever rows happen to exist.
+    """
+    response = admin_client.get(f"{API}/status-counts")
+    assert response.status_code == 200, response.text
+    modules = response.json()["modules"]
+
+    assert set(modules) == {
+        "sales_orders",
+        "customer_invoices",
+        "purchase_orders",
+        "vendor_bills",
+        "budgets",
+    }
+
+    orders = modules["sales_orders"]
+    assert set(orders["by_status"]) == {"DRAFT", "CONFIRMED", "INVOICED", "CANCELLED"}
+    assert orders["total"] == sum(orders["by_status"].values())
+
+    # Cross-check one module against the list endpoint's own total, so the two
+    # can never drift apart without a test noticing.
+    listed = admin_client.get(f"{API}/sales-orders", params={"page_size": 1})
+    assert listed.json()["total"] == orders["total"]
+
+
+def test_status_counts_needs_a_session(client):
+    """Counts are staff-only (`require_internal`); anonymous gets nothing."""
+    assert client.get(f"{API}/status-counts").status_code == 401
+
+
+def test_status_counts_is_staff_only(portal_client):
+    """A portal contact has no business knowing how many drafts exist."""
+    assert portal_client.get(f"{API}/status-counts").status_code == 403
+
+
+def test_portal_documents_returns_the_standard_page_envelope(portal_client):
+    """Every list endpoint answers the same envelope (04_API_CONTRACT.md §1).
+
+    This one used to return `{items, total}` only. The UI divides by the missing
+    `page`/`page_size`, so the portal's pagination bar rendered
+    "Showing NaN–NaN of 2" — a visible break caused purely by a shape mismatch,
+    which is exactly what a contract exists to prevent.
+    """
+    response = portal_client.get(f"{API}/portal/documents")
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert {"items", "total", "page", "page_size", "pages"} <= set(body)
+    assert body["page"] == 1
+    assert body["pages"] >= 1
+    assert all(isinstance(body[k], int) for k in ("total", "page", "page_size", "pages"))
+
+
+def test_portal_documents_actually_pages(portal_client):
+    """`page_size` has to slice, not be accepted and ignored."""
+    everything = portal_client.get(f"{API}/portal/documents", params={"page_size": 100}).json()
+    if everything["total"] < 2:
+        pytest.skip("needs at least two documents to prove a slice")
+
+    first = portal_client.get(f"{API}/portal/documents", params={"page_size": 1}).json()
+    assert len(first["items"]) == 1
+    assert first["total"] == everything["total"]
+    assert first["pages"] == everything["total"]
+
+    second = portal_client.get(
+        f"{API}/portal/documents", params={"page_size": 1, "page": 2}
+    ).json()
+    assert second["items"][0]["id"] != first["items"][0]["id"]
+
+
+def test_ageing_buckets_account_for_every_outstanding_rupee(admin_client):
+    """The buckets must sum to what is actually outstanding.
+
+    An invoice that is not yet due produced a negative day count, and every
+    bucket's lower bound rejected it, so the document fell out of the report
+    entirely — money genuinely owed simply stopped being counted, and no total
+    on the screen revealed it. `Current` means "not yet due"; that is what the
+    clamp restores.
+    """
+    ageing = admin_client.get(f"{API}/analytics/ageing")
+    assert ageing.status_code == 200, ageing.text
+    body = ageing.json()
+
+    for side, path, filter_key in (
+        ("receivables", "/customer-invoices", "customer"),
+        ("payables", "/vendor-bills", "vendor"),
+    ):
+        bucketed = round(sum(b["amount"] for b in body[side]), 2)
+
+        outstanding = 0.0
+        for state in ("POSTED", "PARTIAL"):
+            # 100 is the API's own page-size ceiling; ask for more and it is
+            # a validation error, not a bigger page.
+            page = admin_client.get(
+                f"{API}{path}", params={"status": state, "page_size": 100}
+            ).json()
+            assert page["total"] <= 100, "this check assumes a single page"
+            outstanding += sum(d["total"] - d["amount_paid"] for d in page["items"])
+
+        assert bucketed == round(outstanding, 2), (
+            f"{side}: buckets total {bucketed} but {round(outstanding, 2)} is outstanding"
+        )
+
+    # And a not-yet-due document has to land in Current specifically.
+    assert {b["bucket"] for b in body["receivables"]} == {
+        "Current", "1-30", "31-60", "61-90", "90+"
+    }
