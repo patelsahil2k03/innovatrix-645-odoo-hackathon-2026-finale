@@ -14,6 +14,7 @@
 
 import argparse
 import sys
+from datetime import UTC, datetime, time
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -245,6 +246,85 @@ def seed_notifications(db: Session, users: list[User], gen: Gen) -> int:
     return count
 
 
+def seed_audit_logs(db: Session, users: list[User], gen: Gen) -> int:
+    """An audit row for each document the seed created, plus a few refusals.
+
+    Audit rows are written by middleware on real API calls, and the seeder
+    writes documents straight to the session — so a freshly seeded database
+    showed a populated app beside an audit screen reading "Nothing logged yet".
+    Every row below is *derived from a document that exists*: same id, same
+    date, same actor. Nothing here invents activity that did not happen.
+
+    The refusals are the honest part rather than decoration. An Accountant
+    modifying master data is a 403 by rule (`core/rbac.py`), so a handful of
+    those are recorded against the Accountant — without them the outcome
+    filter has only one value to show and the screen cannot demonstrate that
+    the permission boundary exists at all.
+    """
+    from app.models.documents import CustomerInvoice, PurchaseOrder, SalesOrder, VendorBill
+    from app.models.masters import Contact
+
+    already = db.execute(select(AuditLog.id).limit(1)).first()
+    if already is not None:
+        return 0
+
+    by_role = {user.role.name: user for user in users}
+    admin = by_role.get("Admin")
+    accountant = by_role.get("Accountant") or admin
+    if admin is None:
+        return 0
+
+    # (model, url segment, the column holding the document's own date)
+    sources = [
+        (SalesOrder, "sales-orders", SalesOrder.order_date),
+        (CustomerInvoice, "customer-invoices", CustomerInvoice.invoice_date),
+        (PurchaseOrder, "purchase-orders", PurchaseOrder.order_date),
+        (VendorBill, "vendor-bills", VendorBill.bill_date),
+    ]
+
+    count = 0
+    for model, segment, date_column in sources:
+        for doc_id, doc_date in db.execute(select(model.id, date_column)).all():
+            actor = accountant if gen.maybe(0.7) else admin
+            db.add(
+                AuditLog(
+                    user_id=actor.id,
+                    action=f"POST /api/v1/{segment}",
+                    entity_name=segment,
+                    entity_id=doc_id,
+                    status_code=201,
+                    # Same day as the document, at a plausible working hour, so
+                    # the log sorts alongside the history it describes instead
+                    # of every row landing at seed time.
+                    created_at=datetime.combine(
+                        doc_date,
+                        time(hour=gen.rng.randint(9, 18), minute=gen.rng.randint(0, 59)),
+                        tzinfo=UTC,
+                    ),
+                )
+            )
+            count += 1
+
+    # The refusals: an Accountant cannot modify or archive master data.
+    if accountant is not None and accountant is not admin:
+        contact_ids = db.execute(select(Contact.id).limit(3)).scalars().all()
+        for contact_id in contact_ids:
+            db.add(
+                AuditLog(
+                    user_id=accountant.id,
+                    action=f"PATCH /api/v1/contacts/{contact_id}",
+                    entity_name="contacts",
+                    entity_id=contact_id,
+                    status_code=403,
+                    created_at=gen.past_datetime(10),
+                )
+            )
+            count += 1
+
+    db.commit()
+    return count
+
+
 def seed_all(db: Session, *, seed_value: int = 42) -> dict[str, int]:
     """Everything, in dependency order. Importable — this is what tests call."""
     gen = Gen(seed_value)
@@ -261,10 +341,14 @@ def seed_all(db: Session, *, seed_value: int = 42) -> dict[str, int]:
     admin = next((u for u in users if u.role_id == roles["Admin"].id), None)
     domain_counts = seed_domain(db, accounts, admin.id if admin else None, gen)
 
+    # After the documents exist: every audit row points at one of them.
+    audit_logs = seed_audit_logs(db, users, gen)
+
     return {
         "roles": len(roles),
         "users": len(users),
         "notifications": notifications,
+        "audit_logs": audit_logs,
         "accounts": len(accounts),
         "journals": len(journals),
         **domain_counts,
