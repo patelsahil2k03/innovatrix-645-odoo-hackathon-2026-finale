@@ -8,6 +8,7 @@ import { CategoryBarChart } from "@/components/ui/bar-chart";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { SkeletonCard } from "@/components/ui/skeleton";
+import { PageHeading } from "@/components/ui/page-heading";
 import { DownloadIcon } from "@/components/icons";
 import { api, type ReportGroup } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -60,15 +61,16 @@ export default function BalanceSheetPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Report" }, { label: "Balance Sheet" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Balance Sheet</h1>
-          <p>Every figure is a link — click through to the journal lines that make it up.</p>
-        </div>
-        <a className="btn btn-sm" href={api.reports.pdfUrl("balance-sheet")} target="_blank" rel="noreferrer">
-          <DownloadIcon size={14} /> PDF
-        </a>
-      </div>
+      <PageHeading
+        image="/img/tabs/balance-sheet.webp"
+        title="Balance Sheet"
+        subtitle="Every figure is a link — click through to the journal lines that make it up."
+        action={
+          <a className="btn btn-sm" href={api.reports.pdfUrl("balance-sheet")} target="_blank" rel="noreferrer">
+            <DownloadIcon size={14} /> PDF
+          </a>
+        }
+      />
 
       <AsyncState
         loading={report.loading}

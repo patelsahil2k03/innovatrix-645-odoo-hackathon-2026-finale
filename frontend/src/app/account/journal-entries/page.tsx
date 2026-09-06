@@ -8,6 +8,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Drawer } from "@/components/ui/drawer";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -97,12 +98,11 @@ function JournalEntriesPageInner() {
         }
       />
 
-      <div className="page-head">
-        <div>
-          <h1>{accountLabel ? `Journal entries — ${accountLabel}` : "Journal Entries"}</h1>
-          <p>The ledger itself — read-only. Corrections are a reversing entry, never an edit.</p>
-        </div>
-      </div>
+      <PageHeading
+        image="/img/tabs/journal-entries.webp"
+        title={accountLabel ? `Journal entries — ${accountLabel}` : "Journal Entries"}
+        subtitle="The ledger itself — read-only. Corrections are a reversing entry, never an edit."
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search journal entries" placeholder="Search by entry number or reference" />
 

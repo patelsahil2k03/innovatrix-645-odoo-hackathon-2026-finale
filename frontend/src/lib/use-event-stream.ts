@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-import { API_BASE } from "@/lib/api";
+import { useEventStreamContext } from "@/lib/event-stream-context";
 
 type EventHandler = (data: Record<string, unknown>) => void;
 
@@ -19,19 +19,19 @@ type EventHandler = (data: Record<string, unknown>) => void;
  *
  * Returns whether the stream is currently connected, for a "live" indicator.
  *
- * `enabled` gates the connection — pass `false` while the session is still
- * loading or unauthenticated. `/events` requires a logged-in user, and
- * `EventSource` retries forever on its own, so an ungated call from `AppShell`
- * hammers the API with 401s from the moment any page mounts, before the auth
- * check has even resolved.
+ * Every caller shares one real `EventSource`, owned by `EventStreamProvider`
+ * (mounted once in the root layout) — this hook only registers/unregisters
+ * handlers against it. `enabled` gates whether THIS caller's handlers are
+ * subscribed; it no longer needs to gate a connection, since the shared one
+ * already waits for a logged-in session before it opens.
  */
 export function useEventStream(
   handlers: Record<string, EventHandler>,
   enabled = true,
 ): boolean {
-  const [connected, setConnected] = useState(false);
+  const { connected, subscribe } = useEventStreamContext();
 
-  // Keep handlers in a ref so re-renders don't tear down the connection.
+  // Keep handlers in a ref so re-renders don't tear down the subscription.
   // Writing a ref during render is not allowed, so update it in an effect.
   const handlersRef = useRef(handlers);
   useEffect(() => {
@@ -42,41 +42,20 @@ export function useEventStream(
   const eventNames = Object.keys(handlers).sort().join(",");
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !eventNames) {
       return;
     }
 
-    const source = new EventSource(`${API_BASE}/events`, { withCredentials: true });
-
-    source.addEventListener("connected", () => setConnected(true));
-    source.onerror = () => setConnected(false);
-
-    const registered = eventNames ? eventNames.split(",") : [];
-    const listeners = registered.map((eventName) => {
-      const listener = (event: MessageEvent) => {
-        let payload: Record<string, unknown> = {};
-        try {
-          payload = JSON.parse(event.data);
-        } catch {
-          /* a malformed frame must not break the stream */
-        }
-        handlersRef.current[eventName]?.(payload);
-      };
-      source.addEventListener(eventName, listener);
-      return { eventName, listener };
-    });
+    const unsubscribes = eventNames
+      .split(",")
+      .map((eventName) =>
+        subscribe(eventName, (payload) => handlersRef.current[eventName]?.(payload)),
+      );
 
     return () => {
-      listeners.forEach(({ eventName, listener }) =>
-        source.removeEventListener(eventName, listener),
-      );
-      source.close();
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-    // Re-subscribe if the SET of event names changes, or once `enabled` flips true.
-  }, [eventNames, enabled]);
+  }, [eventNames, enabled, subscribe]);
 
-  // Gated rather than reset inside the effect: writing state from an effect body
-  // costs a second render pass, and while disabled there is no stream to be
-  // connected to regardless of what the last run left behind.
   return enabled && connected;
 }

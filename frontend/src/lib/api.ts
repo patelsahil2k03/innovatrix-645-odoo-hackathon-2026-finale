@@ -279,6 +279,7 @@ export interface SalesOrder extends DocumentHeader {
   lines: DocumentLine[];
 }
 export type SalesOrderCreate = Pick<SalesOrder, "reference" | "customer_id" | "order_date" | "lines">;
+export type SalesOrderUpdate = Partial<SalesOrderCreate>;
 
 export interface CustomerInvoice extends DocumentHeader {
   so_id: string | null;
@@ -299,6 +300,7 @@ export type CustomerInvoiceCreate = Pick<
   CustomerInvoice,
   "reference" | "customer_id" | "invoice_date" | "due_date" | "lines"
 >;
+export type CustomerInvoiceUpdate = Partial<CustomerInvoiceCreate>;
 
 export interface PurchaseOrder extends DocumentHeader {
   vendor_id: string;
@@ -311,6 +313,7 @@ export interface PurchaseOrder extends DocumentHeader {
   lines: DocumentLine[];
 }
 export type PurchaseOrderCreate = Pick<PurchaseOrder, "reference" | "vendor_id" | "order_date" | "lines">;
+export type PurchaseOrderUpdate = Partial<PurchaseOrderCreate>;
 
 export interface VendorBill extends DocumentHeader {
   po_id: string | null;
@@ -331,6 +334,7 @@ export type VendorBillCreate = Pick<
   VendorBill,
   "reference" | "vendor_id" | "bill_date" | "due_date" | "lines"
 >;
+export type VendorBillUpdate = Partial<VendorBillCreate>;
 
 export type PaymentDirection = "RECEIVE" | "SEND";
 
@@ -386,6 +390,7 @@ export interface Budget {
   lines: BudgetLine[];
 }
 export type BudgetCreate = Pick<Budget, "name" | "period_start" | "period_end" | "responsible_id" | "lines">;
+export type BudgetUpdate = Partial<BudgetCreate>;
 
 export interface JournalEntryLine {
   id: string;
@@ -600,6 +605,7 @@ export const api = {
     list: (params?: ListParams) => get<Page<SalesOrder>>("/sales-orders", params),
     get: (id: string) => get<SalesOrder>(`/sales-orders/${id}`),
     create: (body: SalesOrderCreate) => post<SalesOrder>("/sales-orders", body),
+    update: (id: string, body: SalesOrderUpdate) => patch<SalesOrder>(`/sales-orders/${id}`, body),
     confirm: (id: string) => post<SalesOrder>(`/sales-orders/${id}/confirm`),
     createInvoice: (id: string) => post<CustomerInvoice>(`/sales-orders/${id}/create-invoice`),
     cancel: (id: string) => post<SalesOrder>(`/sales-orders/${id}/cancel`),
@@ -608,6 +614,7 @@ export const api = {
     list: (params?: ListParams) => get<Page<CustomerInvoice>>("/customer-invoices", params),
     get: (id: string) => get<CustomerInvoice>(`/customer-invoices/${id}`),
     create: (body: CustomerInvoiceCreate) => post<CustomerInvoice>("/customer-invoices", body),
+    update: (id: string, body: CustomerInvoiceUpdate) => patch<CustomerInvoice>(`/customer-invoices/${id}`, body),
     post: (id: string) => post<CustomerInvoice>(`/customer-invoices/${id}/post`),
     cancel: (id: string) => post<CustomerInvoice>(`/customer-invoices/${id}/cancel`),
     send: (id: string) => post<{ queued: boolean; to: string }>(`/customer-invoices/${id}/send`),
@@ -619,6 +626,7 @@ export const api = {
     list: (params?: ListParams) => get<Page<PurchaseOrder>>("/purchase-orders", params),
     get: (id: string) => get<PurchaseOrder>(`/purchase-orders/${id}`),
     create: (body: PurchaseOrderCreate) => post<PurchaseOrder>("/purchase-orders", body),
+    update: (id: string, body: PurchaseOrderUpdate) => patch<PurchaseOrder>(`/purchase-orders/${id}`, body),
     confirm: (id: string) => post<PurchaseOrder>(`/purchase-orders/${id}/confirm`),
     createBill: (id: string) => post<VendorBill>(`/purchase-orders/${id}/create-bill`),
     cancel: (id: string) => post<PurchaseOrder>(`/purchase-orders/${id}/cancel`),
@@ -627,6 +635,7 @@ export const api = {
     list: (params?: ListParams) => get<Page<VendorBill>>("/vendor-bills", params),
     get: (id: string) => get<VendorBill>(`/vendor-bills/${id}`),
     create: (body: VendorBillCreate) => post<VendorBill>("/vendor-bills", body),
+    update: (id: string, body: VendorBillUpdate) => patch<VendorBill>(`/vendor-bills/${id}`, body),
     post: (id: string) => post<VendorBill>(`/vendor-bills/${id}/post`),
     cancel: (id: string) => post<VendorBill>(`/vendor-bills/${id}/cancel`),
     send: (id: string) => post<{ queued: boolean; to: string }>(`/vendor-bills/${id}/send`),
@@ -645,6 +654,7 @@ export const api = {
     list: (params?: ListParams) => get<Page<Budget>>("/budgets", params),
     get: (id: string) => get<Budget>(`/budgets/${id}`),
     create: (body: BudgetCreate) => post<Budget>("/budgets", body),
+    update: (id: string, body: BudgetUpdate) => patch<Budget>(`/budgets/${id}`, body),
     confirm: (id: string) => post<Budget>(`/budgets/${id}/confirm`),
     revise: (id: string) => post<Budget>(`/budgets/${id}/revise`),
     cancel: (id: string) => post<Budget>(`/budgets/${id}/cancel`),

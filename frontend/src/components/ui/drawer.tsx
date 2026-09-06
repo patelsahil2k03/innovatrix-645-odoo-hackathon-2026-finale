@@ -112,6 +112,9 @@ export function Drawer({ open, title, onClose, children, footer, width = 60 }: D
           aria-label="Close"
           aria-describedby={closeTipId}
         >
+          <svg className="drawer-close-ring" viewBox="0 0 38 38" aria-hidden="true">
+            <rect x="1" y="1" width="36" height="36" rx="17" pathLength={1} />
+          </svg>
           <CloseIcon size={16} />
         </button>
         <span role="tooltip" id={closeTipId} className="drawer-close-tip">

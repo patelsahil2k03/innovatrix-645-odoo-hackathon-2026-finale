@@ -7,6 +7,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { GroupedBarChart } from "@/components/ui/bar-chart";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Field } from "@/components/ui/field";
+import { PageHeading } from "@/components/ui/page-heading";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { api, type BudgetReportRow } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
@@ -40,12 +41,11 @@ export default function BudgetReportPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Report" }, { label: "Budget Report" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Budget Report</h1>
-          <p>Planned vs. actual vs. variance, per analytic account.</p>
-        </div>
-      </div>
+      <PageHeading
+        image="/img/tabs/budget-report.webp"
+        title="Budget Report"
+        subtitle="Planned vs. actual vs. variance, per analytic account."
+      />
 
       <div className="card">
         <Field label="Budget" required>

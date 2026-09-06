@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 
 import { AuthProvider } from "@/lib/auth-context";
+import { EventStreamProvider } from "@/lib/event-stream-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {THEME_BOOT_SCRIPT}
         </Script>
         <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <EventStreamProvider>{children}</EventStreamProvider>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>

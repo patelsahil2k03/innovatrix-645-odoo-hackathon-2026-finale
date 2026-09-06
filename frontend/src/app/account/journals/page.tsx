@@ -8,6 +8,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -89,18 +90,19 @@ function JournalsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Account" }, { label: "Journals" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Journals</h1>
-          <p>Where a payment posts — Bank, Cash, Sales, Purchase, Misc.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New journal
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/journals.webp"
+        title="Journals"
+        subtitle="Where a payment posts — Bank, Cash, Sales, Purchase, Misc."
+        action={
+          canRecord ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New journal
+            </Link>
+          ) : null
+        }
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search journals" />
 

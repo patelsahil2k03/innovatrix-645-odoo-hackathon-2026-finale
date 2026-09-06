@@ -8,6 +8,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Drawer } from "@/components/ui/drawer";
 import { Field } from "@/components/ui/field";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -72,18 +73,19 @@ function PurchasePaymentsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Purchase" }, { label: "Payment" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Payments</h1>
-          <p>Payments sent against vendor bills.</p>
-        </div>
-        {can.record(user?.role.name) ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New payment
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/payment.webp"
+        title="Payments"
+        subtitle="Payments sent against vendor bills."
+        action={
+          can.record(user?.role.name) ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New payment
+            </Link>
+          ) : null
+        }
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search payments" />
 

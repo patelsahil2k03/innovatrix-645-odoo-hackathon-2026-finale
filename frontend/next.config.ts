@@ -39,7 +39,14 @@ const nextConfig: NextConfig = {
   // Everything runs on one machine (docs/08_RUNBOOK.md §1); teammates open this
   // machine's LAN IP directly (http://<host-ip>:3000) to demo/review. Next 16 blocks
   // cross-origin dev requests (HMR) from anywhere not explicitly allow-listed.
-  allowedDevOrigins: lanIPs(),
+  // `localhost` is allowed by default but `127.0.0.1` is a *different* origin to
+  // Next, and it was not on this list — so opening the app at 127.0.0.1:3000
+  // served HTML that never hydrated: every button dead, every form submitting
+  // natively. The page looked fine and answered 200, which is exactly why an
+  // HTTP check does not catch it. lanIPs() cannot supply these itself; it skips
+  // internal interfaces on purpose, since a loopback address is useless to a
+  // teammate on another machine.
+  allowedDevOrigins: ["127.0.0.1", "[::1]", ...lanIPs()],
   // Dev-only badge Next renders in a screen corner — bottom-left by default, and
   // still colliding with the sidebar's live status / user / sign-out controls
   // (AppShell moved them out of the topbar) at bottom-right on a narrow/mobile

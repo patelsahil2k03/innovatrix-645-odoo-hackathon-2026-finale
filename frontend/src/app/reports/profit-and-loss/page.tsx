@@ -9,6 +9,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { Field } from "@/components/ui/field";
 import { SkeletonCard } from "@/components/ui/skeleton";
+import { PageHeading } from "@/components/ui/page-heading";
 import { DownloadIcon } from "@/components/icons";
 import { api, type ReportGroup } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -73,15 +74,16 @@ export default function ProfitAndLossPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Report" }, { label: "Profit and Loss" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Profit and Loss</h1>
-          <p>Income and expense for the period — computed from the ledger, not from documents.</p>
-        </div>
-        <a className="btn btn-sm" href={api.reports.pdfUrl("profit-and-loss", { date_from: dateFrom, date_to: dateTo })} target="_blank" rel="noreferrer">
-          <DownloadIcon size={14} /> PDF
-        </a>
-      </div>
+      <PageHeading
+        image="/img/tabs/profit-and-loss.webp"
+        title="Profit and Loss"
+        subtitle="Income and expense for the period — computed from the ledger, not from documents."
+        action={
+          <a className="btn btn-sm" href={api.reports.pdfUrl("profit-and-loss", { date_from: dateFrom, date_to: dateTo })} target="_blank" rel="noreferrer">
+            <DownloadIcon size={14} /> PDF
+          </a>
+        }
+      />
 
       <div className="card row">
         <Field label="From">

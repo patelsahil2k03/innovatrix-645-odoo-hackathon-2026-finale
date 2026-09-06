@@ -19,7 +19,7 @@ import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StatusChips } from "@/components/ui/status-chips";
 import { PlusIcon } from "@/components/icons";
-import { api } from "@/lib/api";
+import { api, type AnalyticAccount, type Contact, type Product, type SalesOrder, type SalesOrderUpdate } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useConfirmAction } from "@/lib/use-confirm-action";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
@@ -34,6 +34,94 @@ import { date, money } from "@/lib/format";
 import { can } from "@/lib/roles";
 
 const PAGE_SIZE = 20;
+
+interface SalesOrderEditFormProps {
+  order: SalesOrder;
+  customers: Contact[];
+  products: Product[];
+  analyticAccounts: AnalyticAccount[];
+  onSave: (values: SalesOrderUpdate) => Promise<void>;
+}
+
+// A DRAFT order can still be edited — everything past DRAFT is read-only
+// (see the parent's status check). Keyed by `order.id` where it's mounted so
+// switching to a different order while the drawer stays open reseeds instead
+// of carrying over stale line state.
+function SalesOrderEditForm({ order, customers, products, analyticAccounts, onSave }: SalesOrderEditFormProps) {
+  const [customerId, setCustomerId] = useState(order.customer_id);
+  const [orderDate, setOrderDate] = useState(order.order_date);
+  const [reference, setReference] = useState(order.reference ?? "");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { lines, addLine, removeLine, updateLine, selectProduct, totals } = useDocumentLines(order.lines);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setFormError(null);
+    const linesResult = validate(documentLinesSchema, lines);
+    if (!linesResult.ok) {
+      setFormError("Fix the highlighted lines before saving.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSave({ customer_id: customerId, order_date: orderDate, reference: reference || null, lines: linesResult.data });
+    } catch (error) {
+      setFormError(formMessageFrom(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form className="stack" onSubmit={handleSubmit} noValidate>
+      {formError ? <div className="alert alert-danger" role="alert">{formError}</div> : null}
+
+      <div className="card grid-2">
+        <Field label="Customer" required>
+          {(props) => (
+            <select {...props} className="select" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>{customer.name}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Order date" required>
+          {(props) => (
+            <input {...props} className="input" type="date" value={orderDate} onChange={(event) => setOrderDate(event.target.value)} />
+          )}
+        </Field>
+        <Field label="Reference">
+          {(props) => (
+            <input {...props} className="input" value={reference} onChange={(event) => setReference(event.target.value)} />
+          )}
+        </Field>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><span className="card-title">Order lines</span></div>
+        <LineItemsEditor
+          lines={lines}
+          products={products}
+          analyticAccounts={analyticAccounts}
+          onAdd={addLine}
+          onRemove={removeLine}
+          onUpdate={updateLine}
+          onSelectProduct={(key, productId) => {
+            const product = products.find((p) => p.id === productId);
+            selectProduct(key, productId, product ? lineDefaultsFromProduct(product, "sales") : {});
+          }}
+          totals={totals}
+        />
+      </div>
+
+      <button type="submit" className="btn btn-primary" disabled={submitting} style={{ alignSelf: "flex-start" }}>
+        {submitting ? "Saving…" : "Save changes"}
+      </button>
+    </form>
+  );
+}
 
 export default function SalesOrdersPage() {
   return (
@@ -350,20 +438,36 @@ function SalesOrdersPageInner() {
 
               {actionError ? <div className="alert alert-danger" role="alert">{actionError}</div> : null}
 
-              <div className="card">
-                <div className="card-head"><span className="card-title">Order lines</span></div>
-                <LineItemsEditor
-                  lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
+              {data.status === "DRAFT" && canRecord ? (
+                <SalesOrderEditForm
+                  key={data.id}
+                  order={data}
+                  customers={customers}
                   products={products.data?.items ?? []}
                   analyticAccounts={analyticAccounts.data?.items ?? []}
-                  onAdd={() => { }}
-                  onRemove={() => { }}
-                  onUpdate={() => { }}
-                  onSelectProduct={() => { }}
-                  totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
-                  readOnly
+                  onSave={async (values) => {
+                    await api.salesOrders.update(data.id, values);
+                    toast.success("Sales order updated");
+                    editingOrder.reload();
+                    orders.reload();
+                  }}
                 />
-              </div>
+              ) : (
+                <div className="card">
+                  <div className="card-head"><span className="card-title">Order lines</span></div>
+                  <LineItemsEditor
+                    lines={data.lines.map((line, index) => ({ ...line, key: String(line.id ?? index) }))}
+                    products={products.data?.items ?? []}
+                    analyticAccounts={analyticAccounts.data?.items ?? []}
+                    onAdd={() => { }}
+                    onRemove={() => { }}
+                    onUpdate={() => { }}
+                    onSelectProduct={() => { }}
+                    totals={{ untaxed_total: data.untaxed_total, tax_total: data.tax_total, total: data.total }}
+                    readOnly
+                  />
+                </div>
+              )}
             </>
           )}
         </AsyncState>

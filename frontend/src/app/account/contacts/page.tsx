@@ -9,6 +9,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { KanbanGrid } from "@/components/ui/kanban";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -108,18 +109,19 @@ function ContactsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Account" }, { label: "Contact" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Contacts</h1>
-          <p>Customers and vendors — Master Data.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New contact
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/contact.webp"
+        title="Contacts"
+        subtitle="Customers and vendors — Master Data."
+        action={
+          canRecord ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New contact
+            </Link>
+          ) : null
+        }
+      />
 
       <div className="row-between">
         <SearchInput
