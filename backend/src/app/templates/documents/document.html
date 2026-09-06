@@ -1,0 +1,109 @@
+{# One template for both invoices and bills.
+
+   The print view and the PDF render this same file (services/rendering.py), so
+   the two can never drift apart — which is the whole reason 01_STACK.md §3
+   chose an HTML-based PDF engine over a drawing API.
+
+   The CSS is inline and deliberately plain: it has to survive both a browser's
+   print stylesheet and a PDF engine with partial CSS support, so there is no
+   flexbox, no grid, and no web fonts here. #}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ doc.number }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
+    h1 { font-size: 16pt; margin: 0 0 2mm 0; }
+    .muted { color: #666; }
+    .head-table { width: 100%; margin-bottom: 8mm; }
+    .head-table td { vertical-align: top; padding: 0; }
+    .right { text-align: right; }
+    table.lines { width: 100%; border-collapse: collapse; margin-top: 4mm; }
+    table.lines th {
+      text-align: left; font-size: 8.5pt; text-transform: uppercase;
+      letter-spacing: 0.04em; color: #555;
+      border-bottom: 1.2px solid #333; padding: 2mm 1.5mm;
+    }
+    table.lines td { padding: 2mm 1.5mm; border-bottom: 0.6px solid #ddd; }
+    /* Figures are right-aligned and tabular so columns of money line up on the
+       decimal point — the single styling decision that makes a document read as
+       finance software rather than a web page. */
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    table.totals { margin-left: auto; margin-top: 5mm; border-collapse: collapse; }
+    table.totals td { padding: 1.5mm 2mm; }
+    table.totals tr.grand td { border-top: 1.2px solid #333; font-weight: bold; }
+    .status {
+      display: inline-block; padding: 1mm 2.5mm; font-size: 8.5pt;
+      border: 0.8px solid #666; border-radius: 2mm;
+    }
+    .footer { margin-top: 12mm; font-size: 8.5pt; color: #777; }
+  </style>
+</head>
+<body>
+  <table class="head-table">
+    <tr>
+      <td>
+        <h1>{{ title }}</h1>
+        <div class="muted">{{ doc.number }}</div>
+        {% if doc.reference %}<div class="muted">Ref: {{ doc.reference }}</div>{% endif %}
+        <div style="margin-top:3mm"><span class="status">{{ doc.status.value }}</span></div>
+      </td>
+      <td class="right">
+        <strong>{{ company_name }}</strong><br>
+        <span class="muted">{{ party_label }}</span><br>
+        <strong>{{ contact.name }}</strong><br>
+        {% if contact.email %}<span class="muted">{{ contact.email }}</span><br>{% endif %}
+        {% if contact.mobile %}<span class="muted">{{ contact.mobile }}</span><br>{% endif %}
+        {% if contact.address_city %}
+          <span class="muted">
+            {{ contact.address_city }}{% if contact.address_state %}, {{ contact.address_state }}{% endif %}
+          </span><br>
+        {% endif %}
+        <div style="margin-top:3mm">
+          <span class="muted">Date:</span> {{ doc_date }}<br>
+          {% if doc.due_date %}<span class="muted">Due:</span> {{ doc.due_date }}{% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="num">Qty</th>
+        <th class="num">Unit price</th>
+        <th class="num">Tax %</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.name }}</td>
+        <td class="num">{{ line.quantity }}</td>
+        <td class="num">{{ line.unit_price }}</td>
+        <td class="num">{{ line.tax_pct }}</td>
+        <td class="num">{{ line.untaxed }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Untaxed amount</td><td class="num">{{ totals.untaxed }}</td></tr>
+    <tr><td>Tax</td><td class="num">{{ totals.tax }}</td></tr>
+    <tr class="grand"><td>Total</td><td class="num">{{ totals.total }}</td></tr>
+    {% if totals.paid != "0.00" %}
+    <tr><td>Paid</td><td class="num">{{ totals.paid }}</td></tr>
+    <tr class="grand"><td>Amount due</td><td class="num">{{ totals.due }}</td></tr>
+    {% endif %}
+  </table>
+
+  <div class="footer">
+    {{ doc.number }} &middot; generated {{ generated_at }} &middot; all amounts in INR
+  </div>
+</body>
+</html>

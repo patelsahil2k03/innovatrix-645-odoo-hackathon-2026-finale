@@ -1,0 +1,17 @@
+{
+  "name": "urban-furniture-accounting",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Root script runner for the frontend (Next.js) + backend (FastAPI) monorepo. No JS deps here — see frontend/package.json and backend/pyproject.toml.",
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "dev:docker": "./scripts/dev.sh --db docker",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
+    "kill-ports": "./scripts/kill-ports.sh",
+    "kill-ports:all": "./scripts/kill-ports.sh --all",
+    "clean": "./scripts/clean-cache.sh",
+    "clean:frontend": "rm -rf frontend/.next frontend/tsconfig.tsbuildinfo",
+    "clean:backend": "find backend -type d \\( -name '__pycache__' -o -name '.pytest_cache' -o -name '.ruff_cache' \\) -exec rm -rf {} +"
+  }
+}

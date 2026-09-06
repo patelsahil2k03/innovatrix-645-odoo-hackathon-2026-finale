@@ -72,7 +72,7 @@ Query params supported by `core/pagination.py` on any list endpoint:
 | `GET` | `/events` | user | **SSE stream**, 15s heartbeat |
 | `GET` | `/notifications` | user | Paginated, scoped to the calling user only |
 | `POST` | `/notifications/read-all` | user | `{marked_read: n}` |
-| `GET` | `/audit-logs` | admin role | Paginated audit trail |
+| `GET` | `/audit-logs` | admin role | Paginated audit trail. Each row carries the acting `user` (id, name, email) rather than a bare `user_id` — a screen showing UUIDs answers "who" with something nobody can read. Filters: `entity_name`, `outcome` (`accepted` · `rejected`), `user_id`. Records **rejected** writes too, so a refused permission is visible; only 2xx were kept before, which made the outcome column unable to ever say anything but "accepted". |
 
 ### SSE event frames
 ```
@@ -264,6 +264,47 @@ side effect of posting a document. Corrections happen through `/cancel`, which w
 `is_balanced` drives the **`Trial balance 0.00 ✓`** badge in the UI. It is computed, never
 asserted.
 
+```json
+// GET /reports/balance-sheet — assets, liabilities and equity are each ONE flat
+// group (not one section per account type). Equity carries retained earnings as
+// a synthetic row (account_code "") so its own total is what balances against
+// assets — nothing is added in on the client.
+{ "as_of": "2026-09-05",
+  "assets":      { "key": "assets",      "label": "Assets",      "rows": [ /* AccountBalanceRow */ ], "total": 500000.00 },
+  "liabilities": { "key": "liabilities", "label": "Liabilities", "rows": [ /* ... */ ],               "total": 120000.00 },
+  "equity":      { "key": "equity",      "label": "Equity",      "rows": [
+                     { "account_id": "…", "account_code": "3000", "account_name": "Capital", "balance": 350000.00 },
+                     { "account_id": "retained-earnings", "account_code": "", "account_name": "Retained Earnings", "balance": 30000.00 }
+                   ], "total": 380000.00 },
+  "total_assets": 500000.00,
+  "total_liabilities": 120000.00,
+  "retained_earnings": 30000.00,
+  "total_liabilities_and_capital": 500000.00,
+  "is_balanced": true }
+```
+
+```json
+// GET /reports/profit-and-loss — income/expenses/other_expenses are each ONE
+// flat group (note the plural field names — not `expense`/`other_expense`).
+{ "date_from": "2026-08-01", "date_to": "2026-09-05",
+  "income": { "key": "INCOME", "label": "Income", "rows": [ /* ... */ ], "total": 200000.00 },
+  "expenses": { "key": "EXPENSE", "label": "Expenses", "rows": [ /* ... */ ], "total": 150000.00 },
+  "other_expenses": { "key": "OTHER_EXPENSE", "label": "Other Expenses", "rows": [], "total": 0.00 },
+  "total_income": 200000.00, "total_expenses": 150000.00, "net_profit": 50000.00 }
+```
+
+```json
+// GET /reports/budget — field is `lines`, not `rows`; figures are named
+// committed/achieved, not planned/actual/variance. amount_to_achieve < 0 means
+// achieved has already exceeded committed (over budget).
+{ "budget_id": "…", "budget_name": "FY26 Furniture",
+  "period_start": "2026-04-01", "period_end": "2027-03-31", "state": "CONFIRMED",
+  "lines": [ { "analytic_account_id": "…", "analytic_account": "Furniture", "type": "EXPENSE",
+               "committed_amount": 200000.00, "achieved_amount": 10000.00,
+               "achieved_pct": 5.00, "amount_to_achieve": 190000.00 } ],
+  "total_committed": 200000.00, "total_achieved": 10000.00, "total_to_achieve": 190000.00 }
+```
+
 ### 3.9 Portal — User role only
 
 | Method | Path | Purpose |
@@ -308,12 +349,89 @@ asserted.
 | `EMAIL_TAKEN` | 409 | Sign-up email already exists | `routers/auth.py` |
 | `WEAK_PASSWORD` | 422 | Fails the length or character-class rules | `schemas/auth.py` |
 | `MAIL_NOT_CONFIGURED` | 422 | `Send` called with no SMTP host configured | `services/mail.py` |
+| `EMPTY_DOCUMENT` | 422 | Confirm/post attempted with zero lines, **or** a document whose lines total 0.00 | `services/documents.py` |
+| `CANNOT_CANCEL_WITH_PAYMENTS` | 409 | Cancel attempted on a document with `amount_paid > 0` | `services/documents.py` |
+| `CONTACT_ARCHIVED` | 422 | An archived contact used on a new document | `services/documents.py` |
+| `PRODUCT_ARCHIVED` | 422 | An archived product added to a new document line | `services/documents.py` |
+| `PDF_ENGINE_UNAVAILABLE` | 503 | No PDF renderer installed on the server — the print view still works | `services/rendering.py` |
+| `ROLE_NOT_CONFIGURED` | 422 | Sign-up attempted before roles were seeded | `routers/auth.py` |
+| `INVALID_CREDENTIALS` | 401 | Wrong email or password — deliberately identical for both | `routers/auth.py` |
+| `ACCOUNT_INACTIVE` | 403 | The account exists but has been deactivated | `routers/auth.py` |
+| `CONFLICT` | 409 | A unique constraint rejected a create or patch (account code, contact email, …) | `routers/masters.py` |
 
 `fields` keys match request body field names exactly, so the UI drops each message
 straight into the matching input.
 
 **Add a row the moment you invent a code.** Last round this table was left empty and the
 frontend guessed.
+
+---
+
+## 4.1 ADDED DURING IMPLEMENTATION
+
+> ⚠️ **Logged after the fact, against §5's own rule.** These were added while
+> building the backend rather than announced first. They are all additive — no
+> endpoint in §3 changed shape or disappeared — but the protocol exists so the
+> frontend is never surprised, and this section is the correction.
+
+| Method | Path | Role | Why it exists |
+|---|---|---|---|
+| `GET` | `/reports/kpis` | internal | §3.10 promises a `kpi.refresh` event but no endpoint to read the same four figures on first paint. The tiles need a value before the first event arrives. |
+| `GET` | `/{doc}/{id}/print` | internal · owner | The HTML the PDF is rendered from. §3.5 specifies the PDF; the print view is the same artefact and is what makes "Print" work without a download. |
+| `GET` | `/portal/invoices` · `/portal/bills` | portal | §3.9 specifies a combined `/portal/documents`. Both split views exist too, because a contact who is `BOTH` needs to filter one from the other. |
+| `PATCH` | `/sales-orders/{id}` · `/purchase-orders/{id}` · `/customer-invoices/{id}` · `/vendor-bills/{id}` | Admin+Accountant | §3 lists create and the transitions but no edit. A draft has to be editable before it is confirmed. **Draft only** — a posted document returns `CANNOT_MODIFY_POSTED`. |
+| `GET` | `/payments/{id}` | internal | Detail for a row in the payments list. |
+| `GET` | `/budgets/{id}/lines/{line_id}/documents` | internal | Specified in §3.6; listed here because the response shape was not. Returns `[{document_type, id, number, date, contact_id, status, amount}]`. |
+| `GET` | `/analytics/trend` | internal | Monthly income, expense and net profit aggregated from `journal_lines`. `months` (1–36, default 12). Months are contiguous — a month with no postings returns zeros rather than being skipped, so a chart shows a flat stretch instead of closing the gap and implying continuity. |
+| `GET` | `/analytics/breakdown` | internal | Income and expense split by analytic account, from the same lines. Slices carry `type` so a caller can separate revenue from cost — one chart mixing both has no meaningful total. |
+| `GET` | `/analytics/top-contacts` | internal | Highest-value contacts by posted amount. `limit` (1–25, default 5). |
+| `GET` | `/analytics/ageing` | internal | Receivable and payable ageing buckets (0–30 · 31–60 · 61–90 · 90+). The one report that reads documents rather than the ledger, deliberately: an ageing bucket is a property of the *document's* due date, which no journal line carries. |
+| `GET` | `/status-counts` | internal | All / Draft / Confirmed and every other state, per document module, in one request. Backs the mockup's per-module counts (`PROBLEM_STATEMENT.md` §4 item 14). One call rather than one per module, because every consumer wants the whole set at once. |
+
+**`GET /status-counts` response.** Keyed by module so a caller indexes rather than
+searches; `by_status` holds the raw state names the document already uses, so a new
+state appears here without a contract change:
+
+```json
+{
+  "modules": {
+    "sales_orders":      { "total": 40, "by_status": { "DRAFT": 2, "CONFIRMED": 10, "INVOICED": 28 } },
+    "customer_invoices": { "total": 38, "by_status": { "DRAFT": 1, "POSTED": 20, "PAID": 17 } }
+  }
+}
+```
+
+> ⚠️ **`/analytics/*` was built before it was written down here** — the same
+> §5 breach this section exists to correct, repeated. Logged now rather than
+> quietly left out.
+
+**Query parameters added:**
+
+| Endpoint | Param | Notes |
+|---|---|---|
+| all master-data lists | `include_archived` | Default `false`. Archived rows are hidden from lists but remain fetchable by id, because documents still reference them. |
+| document lists | `status`, `vendor_id` / `customer_id` | Backs the dashboard's All / Confirmed / Draft counts. |
+| `/journal-entries` | `source_type` | `customer_invoice` · `vendor_bill` · `payment` · `manual`. |
+| `/payments` | `contact_id`, `direction` | |
+
+**Two behaviours worth stating explicitly, because the codes alone are ambiguous:**
+
+1. **A replayed `Idempotency-Key` returns `200` with the original payment**, not
+   `409`. A retry is not an error, and answering 409 pushes the client into an
+   error path for something that succeeded. `DUPLICATE_PAYMENT` (409) is reserved
+   for the genuinely conflicting case: the **same key reused for a different
+   payment** (different document or different amount).
+2. **`POST /budgets/{id}/revise` returns `201`**, not 200 — it creates a new
+   budget and returns the successor.
+
+**Account defaults on create.** `POST /contacts` fills `receivable_account_id` /
+`payable_account_id` from the seeded Debtors and Creditors accounts when they are
+not supplied, exactly as [`03_DATA_MODEL.md`](03_DATA_MODEL.md) §2 specifies.
+`POST /products` does the same for `income_account_id` / `expense_account_id`
+from Sales Income and Purchase Expense — **not** specified there, but the failure
+it prevents is worse: a product with no income account can be created, added to
+an invoice, and only refused at the moment someone clicks Post. Both remain
+overridable per record and per document line.
 
 ---
 

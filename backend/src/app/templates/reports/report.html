@@ -1,0 +1,71 @@
+{# One template for every printable report — the mockup annotates the P&L
+   screen "Pdf download on click", and the balance sheet and trial balance want
+   the same treatment. Sections in, rows out; the shape is identical for all
+   three, so there is one template rather than three that drift. #}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
+    h1 { font-size: 15pt; margin: 0 0 1mm 0; }
+    .muted { color: #666; font-size: 9pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6mm; }
+    th {
+      text-align: left; font-size: 8.5pt; text-transform: uppercase;
+      letter-spacing: 0.04em; color: #555;
+      border-bottom: 1.2px solid #333; padding: 2mm 1.5mm;
+    }
+    td { padding: 1.8mm 1.5mm; border-bottom: 0.6px solid #e4e4e4; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tr.section td { font-weight: bold; border-bottom: 0.8px solid #999; padding-top: 4mm; }
+    tr.total td { font-weight: bold; border-top: 1.2px solid #333; border-bottom: none; }
+    .badge { margin-top: 4mm; font-size: 9pt; }
+    .footer { margin-top: 12mm; font-size: 8.5pt; color: #777; }
+  </style>
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  <div class="muted">{{ subtitle }}</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Account</th>
+        <th class="num">{{ amount_heading }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for section in sections %}
+        <tr class="section">
+          <td colspan="2">{{ section.label }}</td>
+          <td class="num">{{ section.total }}</td>
+        </tr>
+        {% for row in section.rows %}
+        <tr>
+          <td>{{ row.code }}</td>
+          <td>{{ row.name }}</td>
+          <td class="num">{{ row.amount }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="muted">No activity in this period.</td></tr>
+        {% endfor %}
+      {% endfor %}
+      {% for row in footer_rows %}
+      <tr class="total">
+        <td colspan="2">{{ row.label }}</td>
+        <td class="num">{{ row.amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if badge %}<div class="badge">{{ badge }}</div>{% endif %}
+  <div class="footer">
+    {{ company_name }} &middot; generated {{ generated_at }} &middot; amounts in INR
+  </div>
+</body>
+</html>

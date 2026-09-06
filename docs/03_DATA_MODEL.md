@@ -175,7 +175,7 @@ ledger, applied to planning.
 ### `journal_entries`
 | Column | Type | Notes |
 |---|---|---|
-| `entry_number` | String(32) | **unique** — gapless sequence, see §5 |
+| `entry_number` | String(32) | **unique** — its own sequence, independent of any document number, see §5 |
 | `journal_id` | FK → `journals.id` | indexed |
 | `entry_date` | Date | indexed — reports filter on this |
 | `reference` | String(120) | free text, e.g. the source document number |
@@ -187,6 +187,13 @@ ledger, applied to planning.
 
 `UNIQUE(source_type, source_id)` where state != `REVERSED` — one live entry per document.
 This is the database-level guard against double-posting.
+
+> **Why `entry_number` isn't the document's own number.** A journal entry is its own object
+> in the ledger, with its own audit trail — a real general ledger lets you walk entries in
+> the order they were posted, independent of which document caused each one. It also avoids
+> an awkward question a shared-number scheme runs into immediately: a reversal has no
+> document of its own to be numbered after. Under an independent sequence it's simply the
+> next entry, with `reversal_of_id` pointing back to the original.
 
 ### `journal_lines`
 | Column | Type | Notes |
@@ -219,6 +226,26 @@ if sum(l.debit for l in lines) != sum(l.credit for l in lines):
 > but it runs inside the same transaction as the insert, so a failure rolls the whole
 > posting back. It is never possible to commit an unbalanced entry.
 
+### ⚠️ `REVERSED` means superseded, not void — and reports must count it
+
+Every aggregation reads entries in state `POSTED` **or** `REVERSED`
+(`services/posting.py::LEDGER_STATES`), never `POSTED` alone.
+
+`REVERSED` marks an entry as superseded so the partial unique index above
+releases the source document for a correction. It does **not** mean the entry
+never happened. What cancels it is its reversal — the mirror-image entry — not
+its removal from the query.
+
+Filtering reports on `state == POSTED` is the subtle version of this bug: the
+original drops out of the sums while its reversal stays in, so every account
+ends up showing the exact **negative** of the transaction that was reversed.
+The trial balance still reads `0.00` either way, which is precisely why it
+survives review — *balanced* and *correct* are not the same claim.
+
+With both states counted, a posted-then-reversed invoice nets every account it
+touched back to zero, which is what §5's "the trial balance still lands on zero"
+actually means.
+
 ---
 
 ## 4. DOCUMENTS
@@ -233,14 +260,21 @@ All four document headers share a shape: a generated `number` (unique), a user-s
 
 ### Purchase chain
 ```
-purchase_orders        number · reference · vendor_id · order_date · status · total
+purchase_orders        number · reference · vendor_id · order_date · status
+                       · untaxed_total · tax_total · total
   └ purchase_order_lines   product_id · analytic_account_id · account_id
-                           · quantity · unit_price
+                           · quantity · unit_price · tax_pct
 vendor_bills           number · reference · po_id? · vendor_id · bill_date · due_date
-                       · status · total · amount_paid · journal_entry_id
+                       · status · untaxed_total · tax_total · total
+                       · amount_paid · journal_entry_id
   └ vendor_bill_lines      product_id · analytic_account_id · account_id
-                           · quantity · unit_price
+                           · quantity · unit_price · tax_pct
 ```
+
+> ⚠️ **Corrected gap.** The purchase side originally had no tax field at all, while the
+> sales side did — an oversight, not a deliberate asymmetry. A furniture business pays tax
+> to its vendors exactly as it collects tax from its customers. `tax_pct` on purchase lines
+> is what feeds the Input Tax debit in §5.
 
 ### Sales chain
 ```
@@ -264,6 +298,13 @@ documents can be raised standalone.
 Every line: `CHECK (quantity > 0)` and `CHECK (unit_price >= 0)`.
 `amount_paid` is a **cached** figure for list screens and status transitions only — it is
 never what a report reads.
+
+Both `vendor_bills` and `customer_invoices` also carry `last_sent_at`
+(`DateTime(tz)`) and `last_send_error` (`String(200)`) — required by
+[`04_API_CONTRACT.md`](04_API_CONTRACT.md) §3.5, which has the UI read them to
+report *sent* or *not sent* honestly. Mail is attempted only after the document
+is posted, and a failure writes `last_send_error` rather than raising, so
+delivery can never roll a posting back. Migration: `fffe688792ce`.
 
 ### `payments`
 | Column | Type | Notes |
@@ -295,6 +336,27 @@ CHECK ((invoice_id IS NULL) <> (bill_id IS NULL))   -- exactly one target
 The service enforces `amount ≤ document.total − document.amount_paid`, raising
 `OVERALLOCATED_PAYMENT` otherwise, then moves the document to `PARTIAL` or `PAID`.
 
+> ⚠️ **Known limitation, deliberate: no advance/deposit payments.** `invoice_id`/`bill_id`
+> are the only two payment targets, and both point at a document that already exists. A
+> deposit paid against a Purchase or Sales Order — before any Bill or Invoice has been
+> created — has nothing to attach to, and the current schema will reject it. Neither the
+> PDF nor the mockup ask for this, so it isn't built. If it were wanted: it needs two more
+> accounts (`Advance to Vendors` — an ASSET, since they now owe you goods — and
+> `Advance from Customers` — a LIABILITY, since you now owe them goods), a nullable
+> `po_id`/`so_id` pair on `payments` alongside the existing two, and an *apply* step when
+> the real bill/invoice is later created that debits/credits the advance account for the
+> amount already collected. That's a real, self-contained piece of scope, not a small
+> addition — treat it as its own build if it's picked up.
+
+**Two other edge cases enforced here, both closing gaps a naive implementation would miss:**
+
+- **Cancelling a document with `amount_paid > 0` is rejected** with
+  `CANNOT_CANCEL_WITH_PAYMENTS`. A cancel that silently ignores money already collected
+  would orphan a payment with no live document behind it — the correct path for money that
+  has already moved is a credit note (§2, bonus scope), not a raw cancel.
+- **Confirming or posting a document with zero lines is rejected** with `EMPTY_DOCUMENT`.
+  An empty document posts a valid-looking, entirely fictitious transaction otherwise.
+
 ---
 
 ## 5. POSTING RULES — memorise these four
@@ -305,14 +367,22 @@ This is the entire accounting engine. Everything else is CRUD.
 ```
 Dr  Accounts Receivable (contact.receivable_account)     total
     Cr  Sales Income (product.income_account)              untaxed_total
-    Cr  Tax Payable                                        tax_total
+    Cr  Output Tax (system account)                        tax_total
 ```
 
 **Vendor Bill posted**
 ```
-Dr  Purchase Expense (product.expense_account)           per line
+Dr  Purchase Expense (product.expense_account)           per line, untaxed
+Dr  Input Tax (system account)                           tax_total
     Cr  Accounts Payable (contact.payable_account)         total
 ```
+
+> **Input Tax vs Output Tax — two accounts, not one.** Tax collected from customers
+> (`Output Tax`) is money owed *to* the government — a liability. Tax paid to vendors
+> (`Input Tax`) is a recoverable credit *against* that liability — an asset, not an expense
+> and not the same account as what you owe. Combining both into one "Tax Payable" account
+> would net them together and hide which side is which; a real GST/VAT return needs both
+> figures separately.
 
 **Customer Payment (INBOUND)**
 ```
@@ -346,9 +416,13 @@ equal Liabilities + Equity; if it doesn't, the trial balance badge already said 
 | Vendor bill | `Bill/{YYYY}/{0000}` | `Bill/2026/0001` |
 | Sales order | `S{00000}` | `S00001` |
 | Purchase order | `P{00000}` | `P00001` |
+| **Journal entry** | `JE/{YYYY}/{00000}` | `JE/2026/00001` |
 
 > Orders use a short running number; posted documents carry the year. Match these exactly —
-> a number format is the cheapest possible fidelity signal, and the evaluator drew them.
+> a number format is the cheapest possible fidelity signal, and it's what the mockup draws.
+> The journal entry format is our own addition (§3), five digits rather than four because
+> there will always be more entries than documents — every payment and every reversal adds
+> one without a document of its own.
 
 Every number is allocated **inside the transaction** while holding a row lock on a sequence
 row — never `MAX(number)+1`, which races two concurrent confirms into the same value. The
@@ -369,6 +443,19 @@ in real systems, and gap detection is a cheap, genuinely impressive report.
 - **Money** is `Numeric(12,2)`. Never `Float` — rounding drift is visible on screen.
 - **Dates**: `DateTime(timezone=True)`, always UTC. Never mix `date.today()` with
   `datetime.now(UTC)` — that broke three tests on every IST machine last round.
+- **Tax is computed per line, rounded per line, then summed.** `line_tax = round(untaxed ×
+  tax_pct / 100, 2)`; `document.tax_total = Σ line_tax`. Computing tax once on the order
+  subtotal instead can round to a different total by a paisa when lines carry different
+  rates — pick one method and this is it, everywhere.
+- **A line's tax rate and account mapping are a snapshot, not a live lookup.** `tax_pct`
+  and `account_id` are copied onto the line when it's created (defaulted from the product,
+  editable at that moment), and never re-read from the product afterward. A price or tax
+  change next month must not silently alter a document from last month.
+- **Archiving never touches history.** Setting `is_archived` on a contact, product, journal
+  or account blocks it from being selected on a *new* record. It has zero effect on
+  documents or ledger entries that already reference it — an archived account's historical
+  postings remain exactly as they were, and still appear in every report that covers their
+  period.
 
 ---
 
@@ -403,16 +490,17 @@ meaningful, and the reports show real figures rather than round test numbers.
 ```
 code  name              type            code  name               type
 1000  Cash              CASH            2000  Creditors          LIABILITY
-1010  Bank              BANK            2100  Tax Payable        LIABILITY
+1010  Bank              BANK            2100  Output Tax         LIABILITY
 1100  Debtors           ASSET           3000  Capital            CAPITAL
-                                        4000  Sales Income       INCOME
+1200  Input Tax         ASSET           4000  Sales Income       INCOME
                                         5000  Purchase Expense   EXPENSE
                                         5100  Other Expense      OTHER_EXPENSE
 ```
 
 The mockup says these *"are to be pre configured"*, so they are seeded rather than left for
 the user to invent. `Other Expense` earns its row because the Profit & Loss statement reports
-it on a separate line from `Purchase Expense`.
+it on a separate line from `Purchase Expense`. `Input Tax` and `Output Tax` are two accounts,
+not one — see the note under §5's postings for why they must stay separate.
 
 **Seed the edge cases you intend to demo**, or you cannot show the rule working:
 - an invoice **partially** paid, so `PARTIAL` status is visible

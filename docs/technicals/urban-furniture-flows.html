@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban Furniture · Accounting Flows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1614;
+    --paper: #f5f1ea;
+    --paper-warm: #ede6d8;
+    --rule: #d4c9b4;
+    --wood: #8b4513;
+    --wood-dark: #5c2e0a;
+    --wood-light: #c68b5c;
+    --brass: #b8860b;
+    --sage: #6b7d5f;
+    --terracotta: #b85450;
+    --debit: #7a5230;
+    --credit: #4a5d3f;
+    --muted: #6b625a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* Header */
+  header {
+    padding: 48px 0 32px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .brand {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--wood);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(2.5rem, 5vw, 4.2rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--wood);
+  }
+
+  .lede {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--muted);
+    max-width: 680px;
+    line-height: 1.5;
+  }
+
+  .meta {
+    display: flex;
+    gap: 32px;
+    margin-top: 28px;
+    font-size: 14px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+
+  .meta span strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* Section headers */
+  section {
+    padding: 72px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--wood);
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 2.4rem;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+
+  h2 em {
+    font-style: italic;
+    color: var(--wood);
+  }
+
+  .section-intro {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 720px;
+    margin-bottom: 48px;
+  }
+
+  /* Flow timeline */
+  .flow {
+    position: relative;
+    margin-top: 48px;
+  }
+
+  .flow-track {
+    position: absolute;
+    left: 32px;
+    top: 32px;
+    bottom: 32px;
+    width: 2px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--rule) 0,
+      var(--rule) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+  }
+
+  .step {
+    position: relative;
+    padding-left: 84px;
+    padding-bottom: 40px;
+  }
+
+  .step:last-child { padding-bottom: 0; }
+
+  .step-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 64px;
+    height: 64px;
+    background: var(--paper);
+    border: 2px solid var(--wood);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--wood);
+  }
+
+  .step-marker.system {
+    background: var(--wood);
+    color: var(--paper);
+    border-color: var(--wood);
+  }
+
+  .step-content {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    padding: 24px 28px;
+    border-radius: 4px;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .step-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .step-actor {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--wood-dark);
+    background: rgba(139, 69, 19, 0.08);
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  .step-body {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.65;
+    margin-bottom: 12px;
+  }
+
+  .step-result {
+    display: inline-block;
+    font-size: 14px;
+    color: var(--credit);
+    font-weight: 500;
+    padding: 4px 0;
+  }
+
+  .step-result.pending {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* Journal entry cards */
+  .journal-entry {
+    margin-top: 20px;
+    background: var(--paper);
+    border: 1px dashed var(--wood);
+    padding: 20px 24px;
+    border-radius: 4px;
+  }
+
+  .journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .journal-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--wood-dark);
+  }
+
+  .journal-ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .journal-table {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .journal-table td {
+    padding: 4px 0;
+  }
+
+  .journal-table .account { color: var(--ink); }
+  .journal-table .debit {
+    color: var(--debit);
+    text-align: right;
+    width: 100px;
+    padding-right: 20px;
+  }
+  .journal-table .credit {
+    color: var(--credit);
+    text-align: right;
+    width: 100px;
+  }
+  .journal-table .indent { padding-left: 24px; }
+
+  .journal-total {
+    border-top: 1px solid var(--rule);
+    padding-top: 8px !important;
+    font-weight: 600;
+  }
+
+  /* Reports section */
+  .reports-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 32px;
+  }
+
+  .report {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    padding: 32px;
+    border-radius: 4px;
+  }
+
+  .report-title {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+
+  .report-period {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  .report-section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--wood-dark);
+    margin-top: 20px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .report-section-title:first-child { margin-top: 0; }
+
+  .report-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .report-row.total {
+    border-top: 1px solid var(--ink);
+    padding-top: 12px;
+    margin-top: 12px;
+    font-weight: 600;
+  }
+
+  .report-row .amount {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .report-row .amount.negative {
+    color: var(--terracotta);
+  }
+
+  .balance-proof {
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: rgba(107, 125, 95, 0.1);
+    border-left: 3px solid var(--sage);
+    font-size: 14px;
+    color: var(--sage);
+    font-style: italic;
+  }
+
+  /* Actor legend */
+  .actor-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-top: 32px;
+    padding: 32px;
+    background: var(--paper-warm);
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+  }
+
+  .actor {
+    padding-left: 16px;
+    border-left: 3px solid var(--wood);
+  }
+
+  .actor-name {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .actor-role {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* Debit credit explainer */
+  .rule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+
+  .rule-table th,
+  .rule-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .rule-table th {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    color: var(--wood-dark);
+    background: var(--paper-warm);
+    font-size: 13px;
+  }
+
+  .rule-table .up {
+    color: var(--sage);
+    font-weight: 500;
+  }
+
+  .rule-table .down {
+    color: var(--terracotta);
+    font-weight: 500;
+  }
+
+  /* Footer */
+  footer {
+    padding: 48px 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  footer .signature {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    color: var(--wood);
+    margin-bottom: 8px;
+  }
+
+  /* Two-column layout for purchase and sales side by side */
+  .two-flow-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 40px;
+  }
+
+  .flow-column h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--wood);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 0 20px; }
+    header { padding: 32px 0 24px; }
+    section { padding: 48px 0; }
+    h1 { font-size: 2.2rem; }
+    h2 { font-size: 1.8rem; }
+    .step { padding-left: 60px; }
+    .step-marker { width: 48px; height: 48px; font-size: 18px; }
+    .flow-track { left: 24px; }
+    .reports-grid { grid-template-columns: 1fr; }
+    .two-flow-grid { grid-template-columns: 1fr; }
+    .step-header { flex-direction: column; gap: 6px; }
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; }
+    section { page-break-inside: avoid; }
+    .journal-entry { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="brand">Urban Furniture · Accounting System</div>
+    <h1>The full story of a <em>purchase</em> and a <em>sale</em>, in journal entries.</h1>
+    <p class="lede">
+      Follow one week in the life of Urban Furniture. Watch how buying chairs from Azure and selling them to Nimesh becomes four balanced journal entries, and how those entries roll up into a Balance Sheet that proves itself.
+    </p>
+    <div class="meta">
+      <span><strong>Business:</strong> Urban Furniture</span>
+      <span><strong>Period:</strong> March to April 2026</span>
+      <span><strong>Method:</strong> Double-entry, accrual basis</span>
+    </div>
+  </div>
+</header>
+
+<!-- Actors section -->
+<section>
+  <div class="container">
+    <div class="section-label">CAST</div>
+    <h2>Who is involved.</h2>
+    <p class="section-intro">
+      Four actors participate in this story. Only two of them ever log into Urban Furniture's system. The other two exist in the system as data.
+    </p>
+
+    <div class="actor-legend">
+      <div class="actor">
+        <div class="actor-name">Urban Furniture Admin</div>
+        <div class="actor-role">Sets up master data, creates all transactions, sees all reports.</div>
+      </div>
+      <div class="actor">
+        <div class="actor-name">Invoicing User</div>
+        <div class="actor-role">Records daily transactions and payments. No delete rights.</div>
+      </div>
+      <div class="actor">
+        <div class="actor-name">Azure Furniture</div>
+        <div class="actor-role">Vendor. Exists only as a Contact record. Never logs in.</div>
+      </div>
+      <div class="actor">
+        <div class="actor-name">Nimesh Pathak</div>
+        <div class="actor-role">Customer. Optional Contact Portal login to see own invoices.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Purchase flow -->
+<section>
+  <div class="container">
+    <div class="section-label">FLOW 01</div>
+    <h2>The <em>purchase</em>: buying 10 office chairs from Azure.</h2>
+    <p class="section-intro">
+      Urban Furniture needs stock. The owner orders 10 chairs at 800 each from Azure Furniture, with a 5 percent tax and 30-day credit terms.
+    </p>
+
+    <div class="flow">
+      <div class="flow-track"></div>
+
+      <div class="step">
+        <div class="step-marker">1</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Set up Azure as a vendor contact</div>
+            <div class="step-actor">Admin · one-time</div>
+          </div>
+          <div class="step-body">
+            Admin opens the Contacts module and creates a new record for Azure Furniture with type Vendor, email, mobile, and address. This makes Azure available in every future vendor dropdown.
+          </div>
+          <div class="step-result">Master data saved · no accounting impact</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">2</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Create the purchase order</div>
+            <div class="step-actor">Invoicing User</div>
+          </div>
+          <div class="step-body">
+            User opens Purchase Orders, picks Azure Furniture, adds Office Chair with quantity 10 at 800 each. Tax auto-fills at 5 percent. System calculates: subtotal 8,000, tax 400, total 8,400.
+          </div>
+          <div class="step-result pending">P00001 saved · plan only, no journal entry</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">3</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Goods arrive at the warehouse</div>
+            <div class="step-actor">Warehouse · offline</div>
+          </div>
+          <div class="step-body">
+            Azure's delivery van drops off 10 chairs. The delivery person hands over a paper invoice. Nothing happens in the system yet, this is a physical event.
+          </div>
+          <div class="step-result pending">Goods received · no system action</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">4</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Convert the PO to a vendor bill</div>
+            <div class="step-actor">Invoicing User</div>
+          </div>
+          <div class="step-body">
+            User opens P00001, clicks Convert to Vendor Bill. Line items and amounts pre-fill. User adds bill date March 8, due date April 8, and clicks Validate. Accounting kicks in.
+          </div>
+          <div class="step-result">BILL/2026/0001 · Unpaid · system posts entry below</div>
+
+          <div class="journal-entry">
+            <div class="journal-header">
+              <div class="journal-title">Journal entry, bill validated</div>
+              <div class="journal-ref">JE/2026/0001 · March 8</div>
+            </div>
+            <table class="journal-table">
+              <tr>
+                <td class="account">Purchase Expense</td>
+                <td class="debit">8,000</td>
+                <td class="credit"></td>
+              </tr>
+              <tr>
+                <td class="account">Input Tax</td>
+                <td class="debit">400</td>
+                <td class="credit"></td>
+              </tr>
+              <tr>
+                <td class="account indent">Creditors, Azure</td>
+                <td class="debit"></td>
+                <td class="credit">8,400</td>
+              </tr>
+              <tr class="journal-total">
+                <td class="account">Total</td>
+                <td class="debit">8,400</td>
+                <td class="credit">8,400</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">5</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Pay Azure by bank transfer</div>
+            <div class="step-actor">Invoicing User · 30 days later</div>
+          </div>
+          <div class="step-body">
+            User opens the bill, clicks Register Payment, enters payment date April 8, amount 8,400, journal Bank, method Bank Transfer, and reference number from the bank. System records payment and posts the second entry.
+          </div>
+          <div class="step-result">PAY/2026/0001 · bill status flips to Paid</div>
+
+          <div class="journal-entry">
+            <div class="journal-header">
+              <div class="journal-title">Journal entry, payment sent</div>
+              <div class="journal-ref">JE/2026/0002 · April 8</div>
+            </div>
+            <table class="journal-table">
+              <tr>
+                <td class="account">Creditors, Azure</td>
+                <td class="debit">8,400</td>
+                <td class="credit"></td>
+              </tr>
+              <tr>
+                <td class="account indent">Bank</td>
+                <td class="debit"></td>
+                <td class="credit">8,400</td>
+              </tr>
+              <tr class="journal-total">
+                <td class="account">Total</td>
+                <td class="debit">8,400</td>
+                <td class="credit">8,400</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Sales flow -->
+<section>
+  <div class="container">
+    <div class="section-label">FLOW 02</div>
+    <h2>The <em>sale</em>: selling 5 office chairs to Nimesh.</h2>
+    <p class="section-intro">
+      Nimesh walks into the showroom and orders 5 chairs at 1,500 each for his new office. He asks for a formal invoice and pays 15 days later by bank transfer.
+    </p>
+
+    <div class="flow">
+      <div class="flow-track"></div>
+
+      <div class="step">
+        <div class="step-marker">1</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Set up Nimesh as a customer contact</div>
+            <div class="step-actor">Admin · one-time</div>
+          </div>
+          <div class="step-body">
+            Admin creates a new Contact record for Nimesh Pathak with type Customer, email, mobile, address. Optionally issues him a Contact Portal login so he can see and pay his own invoices later.
+          </div>
+          <div class="step-result">Master data saved · no accounting impact</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">2</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Create the sales order</div>
+            <div class="step-actor">Invoicing User</div>
+          </div>
+          <div class="step-body">
+            User picks Nimesh from the customer dropdown, adds Office Chair quantity 5 at 1,500 each. Tax auto-fills at 5 percent. Subtotal 7,500, tax 375, total 7,875.
+          </div>
+          <div class="step-result pending">S00001 saved · plan only, no journal entry</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">3</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Deliver the chairs to Nimesh</div>
+            <div class="step-actor">Delivery · offline</div>
+          </div>
+          <div class="step-body">
+            Urban Furniture staff pack and deliver 5 chairs to Nimesh's office. A physical event, no system action.
+          </div>
+          <div class="step-result pending">Goods delivered · no system action</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">4</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Convert the SO to a customer invoice</div>
+            <div class="step-actor">Invoicing User</div>
+          </div>
+          <div class="step-body">
+            User opens S00001, clicks Create Invoice. Amounts carry over. User adds invoice date March 15, due date April 15, clicks Validate. System posts the entry and generates a PDF invoice.
+          </div>
+          <div class="step-result">INV/2026/0001 · Unpaid · PDF ready to email</div>
+
+          <div class="journal-entry">
+            <div class="journal-header">
+              <div class="journal-title">Journal entry, invoice validated</div>
+              <div class="journal-ref">JE/2026/0003 · March 15</div>
+            </div>
+            <table class="journal-table">
+              <tr>
+                <td class="account">Debtors, Nimesh</td>
+                <td class="debit">7,875</td>
+                <td class="credit"></td>
+              </tr>
+              <tr>
+                <td class="account indent">Sales Income</td>
+                <td class="debit"></td>
+                <td class="credit">7,500</td>
+              </tr>
+              <tr>
+                <td class="account indent">Output Tax</td>
+                <td class="debit"></td>
+                <td class="credit">375</td>
+              </tr>
+              <tr class="journal-total">
+                <td class="account">Total</td>
+                <td class="debit">7,875</td>
+                <td class="credit">7,875</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-marker">5</div>
+        <div class="step-content">
+          <div class="step-header">
+            <div class="step-title">Nimesh pays through the Contact Portal</div>
+            <div class="step-actor">Nimesh via portal · 15 days later</div>
+          </div>
+          <div class="step-body">
+            Nimesh logs into the Contact Portal, sees his invoice, clicks Pay Now, enters payment method Bank Transfer and reference from his bank app. System records payment and posts the settlement entry.
+          </div>
+          <div class="step-result">PAY/2026/0002 · invoice status flips to Paid</div>
+
+          <div class="journal-entry">
+            <div class="journal-header">
+              <div class="journal-title">Journal entry, payment received</div>
+              <div class="journal-ref">JE/2026/0004 · March 30</div>
+            </div>
+            <table class="journal-table">
+              <tr>
+                <td class="account">Bank</td>
+                <td class="debit">7,875</td>
+                <td class="credit"></td>
+              </tr>
+              <tr>
+                <td class="account indent">Debtors, Nimesh</td>
+                <td class="debit"></td>
+                <td class="credit">7,875</td>
+              </tr>
+              <tr class="journal-total">
+                <td class="account">Total</td>
+                <td class="debit">7,875</td>
+                <td class="credit">7,875</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Why two entries -->
+<section>
+  <div class="container">
+    <div class="section-label">PRINCIPLE</div>
+    <h2>Why <em>two</em> entries per flow.</h2>
+    <p class="section-intro">
+      Each flow creates two journal entries because two distinct real-world events happen at different moments. The bill or invoice records an obligation. The payment records the settlement. Combining them would hide who owes what during the credit period.
+    </p>
+
+    <table class="rule-table">
+      <thead>
+        <tr>
+          <th style="width: 30%">Account type</th>
+          <th style="width: 35%">Debit effect</th>
+          <th style="width: 35%">Credit effect</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Assets (Cash, Bank, Debtors, Input Tax)</td>
+          <td class="up">Increases</td>
+          <td class="down">Decreases</td>
+        </tr>
+        <tr>
+          <td>Liabilities (Creditors, Output Tax, Loans)</td>
+          <td class="down">Decreases</td>
+          <td class="up">Increases</td>
+        </tr>
+        <tr>
+          <td>Equity (Capital, Retained Earnings)</td>
+          <td class="down">Decreases</td>
+          <td class="up">Increases</td>
+        </tr>
+        <tr>
+          <td>Income (Sales)</td>
+          <td class="down">Decreases</td>
+          <td class="up">Increases</td>
+        </tr>
+        <tr>
+          <td>Expenses (Purchase, Rent, Salary)</td>
+          <td class="up">Increases</td>
+          <td class="down">Decreases</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Reports -->
+<section>
+  <div class="container">
+    <div class="section-label">THE PAYOFF</div>
+    <h2>Reports build <em>themselves</em>.</h2>
+    <p class="section-intro">
+      Assume Urban Furniture opened the period with 10,000 cash, 50,000 in the bank, and 60,000 owner capital. Combine that with the four journal entries you just saw. The reports fall out of the ledger automatically.
+    </p>
+
+    <div class="reports-grid">
+      <div class="report">
+        <div class="report-title">Profit and Loss</div>
+        <div class="report-period">MARCH 1 to APRIL 30, 2026</div>
+
+        <div class="report-section-title">Income</div>
+        <div class="report-row">
+          <span>Sales Income</span>
+          <span class="amount">7,500</span>
+        </div>
+        <div class="report-row total">
+          <span>Total Income</span>
+          <span class="amount">7,500</span>
+        </div>
+
+        <div class="report-section-title">Expenses</div>
+        <div class="report-row">
+          <span>Purchase Expense</span>
+          <span class="amount">8,000</span>
+        </div>
+        <div class="report-row total">
+          <span>Total Expenses</span>
+          <span class="amount">8,000</span>
+        </div>
+
+        <div class="report-row total">
+          <span>Net Loss</span>
+          <span class="amount negative">(500)</span>
+        </div>
+
+        <div class="balance-proof">
+          Tax never touches the P&L. Only the real sale and real cost land here.
+        </div>
+      </div>
+
+      <div class="report">
+        <div class="report-title">Balance Sheet</div>
+        <div class="report-period">AS OF APRIL 30, 2026</div>
+
+        <div class="report-section-title">Assets</div>
+        <div class="report-row">
+          <span>Cash</span>
+          <span class="amount">10,000</span>
+        </div>
+        <div class="report-row">
+          <span>Bank</span>
+          <span class="amount">49,475</span>
+        </div>
+        <div class="report-row">
+          <span>Debtors</span>
+          <span class="amount">0</span>
+        </div>
+        <div class="report-row">
+          <span>Input Tax</span>
+          <span class="amount">400</span>
+        </div>
+        <div class="report-row total">
+          <span>Total Assets</span>
+          <span class="amount">59,875</span>
+        </div>
+
+        <div class="report-section-title">Liabilities and Equity</div>
+        <div class="report-row">
+          <span>Creditors</span>
+          <span class="amount">0</span>
+        </div>
+        <div class="report-row">
+          <span>Output Tax</span>
+          <span class="amount">375</span>
+        </div>
+        <div class="report-row">
+          <span>Capital</span>
+          <span class="amount">60,000</span>
+        </div>
+        <div class="report-row">
+          <span>Retained Earnings</span>
+          <span class="amount negative">(500)</span>
+        </div>
+        <div class="report-row total">
+          <span>Total Liabilities and Equity</span>
+          <span class="amount">59,875</span>
+        </div>
+
+        <div class="balance-proof">
+          Both sides equal 59,875. If the sheet did not balance, an entry would be broken.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Summary -->
+<section>
+  <div class="container">
+    <div class="section-label">RECAP</div>
+    <h2>What the system does, in one glance.</h2>
+    <p class="section-intro">
+      Master data is set up once. Documents are created by users. The system silently posts the accounting behind each validated document. Reports read live from the ledger.
+    </p>
+
+    <div class="two-flow-grid">
+      <div class="flow-column">
+        <h3>Purchase (buying)</h3>
+        <div class="step-content" style="margin-bottom: 16px;">
+          <div class="step-title" style="font-size: 16px; margin-bottom: 6px;">1. Purchase Order</div>
+          <div class="step-body" style="margin-bottom: 0;">Plan to buy. No accounting.</div>
+        </div>
+        <div class="step-content" style="margin-bottom: 16px;">
+          <div class="step-title" style="font-size: 16px; margin-bottom: 6px;">2. Vendor Bill</div>
+          <div class="step-body" style="margin-bottom: 0;">Records obligation. Debit expense and tax, credit creditors.</div>
+        </div>
+        <div class="step-content">
+          <div class="step-title" style="font-size: 16px; margin-bottom: 6px;">3. Payment</div>
+          <div class="step-body" style="margin-bottom: 0;">Records settlement. Debit creditors, credit bank.</div>
+        </div>
+      </div>
+
+      <div class="flow-column">
+        <h3>Sales (selling)</h3>
+        <div class="step-content" style="margin-bottom: 16px;">
+          <div class="step-title" style="font-size: 16px; margin-bottom: 6px;">1. Sales Order</div>
+          <div class="step-body" style="margin-bottom: 0;">Plan to sell. No accounting.</div>
+        </div>
+        <div class="step-content" style="margin-bottom: 16px;">
+          <div class="step-title" style="font-size: 16px; margin-bottom: 6px;">2. Customer Invoice</div>
+          <div class="step-body" style="margin-bottom: 0;">Records receivable. Debit debtors, credit income and tax.</div>
+        </div>
+        <div class="step-content">
+          <div class="step-title" style="font-size: 16px; margin-bottom: 6px;">3. Payment</div>
+          <div class="step-body" style="margin-bottom: 0;">Records settlement. Debit bank, credit debtors.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="signature">Urban Furniture Accounting</div>
+    <div>An accrual-basis, double-entry system. Every entry balances. Every report proves itself.</div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,147 +1,144 @@
 # 08 — RUNBOOK
 
-> **Read when:** something won't start.
+> Commands only. Why it is built this way, shared-database details and
+> troubleshooting: [`01_STACK.md`](01_STACK.md) §3.2–3.3.
+
+One shared database. Everyone runs their own backend and frontend.
 
 ---
 
-## 1. FIRST RUN
+## 1. FIRST TIME
 
 ```bash
 cp .env.example .env
+```
 
+In `.env`, set the database host's IP. **That one person keeps `localhost`;
+everyone else puts their IP:**
+
+```
+DATABASE_URL=postgresql+psycopg://app:<password>@<db-host-ip>:5432/app
+```
+
+Database host only:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d db
+```
+
+Everyone:
+
+```bash
 cd backend
-uv sync --extra postgres           # psycopg — needed for the Postgres path
+uv sync --extra postgres
 uv run alembic upgrade head
-uv run python -m app.seed          # chart of accounts + demo users + demo ledger
-uv run uvicorn app.main:app --reload --port 8000
+uv run python -m app.seed
+```
 
-# in a second terminal
+```bash
 cd frontend
 npm install
+```
+
+---
+
+## 2. EVERY TIME
+
+Terminal 1:
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Terminal 2:
+
+```bash
+cd frontend
 npm run dev
 ```
 
-Or everything at once from the repo root:
+Linux/macOS, both plus the database in one command:
+
 ```bash
-./scripts/dev.sh --db docker      # Postgres — use this for anything being graded
-./scripts/dev.sh                  # SQLite — fine for local work, see the caveat below
+./scripts/dev.sh
 ```
 
-> ⚠️ **Which database, and why it matters here.** Money is exact on both — that was tested.
-> But `SELECT … FOR UPDATE` is **silently dropped** on SQLite, so `lock_row()` stops locking
-> while still looking correct in the source. Use Postgres for the demo, for anything being
-> graded, and whenever you're testing concurrency. Full detail and the test output:
-> [`01_STACK.md`](01_STACK.md) §3.1.
-
-| What | Where |
+| | |
 |---|---|
 | Web app | http://localhost:3000 |
-| API docs (Swagger) | http://localhost:8000/docs |
+| Show your work to the team | http://`<your-ip>`:3000 |
+| API docs | http://localhost:8000/docs |
 | Health check | http://localhost:8000/api/v1/health |
+| Adminer | http://`<db-host-ip>`:8081 |
+| Who changed what | `/audit-logs` in the app |
 
-Demo logins are printed by the seed script. Default password: `Demo@1234`.
+Logins — password `Demo@1234`:
+
+```
+admin@urbanfurniture.in
+accountant@urbanfurniture.in
+portal@urbanfurniture.in
+```
 
 ---
 
-## 2. COMMON PROBLEMS
+## 3. DATABASE
 
-**Port already in use / frontend starts on 3001**
-A leftover process is holding the port, and the port change then breaks CORS in
-confusing ways.
 ```bash
-fuser -k 3000/tcp 8000/tcp
-```
-`dev.sh` already does this on start and exit.
-
-**Every screen shows an error state**
-The API isn't running or isn't reachable. Check `curl localhost:8000/api/v1/health`,
-then confirm `NEXT_PUBLIC_API_URL` in `frontend/.env.local` matches the API's port.
-
-**401 on every request even after signing in**
-The auth cookie isn't being sent. Check that the frontend origin is in `cors_origins`
-(backend settings) and that requests use `credentials: "include"` — `lib/api.ts` does
-this already, so suspect a port mismatch first.
-
-**`ModuleNotFoundError: app`**
-Run backend commands from `backend/` via `uv run` — `pythonpath = ["src"]` in
-`pyproject.toml` is what makes the package importable.
-
-**Database looks empty / stale**
-```bash
-./scripts/demo-reset.sh          # ⚠️ destructive, prompts first
+docker compose -f infra/docker-compose.yml up -d db      # start
+docker compose -f infra/docker-compose.yml ps            # status
+docker compose -f infra/docker-compose.yml down          # stop, data kept
+docker compose -f infra/docker-compose.yml --profile adminer up -d adminer
 ```
 
-**Migration conflicts or a broken chain**
-For a demo, deleting the SQLite file and re-seeding is a legitimate escape hatch:
 ```bash
-rm backend/app.db && cd backend && uv run python -m app.seed
+docker compose -f infra/docker-compose.yml down -v       # ⚠️ DELETES ALL DATA
 ```
 
-**Real-time isn't updating**
 ```bash
-./scripts/verify-sse.sh          # proves the stream end to end
+cd backend
+uv run alembic upgrade head          # one person, after a schema change
+uv run python -m app.seed            # safe, any time, any number of times
+uv run python -m app.seed --reset    # ⚠️ DESTROYS everyone's data — announce first
 ```
-Also confirm `SIMULATOR_ENABLED=true` in `.env` if you expect data to move on its own.
+
+Your IP, to give teammates:
+
+```bash
+hostname -I | awk '{print $1}'       # Linux
+ipconfig getifaddr en0               # macOS
+ipconfig                             # Windows — IPv4 Address
+```
 
 ---
 
-## 2.1 ACCOUNTING-SPECIFIC PROBLEMS
+## 4. WINDOWS
 
-**`Trial balance` badge is red / the balance sheet doesn't balance**
-Something wrote `journal_lines` outside `services/posting.py`. That is the only permitted
-write path. Find it:
-```bash
-grep -rn "JournalLine(" backend/src/app --include="*.py" | grep -v services/posting.py
-```
-Then check for orphaned or one-sided entries:
-```sql
-SELECT e.entry_number, SUM(l.debit) AS d, SUM(l.credit) AS c
-FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id
-GROUP BY e.entry_number HAVING SUM(l.debit) <> SUM(l.credit);
-```
+The `docker compose`, `uv` and `npm` commands above run as-is in PowerShell.
 
-**`MISSING_ACCOUNT_MAPPING` when posting**
-The contact has no receivable/payable account, or the product has no income/expense
-account. The seed sets these; a hand-created record won't have them. Fix the record — do
-**not** add a fallback account in the posting code, or the error stops being informative.
-
-**`ALREADY_POSTED` on a document that looks unposted**
-A previous attempt committed the entry but failed afterwards. Check:
-```sql
-SELECT * FROM journal_entries WHERE source_id = '<document-uuid>';
-```
-If a live entry exists, the document is genuinely posted — refresh the UI.
-
-**A payment is rejected**
-`amount` may not exceed the document's remaining balance (`total - amount_paid`), and the
-journal must be a `BANK` or `CASH` journal. Both are enveloped 4xx
-(`OVERALLOCATED_PAYMENT`, `INVALID_JOURNAL_TYPE`), never a 500. A payment smaller than the
-balance is valid — the document simply moves to `PARTIAL`.
-
-**Reports are empty but documents exist**
-The documents are still `DRAFT`. Only `POSTED` entries reach a report — that is correct
-behaviour, not a bug.
-
-**Frontend build fails on a Next config key**
-Next.js 16 removed the `eslint` key from `next.config.ts` (and `next lint`). Lint is a
-separate step: `npm run lint`.
+`./scripts/*.sh` need **WSL or Git Bash** — they use `fuser`, `hostname -I` and
+`/dev/tcp`. Use the two-terminal commands in §2 instead.
 
 ---
 
-## 3. BEFORE THE DEMO
+## 5. PORTS BUSY
 
 ```bash
-./scripts/demo-reset.sh --yes    # clean, deterministic data
-# set SIMULATOR_ENABLED=true in .env so the dashboard visibly moves
-./scripts/dev.sh
+./scripts/kill-ports.sh              # Linux/macOS
 ```
-Then walk the full demo path once, in the browser, before recording.
+
+```powershell
+netstat -ano | findstr ":3000 :8000"  # Windows, then: taskkill /PID <pid> /F
+```
 
 ---
 
-## 4. RESET EVERYTHING
+## 6. BEFORE THE DEMO
 
 ```bash
-rm -rf backend/.venv backend/app.db frontend/node_modules frontend/.next
-./scripts/dev.sh
+cd backend && uv run python -m app.seed --reset --yes
 ```
+
+Set `SIMULATOR_ENABLED=true` in `.env`, restart, then walk the full demo path
+once in the browser.

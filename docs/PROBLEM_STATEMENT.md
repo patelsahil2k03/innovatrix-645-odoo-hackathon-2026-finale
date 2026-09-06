@@ -185,28 +185,67 @@ from it alone.
 10. An Accountant **cannot** modify or archive master data.
 11. Converting a PO to a Bill **must** copy lines faithfully and mark the PO `BILLED`.
 12. Tax on a sale **must** be computed by the system, not typed by the user.
+13. A document **cannot** be posted or confirmed with zero lines.
+14. A document with any payment already recorded against it **cannot** be cancelled — a
+    partial or full refund is a reversing correction, never a raw cancel of paid history.
+15. Tax is computed **per line**, rounded to two decimals per line, then summed — never
+    computed once on the order subtotal, which can round to a different total by a paisa.
+16. A line's tax rate and account mapping are captured **at the moment the line is
+    created**, and never re-derived from the product's current settings afterward — a later
+    rate change must not retroactively alter an existing document.
+17. Archiving a contact, product, or account **cannot** affect any document or ledger entry
+    that already references it — archiving only blocks new use, never rewrites history.
+
+Rules 13–17 were found by cross-checking the schema for edge cases neither official source
+states explicitly but that a real accounting system cannot skip — a document editor that
+allows zero lines, or a cancel button that quietly orphans a recorded payment, would pass
+every example in the statement while still being wrong.
 
 Each of these gets a rejecting test **and** an accepting test — see
 [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md).
 
 ### Mandatory deliverables (explicitly required)
 
-- [ ] Contact, Product, Chart of Accounts, Journal, Journal Entry master data
-- [ ] Purchase Order → Vendor Bill → Payment
-- [ ] Sales Order → Customer Invoice → Payment (with tax)
-- [ ] Analytic Account + Budget
-- [ ] Balance Sheet
-- [ ] Profit & Loss
-- [ ] Budget Report
-- [ ] Contact portal — view own documents, make payment
-- [ ] Three roles enforced server-side
+All nine are **built and verified end to end against the running system** — each line
+below names the evidence rather than asserting completion.
+
+- [x] Contact, Product, Chart of Accounts, Journal, Journal Entry master data — 21
+      contacts, 25 products, 9 live accounts, 4 journals, 109 entries; list, create and
+      edit screens for each
+- [x] Purchase Order → Vendor Bill → Payment — driven through the API end to end:
+      `P00031 → Bill/2026/0024 → PAID`, balance due 0.00
+- [x] Sales Order → Customer Invoice → Payment (with tax) — `S00042 → INV/2026/0033 →
+      PAID`; tax is computed per line by the server and never accepted from the request
+      (`test_sales_chain_posts_a_balanced_entry_and_settles`)
+- [x] Analytic Account + Budget — 6 analytic accounts, 3 budgets with the
+      `DRAFT → CONFIRMED → REVISED → CANCELLED` state machine
+- [x] Balance Sheet — assets 37,68,761.00 = liabilities 12,98,461.00 + retained earnings
+      24,70,300.00, `is_balanced: true`
+- [x] Profit & Loss — income, expenses and other expenses reported separately, PDF export
+- [x] Budget Report — planned against achieved per line, from the ledger
+- [x] Contact portal — view own documents, make payment — a portal login sees only its own
+      documents and settles them from the portal
+- [x] Three roles enforced server-side — 3 roles × 18 endpoints verified, every allow and
+      every 403 as intended
 
 ### Bonus / optional (not asked for — build only after the above is green)
 
-- [ ] Partial payments allocated across several documents
-- [ ] Drill-down: report figure → account → journal lines → source document
-- [ ] Aged receivables / payables
+- [ ] **Advance / deposit payments** — recording money against a Purchase or Sales Order
+      *before* a Bill or Invoice exists. Not asked for by either source, and the current
+      schema deliberately doesn't support it — see [`03_DATA_MODEL.md`](03_DATA_MODEL.md)
+      §4 for exactly what's missing and how it would be added if wanted.
+- [x] Drill-down: report figure → account → journal lines → source document — a balance
+      sheet row opens the entries behind it (`/journal-entries?account_id=…`), and each
+      entry carries `source_type` + `source_id` through to the document that created it
+- [x] Aged receivables / payables — 0–30 · 31–60 · 61–90 · 90+, receivables against
+      payables, on the dashboard. The buckets reconcile with the outstanding balance
+      (`test_ageing_buckets_account_for_every_outstanding_rupee`)
 - [ ] Period lock (a closed month cannot be posted into)
+
+> Partial payment itself is **not** on this list — entering less than the amount due is
+> already core, mandatory behaviour (§1, "Payment" row). The item above is specifically
+> about paying *before any bill or invoice exists at all*, which is a different, harder
+> problem: there is no document yet for the payment to point at.
 
 ### 🟩 The capability that defines the build
 
