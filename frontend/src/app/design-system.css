@@ -10,12 +10,27 @@
    change --accent-h / --accent-s only. Everything else derives from them, and the
    neutrals already carry a slight hue bias toward the accent so the greys look
    chosen rather than default.
+
+   Full Apple aesthetic (frontend/DESIGN.md) applied to the CHROME and COMPONENT GRAMMAR:
+   Action Blue accent, its radius scale, pill-shaped buttons everywhere, "no shadow except
+   product imagery" (cards/kanban carry a hairline border instead), a frosted translucent
+   topbar (Apple's sub-nav-frosted), the tight heading tracking, the 300/400/600/700 weight
+   ladder, and the scale(0.97) press micro-interaction. The sidebar follows the light/dark
+   theme like everything else in the app (an earlier pass made it permanently near-black,
+   mirroring Apple's global-nav bar, which never changes with the page — reverted per
+   explicit feedback that a fixed-dark sidebar next to a light theme read as broken, not
+   deliberate). Its selected-item state is still a solid capsule fill, never a coloured
+   side-bar/stripe — DESIGN.md's own selected-state pattern
+   (`configurator-option-chip-selected`) is a full-shape upgrade, not an edge decoration.
+   What did NOT change: table row density, form field sizes, number formatting — those are
+   docs/05_FRONTEND.md's "precise and dense, numbers are the content" non-negotiables, and
+   they win over DESIGN.md's airier marketing proportions wherever the two would collide.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── The only two numbers you need to change to re-theme ───────────────── */
-  --accent-h: 217;   /* hue        0=red 40=orange 150=green 217=blue 265=violet */
-  --accent-s: 76%;   /* saturation */
+  --accent-h: 210;   /* hue        0=red 40=orange 150=green 210=blue(Apple) 265=violet */
+  --accent-s: 86%;   /* saturation */
 
   --accent:        hsl(var(--accent-h) var(--accent-s) 48%);
   --accent-hover:  hsl(var(--accent-h) var(--accent-s) 42%);
@@ -41,27 +56,140 @@
   --danger:   #b3261e;  --danger-soft:  #fce8e6;  --danger-border:  #f0b4ae;
   --info:     #0b5f87;  --info-soft:    #e0f0f8;  --info-border:    #a8d3e6;
 
+  /* Chart categorical slots — fixed order, never cycled or reassigned per
+     chart. Validated (script in the dataviz skill) against this surface for
+     CVD-safe adjacent pairs; distinct from the status hues above so a chart
+     series never impersonates a badge state. */
+  --chart-1: #2a78d6;  /* blue */
+  --chart-2: #eb6834;  /* orange */
+  --chart-3: #1baf7a;  /* aqua */
+
   /* ── Space: a 4px scale. Use these, never arbitrary px. ────────────────── */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
 
-  --radius-sm: 6px;  --radius: 10px;  --radius-lg: 14px;  --radius-full: 999px;
+  /* Radius/font/shadow tiers live in the @theme block below (they're also
+     Tailwind utility namespaces — --radius-sm, --font-sans, --shadow-lg — so
+     the *value* is defined once, there, not duplicated here). `--radius` and
+     `--radius-full` stay plain :root aliases: "full" isn't themed by Tailwind
+     (rounded-full is a static utility), and the bare "--radius" name doesn't
+     match Tailwind's dash-suffixed scan, so it's safe as our own
+     internal shorthand for the two call sites still written before the
+     @theme move (`.table-wrap`, `.t-account`). */
+  --radius: var(--radius-md);
+  --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px hsl(var(--accent-h) 20% 20% / 0.06);
-  --shadow:    0 1px 3px hsl(var(--accent-h) 20% 20% / 0.08),
-               0 8px 24px -12px hsl(var(--accent-h) 20% 20% / 0.14);
-  --shadow-lg: 0 24px 48px -24px hsl(var(--accent-h) 25% 15% / 0.30);
+  /* Frosted translucent surface for the topbar (DESIGN.md's sub-nav-frosted). */
+  --surface-translucent: hsl(var(--accent-h) 20% 96% / 0.72);
 
-  /* ── Type ───────────────────────────────────────────────────────────────── */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  /* Custom <select> chevron — a bare, unstyled native select is the one place
+     OS chrome breaks the illusion. Neutral gray on purpose: DESIGN.md's Do's
+     reserve the accent for things that ARE an action, not a decoration. */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%236b6b70' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   --t-xs: 11px; --t-sm: 12.5px; --t-base: 14px;
-  --t-md: 16px; --t-lg: 20px;   --t-xl: 26px;  --t-2xl: 34px;
+  --t-md: 16px; --t-lg: 20px;   --t-xl: 26px;  --t-2xl: 40px;
 
   --sidebar-w: 244px;
   --sidebar-w-collapsed: 68px;
   --topbar-h: 60px;
+
+  /* ── Charts ──────────────────────────────────────────────────────────────
+     A categorical series needs several distinguishable colours, and DESIGN.md
+     forbids a second accent. Both hold at once by ramping ONE hue through
+     lightness instead of reaching for a rainbow: this is the accent at
+     different values, not six competing accents, and it reads as ordered —
+     which a categorical ramp in a finance product should, because the slices
+     are always sorted by amount.
+
+     Charts consume these as `var(--chart-1)` in SVG presentation attributes,
+     so light/dark switching costs zero JavaScript. A canvas chart library
+     cannot do that — it would need to read computed styles and force a
+     redraw on every theme change. */
+  --chart-1: hsl(var(--accent-h) var(--accent-s) 44%);
+  --chart-2: hsl(var(--accent-h) 62% 56%);
+  --chart-3: hsl(var(--accent-h) 46% 67%);
+  --chart-4: hsl(var(--accent-h) 34% 76%);
+  --chart-5: hsl(var(--accent-h) 26% 84%);
+  --chart-6: hsl(var(--accent-h) 20% 90%);
+
+  /* Money has a direction, and direction is semantic, not decorative — so
+     these come off the semantic ramp rather than the accent. */
+  --chart-income:  var(--ok);
+  --chart-expense: var(--danger);
+  --chart-grid:    hsl(var(--accent-h) 18% 90%);
+  --chart-axis:    hsl(var(--accent-h) 10% 58%);
+}
+
+/* ═══ TAILWIND THEME ═════════════════════════════════════════════════════════
+   Exposes the tokens above (and frontend/DESIGN.md's Apple language) as real
+   Tailwind utilities — bg-accent, rounded-lg, shadow-lg, font-sans, text-2xl —
+   so new markup can reach for utilities instead of hand-rolling another
+   custom class, without inventing a second palette.
+
+   Colors alias the plain :root custom properties above via var(), which is
+   what makes dark mode "just work" for the generated utilities too: the
+   alias never changes, only the value it points at (reassigned further down
+   in the dark-theme blocks), so e.g. `bg-surface` repaints on theme flip for
+   free — no `dark:` variant needed for anything already tokenized.
+
+   Radius, font and shadow are the one exception: Tailwind's own theme
+   namespace for those already uses our exact generic names (--radius-sm,
+   --font-sans, --shadow-lg), so aliasing via var() here would self-reference.
+   Their real values are defined directly in this block instead — it's now
+   the single source of truth for those three, not design-system.css's :root. */
+@theme {
+  --color-accent:        var(--accent);
+  --color-accent-hover:  var(--accent-hover);
+  --color-accent-soft:   var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+  --color-accent-ink:    var(--accent-ink);
+
+  --color-bg:          var(--bg);
+  --color-surface:     var(--surface);
+  --color-surface-2:   var(--surface-2);
+  --color-surface-3:   var(--surface-3);
+  --color-surface-translucent: var(--surface-translucent);
+  --color-border:      var(--border);
+  --color-border-firm: var(--border-firm);
+
+  --color-text:        var(--text);
+  --color-text-muted:  var(--text-muted);
+  --color-text-faint:  var(--text-faint);
+
+  --color-ok:      var(--ok);      --color-ok-soft:     var(--ok-soft);     --color-ok-border:     var(--ok-border);
+  --color-warn:    var(--warn);    --color-warn-soft:   var(--warn-soft);   --color-warn-border:   var(--warn-border);
+  --color-danger:  var(--danger);  --color-danger-soft: var(--danger-soft); --color-danger-border: var(--danger-border);
+  --color-info:    var(--info);    --color-info-soft:   var(--info-soft);   --color-info-border:   var(--info-border);
+
+  /* Text scale — our `--t-*` names don't collide with Tailwind's `--text-*`
+     namespace, so these are plain aliases too. */
+  --text-xs:   var(--t-xs);
+  --text-sm:   var(--t-sm);
+  --text-base: var(--t-base);
+  --text-md:   var(--t-md);
+  --text-lg:   var(--t-lg);
+  --text-xl:   var(--t-xl);
+  --text-2xl:  var(--t-2xl);
+
+  /* Radius scale — DESIGN.md's xs/sm/md/lg steps; rounded-full is Tailwind's
+     own static utility already (matches our --radius-full: 9999px). */
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 18px;
+
+  /* Font stacks — SF Pro on Apple platforms via -apple-system, Segoe UI/
+     system-ui elsewhere. This IS the source of truth now (see block comment). */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+  /* Shadow — DESIGN.md's rule is exactly one real shadow tier (reserved for
+     product imagery / overlays like the modal); sm/lg are its light shims. */
+  --shadow-sm: 0 1px 2px hsl(var(--accent-h) 20% 20% / 0.06);
+  --shadow-md: 0 1px 3px hsl(var(--accent-h) 20% 20% / 0.08),
+               0 8px 24px -12px hsl(var(--accent-h) 20% 20% / 0.14);
+  --shadow-lg: 0 24px 48px -24px hsl(var(--accent-h) 25% 15% / 0.30);
 }
 
 /* Dark theme. Three states matter: explicit dark, explicit light, and unset
@@ -90,9 +218,16 @@
     --danger:  #ff7a70;  --danger-soft: #351617;  --danger-border: #63292a;
     --info:    #6cc4ea;  --info-soft:   #0c2a36;  --info-border:   #1c4f63;
 
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+
     --shadow-sm: 0 1px 2px #0007;
-    --shadow:    0 1px 3px #0008, 0 8px 24px -12px #000a;
+    --shadow-md: 0 1px 3px #0008, 0 8px 24px -12px #000a;
     --shadow-lg: 0 24px 48px -24px #000c;
+
+    --surface-translucent: hsl(var(--accent-h) 20% 13% / 0.72);
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%23c7c7cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 
@@ -120,8 +255,23 @@
   --info:    #6cc4ea;  --info-soft:   #0c2a36;  --info-border:   #1c4f63;
 
   --shadow-sm: 0 1px 2px #0007;
-  --shadow:    0 1px 3px #0008, 0 8px 24px -12px #000a;
+  --shadow-md: 0 1px 3px #0008, 0 8px 24px -12px #000a;
   --shadow-lg: 0 24px 48px -24px #000c;
+
+  --surface-translucent: hsl(var(--accent-h) 20% 13% / 0.72);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4L5.5 7L8.5 4' stroke='%23c7c7cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  /* The ramp inverts rather than being reused: on a dark ground the light end
+     of the light-mode ramp is near-white and burns out, so it runs from a
+     bright accent down into muted instead of up into white. */
+  --chart-1: hsl(var(--accent-h) 80% 66%);
+  --chart-2: hsl(var(--accent-h) 62% 56%);
+  --chart-3: hsl(var(--accent-h) 48% 47%);
+  --chart-4: hsl(var(--accent-h) 38% 39%);
+  --chart-5: hsl(var(--accent-h) 30% 32%);
+  --chart-6: hsl(var(--accent-h) 24% 26%);
+  --chart-grid: hsl(var(--accent-h) 18% 20%);
+  --chart-axis: hsl(var(--accent-h) 10% 55%);
 }
 
 /* ═══ BASE ═══════════════════════════════════════════════════════════════ */
@@ -143,7 +293,8 @@ html, body {
 /* Judging criterion: zero horizontal scroll at 360px. */
 html, body { overflow-x: hidden; max-width: 100%; }
 
-h1, h2, h3, h4 { margin: 0; text-wrap: balance; letter-spacing: -0.011em; font-weight: 650; }
+/* Negative tracking at display sizes = DESIGN.md's "Apple tight" headline cadence. */
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; letter-spacing: -0.017em; font-weight: 600; }
 h1 { font-size: var(--t-2xl); }
 h2 { font-size: var(--t-xl); }
 h3 { font-size: var(--t-lg); }
@@ -171,22 +322,43 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 
 /* ═══ LAYOUT ═════════════════════════════════════════════════════════════ */
 
-.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+/* Fixed 100vh frame — sidebar + topbar never move, only .app-main scrolls
+   internally. `min-height` here (the old value) let the grid row grow taller
+   than the sidebar's own 100vh box on any page longer than one screen: below
+   that point the sidebar's column showed the page background bleeding
+   through, and the sidebar stopped tracking the scroll entirely. `height`
+   keeps the frame exactly one viewport tall so that never happens. */
+.app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100vh; }
 .app-shell[data-collapsed="true"] { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
-.app-main { display: flex; flex-direction: column; min-width: 0; }
+.app-main { display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow-y: auto; }
 .page { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-5); max-width: 100%; }
 
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
 .page-head p { color: var(--text-muted); font-size: var(--t-sm); margin-top: 2px; }
+/* The title block claims the leftover space, so every control after it groups on
+   the right. `space-between` alone only behaves with exactly two children — a
+   panel with both an action and a close button would strand the action in the
+   middle of the header. This keeps Archive/Post/Pay and Close together however
+   many of them a given panel has. */
+.page-head > :first-child { margin-right: auto; }
 
 .row { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
 .stack { display: flex; flex-direction: column; gap: var(--s-3); }
-.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-4); }
+/* align-items: start — a grid row's default stretch would force a short card
+   to match its taller sibling's height, leaving dead space inside it (e.g.
+   a one-row report group beside a two-card stack). Every other .grid-2 use
+   is same-height form fields, so this is a no-op there. */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-4); align-items: start; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-4); }
 
 @media (max-width: 860px) {
-  .app-shell, .app-shell[data-collapsed="true"] { grid-template-columns: 1fr; }
+  /* Below this width sidebar and main stack in one column instead of sitting
+     side by side — the fixed-100vh-frame trick above would clip .app-main's
+     row entirely, so fall back to plain document flow + page-level scroll. */
+  .app-shell, .app-shell[data-collapsed="true"] { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+  .app-main { height: auto; overflow-y: visible; }
+  .sidebar { position: static; height: auto; }
   .page { padding: var(--s-4) var(--s-3); }
 }
 
@@ -195,37 +367,59 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--s-4);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  padding: var(--s-5);
 }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-3); }
-.card-title { font-size: var(--t-md); font-weight: 650; }
+.card-title { font-size: var(--t-md); font-weight: 600; }
 
-/* ═══ BUTTONS ════════════════════════════════════════════════════════════ */
+/* ═══ BUTTONS ════════════════════════════════════════════════════════════
+   DESIGN.md's Do: "reserve the pill for the primary CTA and anything that
+   should read as an action." Since every button here IS an action, the pill
+   is the default grammar; only icon-only chrome buttons break the pattern
+   (they become circular, Apple's button-icon-circular). No shadows — colour
+   and border carry the button, never elevation. */
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--border-firm);
   background: var(--surface);
   color: var(--text);
   font: inherit; font-size: var(--t-sm); font-weight: 600;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 100ms ease;
   white-space: nowrap;
 }
+/* A button rendered as a <Link> is still an <a>, so the global
+   `a:hover { text-decoration: underline }` was underlining the label of every
+   link-button in the app — "New sales order", "View all", "Back to dashboard".
+   A button is a button whatever element it happens to be. */
+.btn, .btn:hover, .btn:focus { text-decoration: none; }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  padding: 9px 18px;
+}
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-ghost:hover:not(:disabled) { background: var(--surface-2); }
-.btn-sm { padding: 5px 10px; font-size: var(--t-xs); }
+.btn-sm { padding: 5px 12px; font-size: var(--t-xs); }
+.btn-primary.btn-sm { padding: 6px 14px; }
+
+/* Icon-only chrome action (theme toggle, etc.) — Apple's button-icon-circular. */
+.btn-icon {
+  width: 36px; height: 36px; padding: 0; border-radius: var(--radius-full);
+  flex: none;
+}
+/* Smaller variant — the sidebar footer's single row has no room for the full 36px hit target. */
+.btn-icon-sm { width: 28px; height: 28px; }
 
 /* ═══ FORMS ══════════════════════════════════════════════════════════════ */
 
@@ -234,6 +428,28 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .field-required { color: var(--danger); margin-left: 2px; }
 .field-hint { font-size: var(--t-xs); color: var(--text-muted); }
 .field-error { font-size: var(--t-xs); color: var(--danger); font-weight: 500; }
+
+.info-tooltip { position: relative; display: inline-flex; }
+.info-tooltip-trigger {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; padding: 0; border-radius: var(--radius-full);
+  border: 1px solid var(--border-firm); background: var(--surface-2);
+  color: var(--text-muted); font: inherit; font-size: 10px; font-weight: 700;
+  font-style: italic; line-height: 1; cursor: help;
+}
+.info-tooltip-trigger:hover,
+.info-tooltip-trigger:focus-visible { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.info-tooltip-panel {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: 240px;
+  background: var(--text); color: var(--surface);
+  font-size: var(--t-xs); font-weight: 500; line-height: 1.4;
+  padding: 7px 10px; border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+  z-index: 20;
+}
+.info-tooltip-trigger:hover + .info-tooltip-panel,
+.info-tooltip-trigger:focus-visible + .info-tooltip-panel { opacity: 1; }
 
 .input, .select, .textarea {
   width: 100%;
@@ -249,6 +465,29 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+/* A bare native <select> is the one place OS chrome still shows through —
+   Apple's inputs never look like that. Custom chevron, no native arrow. */
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 11px 11px;
+}
+/* The native date-picker glyph is a fixed dark icon regardless of theme —
+   invisible on a dark input otherwise. */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme="light"]) input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
 }
 .input[aria-invalid="true"], .select[aria-invalid="true"], .textarea[aria-invalid="true"] {
   border-color: var(--danger);
@@ -270,7 +509,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .data-table th, .data-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .data-table thead th {
   background: var(--surface-2);
-  font-size: var(--t-xs); font-weight: 650;
+  font-size: var(--t-xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.045em;
   color: var(--text-muted);
   position: sticky; top: 0; z-index: 1;
@@ -289,7 +528,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 9px;
   border-radius: var(--radius-full);
-  font-size: var(--t-xs); font-weight: 650;
+  font-size: var(--t-xs); font-weight: 600;
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -300,41 +539,109 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .badge-neutral { background: var(--surface-3);   color: var(--text-muted); border-color: var(--border); }
 
 /* A dot alongside the colour, so status is never conveyed by hue alone
-   (colour-blind users, and an accessibility reviewer, both notice). */
+   (colour-blind users, and an accessibility reviewer, both notice). Badges
+   that carry a real icon (.badge-icon, e.g. StatusBadge) use that instead of
+   the dot — the icon already does this job, and better. */
 .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.badge-icon::before { content: none; }
+.badge-icon svg { flex: none; }
+
+/* ═══ CHARTS — horizontal bar ════════════════════════════════════════════
+   Plain HTML/CSS bars, no charting dependency (same call as .donut-wrap).
+   Mark spec: <=24px thick, 4px rounded tip, square baseline, 2px surface
+   gap between grouped bars. Value is always a direct label — nothing here
+   is gated behind hover. */
+
+.hbar-chart { display: flex; flex-direction: column; gap: var(--s-4); }
+.hbar-row { display: flex; align-items: center; gap: var(--s-3); }
+.hbar-name {
+  flex: 0 0 132px; font-size: var(--t-sm); color: var(--text-muted); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hbar-bars { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hbar-track { flex: 1; background: var(--surface-3); border-radius: var(--radius-full); overflow: hidden; }
+.hbar-fill {
+  height: 22px; border-radius: 0 4px 4px 0; transition: filter 0.15s ease;
+  display: flex; align-items: center;
+}
+.hbar-row:hover .hbar-fill { filter: brightness(1.08); }
+.hbar-value {
+  flex: 0 0 auto; min-width: 92px; text-align: right;
+  font-size: var(--t-sm); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
+}
+
+.hbar-legend { display: flex; gap: var(--s-4); margin-bottom: var(--s-2); }
+.hbar-legend-item { display: flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-muted); font-weight: 600; }
+.hbar-legend-swatch { width: 12px; height: 4px; border-radius: var(--radius-full); flex: none; }
 
 /* ═══ KPI TILES ══════════════════════════════════════════════════════════ */
 
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--s-3); }
 .kpi {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: var(--s-4);
+  border-radius: var(--radius-lg); padding: var(--s-5);
   display: flex; flex-direction: column; gap: 4px;
 }
-.kpi-label { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 650; }
+.kpi-label { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
 .kpi-value { font-size: var(--t-xl); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .kpi-sub { font-size: var(--t-xs); color: var(--text-faint); }
 
-/* ═══ SIDEBAR / TOPBAR ═══════════════════════════════════════════════════ */
+/* ═══ SIDEBAR ════════════════════════════════════════════════════════════
+   Sidebar follows the light/dark theme like every other surface — same
+   --surface/--text tokens as a card, so it repaints for free on theme flip.
+   No separate topbar in the authenticated shell — live status, the trial
+   balance badge, theme toggle and user/sign-out all live in the sidebar's
+   own footer instead (see .sidebar-foot below). The portal shell keeps its
+   own .portal-topbar — that's a different, unrelated surface. */
 
-.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-3); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.sidebar-brand { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) var(--s-3); font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-3); position: sticky; top: 0; height: 100vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar-brand { display: flex; align-items: center; gap: var(--s-2); padding: 0 var(--s-2) var(--s-3); font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em; color: var(--text); }
 .sidebar-brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+/* DESIGN.md never marks "selected" with a colour bar down the side — that's a
+   generic dashboard convention (Linear/Vercel/GitHub), not Apple's. Its own
+   selected-state pattern (configurator-option-chip-selected) is a full-shape
+   upgrade: same shape, stronger fill/border, nothing bolted onto one edge. So
+   the active row here is a solid capsule — background + text colour only,
+   using the same --accent/--accent-ink pair every primary button uses. */
 .nav-item {
   display: flex; align-items: center; gap: var(--s-3);
   padding: 9px var(--s-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   color: var(--text-muted);
-  font-size: var(--t-sm); font-weight: 550;
-  border-left: 2px solid transparent;
+  font-size: var(--t-sm); font-weight: 400;
+  letter-spacing: -0.006em;
 }
 .nav-item:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
-.nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); font-weight: 650; }
-.nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 650; }
+.nav-item[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.nav-section { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: var(--s-3) var(--s-3) 4px; font-weight: 600; }
 
-.topbar { height: var(--topbar-h); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20; }
-@media (max-width: 860px) { .topbar { padding: 0 var(--s-3); } }
+/* Pinned to the bottom of the sidebar's own scroll area (sticky, not fixed —
+   it scrolls back into flow on the mobile single-column layout where the
+   sidebar has no fixed height). Sits below the nav; margin-top:auto pushes
+   it down when nav content is short, sticky keeps it in view once the nav
+   list scrolls. */
+.sidebar-foot {
+  margin-top: auto; position: sticky; bottom: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: var(--s-3) var(--s-1) 0; display: flex; flex-direction: column; gap: var(--s-3);
+}
+/* One row, no wrap. Name + live dot + trial balance sit in their own
+   scrollable segment (.sidebar-foot-scroll) so a long "trial balance off by
+   ₹X" reading never pushes the theme/sign-out buttons out of reach — those
+   two stay pinned at the row's end, always visible, never scrolled away. */
+.sidebar-foot-row { display: flex; align-items: center; gap: var(--s-2); flex-wrap: nowrap; }
+.sidebar-foot-scroll {
+  display: flex; align-items: center; gap: var(--s-2); min-width: 0; flex: 1 1 auto;
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.sidebar-foot-scroll::-webkit-scrollbar { display: none; }
+.sidebar-user-name {
+  flex: none; font-size: var(--t-sm); font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 92px;
+}
 
 .live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-muted); }
 .live-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
@@ -348,9 +655,84 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .modal-body { padding: var(--s-4); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s-4); }
 .modal-foot { display: flex; justify-content: flex-end; gap: var(--s-2); padding: var(--s-4); border-top: 1px solid var(--border); }
 
+/* ConfirmDialog — a Modal with a fixed icon + body layout, for destructive or
+   irreversible actions (archive, cancel a posted document). */
+.confirm-dialog-body { display: flex; gap: var(--s-3); align-items: flex-start; }
+.confirm-dialog-icon { flex-shrink: 0; margin-top: 2px; color: var(--text-muted); }
+.confirm-dialog-icon-danger { color: var(--danger); }
+
+/* ═══ DRAWER ═════════════════════════════════════════════════════════════ */
+
+.drawer-backdrop { position: fixed; inset: 0; background: hsl(var(--accent-h) 30% 8% / 0.55); z-index: 100; animation: drawer-backdrop-in 0.18s ease-out; }
+@keyframes drawer-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+.drawer {
+  position: fixed; top: 0; right: 0; height: 100vh; z-index: 101;
+  background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
+  min-width: 320px; width: var(--drawer-w, 40vw); max-width: min(var(--drawer-w, 40vw), 1100px);
+  animation: drawer-in 0.22s ease-out;
+}
+@keyframes drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+/* Floating close control — half on the backdrop, half on the drawer, vertically
+   centered on the edge. Distinct from Modal's header close button on purpose:
+   it reads as "close this panel" rather than "close this dialog's header". */
+.drawer-close {
+  position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%); z-index: 1;
+  width: 36px; height: 36px; border-radius: var(--radius-full);
+  border: 1px solid var(--border-firm); background: var(--surface); box-shadow: var(--shadow-md);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text); cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.drawer-close:hover { background: var(--surface-2); }
+.drawer-close:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* One-shot "look here" ring — plays once when the drawer (and this button)
+   mounts, then reverts to its base opacity:0 (no fill-mode) so nothing is
+   left behind: a ring, never a permanent border. */
+.drawer-close::after {
+  content: ""; position: absolute; inset: -8px; border-radius: var(--radius-full);
+  border: 2px solid var(--accent); opacity: 0; pointer-events: none;
+  animation: drawer-close-pulse 700ms ease-out;
+}
+@keyframes drawer-close-pulse {
+  0%   { opacity: 0.9; transform: scale(0.55); }
+  100% { opacity: 0;   transform: scale(1.7); }
+}
+
+/* Hover/focus tooltip — same contract as .info-tooltip-panel (CSS-only,
+   shown on :hover and :focus-visible so mouse and keyboard users see the
+   same thing), naming the Esc shortcut so it's discoverable either way. */
+.drawer-close-tip {
+  position: absolute; top: calc(50% + 30px); left: 0; transform: translateX(-50%);
+  background: var(--text); color: var(--surface);
+  font-size: var(--t-xs); font-weight: 500; line-height: 1.4; white-space: nowrap;
+  padding: 6px 10px; border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease; z-index: 2;
+}
+.drawer-close-tip kbd {
+  font: inherit; font-size: 10px; font-weight: 700;
+  background: hsl(0 0% 100% / 0.16); border-radius: var(--radius-xs); padding: 1px 5px; margin-left: 2px;
+}
+.drawer-close:hover + .drawer-close-tip,
+.drawer-close:focus-visible + .drawer-close-tip { opacity: 1; }
+
+.drawer-head { padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--border); }
+.drawer-body { padding: var(--s-5); overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: var(--s-4); }
+.drawer-foot { display: flex; justify-content: flex-end; gap: var(--s-2); padding: var(--s-4) var(--s-5); border-top: 1px solid var(--border); }
+
+@media (max-width: 640px) {
+  .drawer { width: 100vw; max-width: 100vw; min-width: 0; }
+  .drawer-close { top: var(--s-3); left: auto; right: var(--s-3); transform: none; }
+  .drawer-close-tip { top: calc(var(--s-3) + 46px); left: auto; right: var(--s-3); transform: none; }
+}
+
 /* ═══ TABS ═══════════════════════════════════════════════════════════════ */
 
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tab { padding: 9px var(--s-4); background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-muted); font: inherit; font-size: var(--t-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tab:hover { color: var(--text); }
 .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
@@ -358,7 +740,7 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 /* ═══ STATES ═════════════════════════════════════════════════════════════ */
 
 .state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-2); padding: var(--s-8) var(--s-4); text-align: center; color: var(--text-muted); }
-.state-title { font-weight: 650; color: var(--text); font-size: var(--t-md); }
+.state-title { font-weight: 600; color: var(--text); font-size: var(--t-md); }
 .state-sub { font-size: var(--t-sm); max-width: 44ch; }
 
 .skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.3s ease-in-out infinite; border-radius: var(--radius-sm); }
@@ -372,7 +754,454 @@ code, .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tab
 .alert-ok { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
 .alert-info { background: var(--info-soft); border-color: var(--info-border); color: var(--info); }
 
-.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: var(--s-4); background: var(--bg); }
-.auth-card { width: 100%; max-width: 396px; display: flex; flex-direction: column; gap: var(--s-4); }
+/* ═══ TOAST ══════════════════════════════════════════════════════════════ */
+
+.toast-viewport { position: fixed; bottom: var(--s-5); right: var(--s-5); z-index: 200; display: flex; flex-direction: column; gap: var(--s-2); max-width: 360px; }
+.toast { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-radius: var(--radius-sm); border: 1px solid; box-shadow: var(--shadow-md); animation: toast-in 0.18s ease-out; }
+.toast-success { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
+.toast-error { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
+.toast-info { background: var(--info-soft); border-color: var(--info-border); color: var(--info); }
+.toast-message { flex: 1; font-size: var(--t-sm); color: var(--text); }
+.toast-dismiss { display: inline-flex; padding: 2px; border: 0; background: none; color: var(--text-muted); border-radius: var(--radius-full); cursor: pointer; }
+.toast-dismiss:hover { background: var(--surface-2); color: var(--text); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 520px) { .toast-viewport { left: var(--s-3); right: var(--s-3); max-width: none; } }
+
+.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: var(--s-5); background: var(--surface-2); }
+.auth-card { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: var(--s-5); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ═══ COLLAPSIBLE NAV GROUPS (sidebar) ═══════════════════════════════════════ */
+
+.nav-group {
+  margin-top: 2px;
+}
+.nav-group-toggle {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  gap: var(--s-2); padding: 6px var(--s-3);
+  background: none; border: 0; cursor: pointer; font: inherit;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--text-faint); font-weight: 700;
+  border-radius: var(--radius-md);
+  transition: color 150ms ease, background 150ms ease;
+}
+.nav-group-toggle:hover { color: var(--text); background: var(--surface-2); }
+.nav-group-chevron {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-faint);
+}
+.nav-group-toggle:hover .nav-group-chevron { color: var(--text-muted); }
+.nav-group-toggle[aria-expanded="false"] .nav-group-chevron { transform: rotate(-90deg); }
+
+.nav-group-items {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms ease;
+  overflow: hidden;
+}
+.nav-group-items[data-expanded="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.nav-group-items-inner {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 14px;
+  margin-top: 3px;
+  margin-bottom: 6px;
+  padding-left: 8px;
+  border-left: 1.5px solid var(--border);
+}
+
+.nav-sub-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 7px var(--s-3);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: var(--t-sm);
+  font-weight: 400;
+  transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.nav-sub-item .sub-item-bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: background 150ms ease, opacity 150ms ease, transform 150ms ease;
+}
+.nav-sub-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  transform: translateX(3px);
+  text-decoration: none;
+}
+.nav-sub-item:hover .sub-item-bullet {
+  background: var(--accent);
+  opacity: 1;
+  transform: scale(1.3);
+}
+.nav-sub-item[aria-current="page"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  transform: translateX(0);
+}
+.nav-sub-item[aria-current="page"] .sub-item-bullet {
+  background: var(--accent-ink);
+  opacity: 1;
+}
+
+/* ═══ VIEW TOGGLE (list / kanban) ════════════════════════════════════════════ */
+
+.view-toggle { display: inline-flex; gap: 2px; padding: 2px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.view-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: calc(var(--radius-sm) - 2px); border: 0;
+  background: transparent; color: var(--text-muted);
+  font: inherit; font-size: var(--t-xs); font-weight: 600; cursor: pointer;
+}
+.view-toggle-btn[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
+
+/* ═══ KANBAN ══════════════════════════════════════════════════════════════ */
+
+.kanban-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-4); }
+.kanban-card {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: var(--s-4); color: var(--text);
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.kanban-card:hover { border-color: var(--border-firm); text-decoration: none; }
+.kanban-card:active { transform: scale(0.98); }
+.kanban-avatar {
+  flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; font-size: var(--t-sm); font-weight: 700;
+  overflow: hidden;
+}
+.kanban-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.kanban-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.kanban-title { font-weight: 600; font-size: var(--t-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-subtitle { font-size: var(--t-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-meta { font-size: var(--t-xs); color: var(--text-faint); }
+
+/* ═══ T-ACCOUNT POSTING PREVIEW ═══════════════════════════════════════════════
+   05_FRONTEND.md §7.1 — ours, not a spec item, but it makes the invisible half
+   of the system (debits = credits, before commit) the most convincing thing on
+   screen. Never let this component touch the server total — display only. */
+
+.t-account { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.t-account-col { display: flex; flex-direction: column; }
+.t-account-col + .t-account-col { border-left: 1px solid var(--border); }
+.t-account-head { padding: var(--s-3) var(--s-4); font-size: var(--t-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.t-account-row { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-4); font-size: var(--t-sm); }
+.t-account-row .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.t-account-total { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); font-size: var(--t-sm); font-weight: 700; border-top: 1px solid var(--border-firm); }
+
+/* ═══ DRILL-DOWN — every report figure is a real, clickable link ════════════ */
+
+.drill-amount { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; font-size: inherit; text-underline-offset: 2px; }
+.drill-amount:hover { text-decoration: underline; }
+.breadcrumbs { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--text-muted); flex-wrap: wrap; }
+.breadcrumbs a { color: var(--text-muted); }
+.breadcrumbs a:hover { color: var(--accent); }
+.breadcrumbs .sep { color: var(--text-faint); }
+.row-highlight { background: var(--accent-soft) !important; }
+
+/* ═══ DONUT (budget list's pie-chart column) ═════════════════════════════════
+   Plain SVG, no charting dependency — the swept angle is data, not a token, so
+   it's the one place a numeric value is computed inline rather than a CSS var. */
+
+.donut-wrap { display: inline-flex; align-items: center; }
+.donut-label { font-variant-numeric: tabular-nums; }
+
+/* ═══ COMBOBOX-WITH-INLINE-CREATE (product category, 03_DATA_MODEL.md §2) ══ */
+
+.combo-row { display: flex; gap: var(--s-2); }
+.combo-row .select { flex: 1; }
+
+/* ═══ PORTAL SHELL — its own layout, no internal nav (05_FRONTEND.md §2) ════ */
+
+.portal-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.portal-topbar {
+  height: var(--topbar-h);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-translucent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--s-5); position: sticky; top: 0; z-index: 20;
+}
+.portal-main { flex: 1; padding: var(--s-5); max-width: 1080px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
+@media (max-width: 860px) { .portal-topbar, .portal-main { padding-left: var(--s-3); padding-right: var(--s-3); } }
+
+/* ── Charts ────────────────────────────────────────────────────────────────
+   No shadows and no second accent (DESIGN.md Don'ts): a chart card is the
+   standard .card, and the type switcher reads as a segmented control built
+   from surface tiers rather than colour. */
+.chart-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+  flex-wrap: wrap;
+}
+.chart-card-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chart-card-sub {
+  font-size: var(--t-sm);
+  color: var(--text-faint);
+  margin: 0;
+}
+.chart-card-controls { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+
+/* Segmented control. The pressed segment lifts to --surface with a hairline,
+   the way a physical switch shows position — no fill colour needed. */
+.chart-switch {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.chart-switch-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-xs);
+  font-weight: 500;
+  line-height: 1;
+  padding: 5px 10px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: color .12s ease, background .12s ease;
+}
+.chart-switch-btn:hover { color: var(--text); }
+.chart-switch-btn:active { transform: scale(0.95); }
+.chart-switch-btn[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+.chart-switch-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Recharts' ResponsiveContainer measures its own parent, so the body just has
+   to be a plain block that fills the card. Constraining .recharts-wrapper here
+   (max-width/min-width) fights that measurement and collapses it to zero. */
+.chart-card-body { width: 100%; }
+
+.chart-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--t-sm);
+  box-shadow: var(--shadow-md);
+}
+.chart-tooltip-label {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--text);
+}
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 2px 0 0;
+  color: var(--text-muted);
+}
+.chart-tooltip-swatch {
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+.chart-tooltip-name { flex: 1; }
+.chart-tooltip-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* A KPI tile that links to the ledger behind its figure. No shadow and no
+   colour change on hover (DESIGN.md Don'ts) — the border firms up and the
+   tile lifts by 1px, which reads as interactive without adding a second
+   accent. scale(0.97) on press is the system-wide micro-interaction. */
+.kpi-link {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .12s ease, transform .12s ease;
+}
+/* The global `a:hover { text-decoration: underline }` would otherwise underline
+   the label, the figure AND the sub-label all at once, which looks broken on a
+   card. `.kanban-card` already solves it this way — same precedent, not a new
+   idea. */
+.kpi-link:hover { border-color: var(--border-firm); transform: translateY(-1px); text-decoration: none; }
+.kpi-link:active { transform: scale(0.97); }
+.kpi-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.kpi-link .kpi-value { color: var(--text); }
+
+/* Brand mark. Replaces the old plain dot, which said nothing about the
+   business. Sized to the wordmark's cap height so the two sit on one optical
+   line rather than the mark floating above it. */
+.sidebar-brand .brand-mark { color: var(--accent); flex: none; }
+
+/* ── Page-head illustration ────────────────────────────────────────────────
+   The tab artwork. Sized at 112px because the drawings carry real joinery
+   detail that stops reading below roughly 120 — at the 64 first tried, the
+   workbench was a blue smudge and the craft in the artwork was wasted.
+
+   No card, no border, no shadow (DESIGN.md Don'ts): the drawing sits directly
+   on the page ground. Its own generous white margin already separates it from
+   the title, so a frame would only add a box nobody asked for. */
+.page-head-main { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+.page-head-art {
+  width: 112px;
+  height: 112px;
+  flex: none;
+  object-fit: contain;
+  /* The art is drawn on white. On the dark theme that is a lit tile punched
+     into a dark screen, so it is inverted instead — hue-rotate puts the blue
+     back where it started, leaving light-blue linework on dark ground. One
+     filter, rather than a second set of files to keep in step. */
+  mix-blend-mode: multiply;
+}
+:root[data-theme="dark"] .page-head-art {
+  filter: invert(1) hue-rotate(180deg);
+  /* `screen` and not `normal`: inverting turns the drawing's white ground
+     BLACK, which on a near-black page reads as a distinctly darker rectangle
+     floating behind the furniture. Screen leaves black completely transparent
+     and only lightens where the linework is, so the box disappears and the
+     lines sit directly on the page. */
+  mix-blend-mode: screen;
+}
+@media (max-width: 720px) {
+  /* On a narrow screen the heading has to earn its height back. */
+  .page-head-art { width: 72px; height: 72px; }
+}
+
+/* ── Auth + error artwork ──────────────────────────────────────────────────
+   The workshop elevation sits ABOVE the sign-in card, not beside it: the
+   drawing is a wide 2.5:1 elevation, which fills a banner and letterboxes
+   badly in a tall side panel — and a side panel shoves the form off to one
+   edge when a sign-in form belongs dead centre.
+
+   Below 720px it is removed from the layout rather than shrunk. The drawing is
+   full of fine linework, and at phone width it is an illegible smear stealing
+   the height the form needs. */
+.auth-art { display: none; }
+
+@media (min-width: 720px) {
+  .auth-art {
+    display: block;
+    width: 100%;
+    /* A touch wider than the 420px card so the drawing has room to breathe,
+       while staying narrow enough to read as one centred column with it. */
+    max-width: 480px;
+    margin-bottom: calc(var(--s-2) * -1);
+  }
+  .auth-art img { width: 100%; height: auto; display: block; }
+}
+
+/* The art is drawn on white; on --surface-2 that is a bright slab, and on the
+   dark theme worse. multiply drops the white on light, invert+screen drops the
+   black on dark. Same trick as .page-head-art. */
+.auth-art img, .notfound-art { mix-blend-mode: multiply; }
+:root[data-theme="dark"] .auth-art img,
+:root[data-theme="dark"] .notfound-art {
+  filter: invert(1) hue-rotate(180deg);
+  mix-blend-mode: screen;
+}
+
+.notfound-art {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+/* ── Status count chips ─────────────────────────────────────────────────────
+   "All 40 · Draft 4 · Confirmed 5" beside a module (the mockup's own strip).
+
+   Built from the tokens already here — surface, border, accent, muted text —
+   so it adds no colour to the system. The count is what the eye is looking
+   for, so it carries the weight and tabular numerals; the label stays muted.
+   Selected state is a filled chip rather than a coloured one, matching
+   .chart-switch's segmented control rather than inventing a second idiom. */
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  /* 44px touch targets are the rule for primary controls; these are dense
+     secondary filters in a data-grid UI, so they take the same compact height
+     as .btn-sm and stay comfortably tappable via generous horizontal padding. */
+  min-height: 28px;
+  transition: color .12s ease, background .12s ease, border-color .12s ease;
+}
+/* The global a:hover underline would otherwise strike through a chip's label. */
+a.status-chip, a.status-chip:hover, a.status-chip:focus { text-decoration: none; }
+a.status-chip:hover { color: var(--text); border-color: var(--border-firm); }
+a.status-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status-chip[data-active="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.status-chip-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  color: var(--text);
+}
+.status-chip[data-active="true"] .status-chip-count { color: #fff; }
+
+/* The dashboard's module list: a label, then that module's chips. */
+.status-module {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--border);
+}
+.status-module:first-child { border-top: 0; padding-top: 0; }
+.status-module-name { font-size: var(--t-sm); font-weight: 600; color: var(--text); }
+
+/* A row of list filters sitting between the search box and the table.
+   Wraps rather than scrolls, so a narrow screen stacks the controls instead
+   of hiding one off the edge. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.filter-bar .select { max-width: 220px; }

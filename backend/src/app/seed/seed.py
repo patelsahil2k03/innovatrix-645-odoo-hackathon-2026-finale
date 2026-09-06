@@ -14,6 +14,7 @@
 
 import argparse
 import sys
+from datetime import UTC, datetime, time
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,8 +24,31 @@ from app.core.security import hash_password
 from app.core.settings import get_settings
 from app.models import Base
 from app.models.auth import Role, User
-from app.models.masters import Account, AccountType, Journal, JournalType
-from app.models.system import Notification
+from app.models.budgets import Budget, BudgetLine
+from app.models.documents import (
+    CustomerInvoice,
+    CustomerInvoiceLine,
+    PurchaseOrder,
+    PurchaseOrderLine,
+    SalesOrder,
+    SalesOrderLine,
+    VendorBill,
+    VendorBillLine,
+)
+from app.models.ledger import JournalEntry, JournalLine, NumberSequence
+from app.models.masters import (
+    Account,
+    AccountType,
+    AnalyticAccount,
+    Contact,
+    Journal,
+    JournalType,
+    Product,
+    ProductCategory,
+)
+from app.models.payments import Payment
+from app.models.system import AuditLog, Notification
+from app.seed.domain import seed_domain
 from app.seed.generators import Gen
 
 settings = get_settings()
@@ -80,8 +104,46 @@ def create_tables() -> None:
 
 
 def reset_tables(db: Session) -> None:
-    """Delete all rows, children first so foreign keys stay satisfied."""
-    for model in (Notification, User, Role, Journal, Account):
+    """Delete all rows, children first so foreign keys stay satisfied.
+
+    Order matters and is not alphabetical: payments and documents reference
+    journal entries, entries reference journals and accounts, and everything
+    references contacts. Deleting a parent first fails on the foreign keys that
+    `PRAGMA foreign_keys=ON` (core/database.py) deliberately enforces.
+
+    `AuditLog` is in this list because it holds a FK to `users`, and the audit
+    middleware only writes it for requests that came through the API. So a
+    database seeded and tested purely in-process has an empty audit_logs and
+    resets fine, while any database a person has actually clicked through fails
+    on `DELETE FROM users` — the escape hatch breaking precisely on the
+    databases worth rescuing.
+    """
+    for model in (
+        AuditLog,
+        Payment,
+        JournalLine,
+        CustomerInvoiceLine,
+        VendorBillLine,
+        SalesOrderLine,
+        PurchaseOrderLine,
+        CustomerInvoice,
+        VendorBill,
+        SalesOrder,
+        PurchaseOrder,
+        JournalEntry,
+        BudgetLine,
+        Budget,
+        NumberSequence,
+        Notification,
+        User,
+        Role,
+        Journal,
+        Product,
+        ProductCategory,
+        AnalyticAccount,
+        Contact,
+        Account,
+    ):
         db.query(model).delete()
     db.commit()
 
@@ -184,6 +246,85 @@ def seed_notifications(db: Session, users: list[User], gen: Gen) -> int:
     return count
 
 
+def seed_audit_logs(db: Session, users: list[User], gen: Gen) -> int:
+    """An audit row for each document the seed created, plus a few refusals.
+
+    Audit rows are written by middleware on real API calls, and the seeder
+    writes documents straight to the session — so a freshly seeded database
+    showed a populated app beside an audit screen reading "Nothing logged yet".
+    Every row below is *derived from a document that exists*: same id, same
+    date, same actor. Nothing here invents activity that did not happen.
+
+    The refusals are the honest part rather than decoration. An Accountant
+    modifying master data is a 403 by rule (`core/rbac.py`), so a handful of
+    those are recorded against the Accountant — without them the outcome
+    filter has only one value to show and the screen cannot demonstrate that
+    the permission boundary exists at all.
+    """
+    from app.models.documents import CustomerInvoice, PurchaseOrder, SalesOrder, VendorBill
+    from app.models.masters import Contact
+
+    already = db.execute(select(AuditLog.id).limit(1)).first()
+    if already is not None:
+        return 0
+
+    by_role = {user.role.name: user for user in users}
+    admin = by_role.get("Admin")
+    accountant = by_role.get("Accountant") or admin
+    if admin is None:
+        return 0
+
+    # (model, url segment, the column holding the document's own date)
+    sources = [
+        (SalesOrder, "sales-orders", SalesOrder.order_date),
+        (CustomerInvoice, "customer-invoices", CustomerInvoice.invoice_date),
+        (PurchaseOrder, "purchase-orders", PurchaseOrder.order_date),
+        (VendorBill, "vendor-bills", VendorBill.bill_date),
+    ]
+
+    count = 0
+    for model, segment, date_column in sources:
+        for doc_id, doc_date in db.execute(select(model.id, date_column)).all():
+            actor = accountant if gen.maybe(0.7) else admin
+            db.add(
+                AuditLog(
+                    user_id=actor.id,
+                    action=f"POST /api/v1/{segment}",
+                    entity_name=segment,
+                    entity_id=doc_id,
+                    status_code=201,
+                    # Same day as the document, at a plausible working hour, so
+                    # the log sorts alongside the history it describes instead
+                    # of every row landing at seed time.
+                    created_at=datetime.combine(
+                        doc_date,
+                        time(hour=gen.rng.randint(9, 18), minute=gen.rng.randint(0, 59)),
+                        tzinfo=UTC,
+                    ),
+                )
+            )
+            count += 1
+
+    # The refusals: an Accountant cannot modify or archive master data.
+    if accountant is not None and accountant is not admin:
+        contact_ids = db.execute(select(Contact.id).limit(3)).scalars().all()
+        for contact_id in contact_ids:
+            db.add(
+                AuditLog(
+                    user_id=accountant.id,
+                    action=f"PATCH /api/v1/contacts/{contact_id}",
+                    entity_name="contacts",
+                    entity_id=contact_id,
+                    status_code=403,
+                    created_at=gen.past_datetime(10),
+                )
+            )
+            count += 1
+
+    db.commit()
+    return count
+
+
 def seed_all(db: Session, *, seed_value: int = 42) -> dict[str, int]:
     """Everything, in dependency order. Importable — this is what tests call."""
     gen = Gen(seed_value)
@@ -194,17 +335,36 @@ def seed_all(db: Session, *, seed_value: int = 42) -> dict[str, int]:
     accounts = seed_chart_of_accounts(db)
     journals = seed_journals(db, accounts)
 
-    # ★ Contacts, products, and any demo documents/transactions are the team's
-    # own domain seed data, added as each feature is built — not fabricated
-    # here ahead of the schema that would give them meaning.
+    # The accounting domain: contacts, products, a month of trading, and the
+    # budgets that measure it. Built through services/, so seeded data obeys
+    # exactly the rules the API enforces (see seed/domain.py).
+    admin = next((u for u in users if u.role_id == roles["Admin"].id), None)
+    domain_counts = seed_domain(db, accounts, admin.id if admin else None, gen)
+
+    # After the documents exist: every audit row points at one of them.
+    audit_logs = seed_audit_logs(db, users, gen)
 
     return {
         "roles": len(roles),
         "users": len(users),
         "notifications": notifications,
+        "audit_logs": audit_logs,
         "accounts": len(accounts),
         "journals": len(journals),
+        **domain_counts,
     }
+
+
+def db_portal_login() -> tuple[str, str] | None:
+    """The seeded portal user, looked up for the login summary."""
+    db = SessionLocal()
+    try:
+        user = db.execute(
+            select(User).where(User.email == "portal@urbanfurniture.in")
+        ).scalar_one_or_none()
+        return (user.email, user.full_name) if user else None
+    finally:
+        db.close()
 
 
 def main() -> None:
@@ -216,6 +376,15 @@ def main() -> None:
     `tests/test_seed_smoke.py` now imports and calls this — if the header disappears
     again, the test suite fails immediately.
     """
+    # Windows consoles default to cp1252, which cannot encode the check mark
+    # and box characters below — printing them raises UnicodeEncodeError and
+    # the documented setup command dies *after* successfully seeding, which
+    # reads exactly like a failed seed. Force UTF-8 on the way out instead of
+    # giving up the formatting.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="Seed demo data.")
     parser.add_argument(
         "--reset", action="store_true", help="DESTRUCTIVE: delete all rows first"
@@ -251,7 +420,13 @@ def main() -> None:
     print("\n  \033[1mDemo logins\033[0m (password for all: "
           f"\033[1m{settings.seed_password}\033[0m)")
     for email, full_name, role_name, _login_id in DEMO_USERS:
-        print(f"     {email:<22} {role_name:<16} {full_name}")
+        print(f"     {email:<30} {role_name:<12} {full_name}")
+    # Created in seed/domain.py alongside the contact it is scoped to, so it is
+    # not in DEMO_USERS — but it is the login that demonstrates portal scoping,
+    # and an undiscoverable demo account may as well not exist.
+    portal = db_portal_login()
+    if portal:
+        print(f"     {portal[0]:<30} {'User':<12} {portal[1]} (portal)")
     print()
 
 

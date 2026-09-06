@@ -1,78 +1,298 @@
 "use client";
 
+import { useState } from "react";
+
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
+import { ChartCard } from "@/components/ui/chart-card";
+import { AgeingChart, CategoryChart, NetProfitChart, TrendChart } from "@/components/ui/charts";
+import { PageHeading } from "@/components/ui/page-heading";
 import { KpiGrid } from "@/components/ui/kpi-grid";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusChips } from "@/components/ui/status-chips";
+import { MODULE_LABELS, MODULE_ROUTES, useStatusCounts } from "@/lib/use-status-counts";
+import { useDashboardAnalytics } from "@/lib/use-dashboard-analytics";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { CHART_OPTIONS, type ChartKind } from "@/lib/chart-types";
+import { ledgerHref } from "@/lib/ledger-links";
+import { useDashboardKpis } from "@/lib/use-dashboard-kpis";
 import { useEventStream } from "@/lib/use-event-stream";
 import { useFetch } from "@/lib/use-fetch";
-import { dateTime } from "@/lib/format";
+import { date, money } from "@/lib/format";
+import Link from "next/link";
+
+const MONTH_RANGES = [6, 12, 24] as const;
+
+/** Who the money moves through, from each side of the ledger. */
+const DIRECTIONS = [
+  { value: "customer", label: "Customers" },
+  { value: "vendor", label: "Vendors" },
+] as const;
 
 /**
- * ★ Dashboard — replace the tiles and panels with your problem statement's KPIs.
- *
- * The pattern to copy: useFetch for data, useEventStream to reload on a server
- * event, AsyncState to render loading / error / empty / content.
+ * Dashboard — the four KPIs a business actually asks about (Receivables,
+ * Payables, Cash, Net Profit), plus the most recent ledger activity. Every
+ * number here is a live query, never hard-coded (02_ARCHITECTURE.md §5).
  */
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const kpis = useDashboardKpis();
 
-  const notifications = useFetch(() => api.notifications.list({ page_size: 5 }), []);
+  const [months, setMonths] = useState<number>(12);
+  const [trendKind, setTrendKind] = useState<ChartKind>("area");
+  const [netKind, setNetKind] = useState<ChartKind>("bar");
+  const [breakdownKind, setBreakdownKind] = useState<ChartKind>("donut");
 
-  // Live updates: when the server says something changed, refetch.
-  useEventStream({ "kpi.refresh": () => notifications.reload() });
+  const statusCounts = useStatusCounts();
+  const analytics = useDashboardAnalytics(!!user);
+
+  const recentEntries = useFetch(
+    () => api.journalEntries.list({ page: 1, page_size: 8, sort: "-entry_date" }),
+    [],
+  );
+  const trend = useFetch(
+    () => (user ? api.analytics.trend(months) : Promise.resolve(null)),
+    [user, months],
+  );
+
+  useEventStream({
+    "document.posted": () => {
+      recentEntries.reload();
+      trend.reload();
+    },
+    "payment.registered": () => recentEntries.reload(),
+    "ledger.changed": () => trend.reload(),
+  });
 
   if (authLoading || !user) return null;
 
   return (
     <AppShell>
-      <div className="page-head">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Signed in as {user.full_name}</p>
-        </div>
-      </div>
+      <PageHeading
+        image="/img/tabs/dashboard.webp"
+        title="Dashboard"
+        subtitle={`Signed in as ${user.full_name} · ${user.role.name}`}
+      />
 
       <KpiGrid
         items={[
-          // ★ Replace with real metrics. Feed counts from the API's `total`.
-          { label: "Notifications", value: notifications.data?.total ?? "—", sub: "unread + read" },
-          { label: "Your role", value: user.role.name },
-          { label: "Status", value: "Ready", sub: "replace with a real KPI" },
+          {
+            // The sub-line names the account the figure comes from, which is
+            // the useful thing to know. It deliberately does NOT say "click
+            // here": a card that has to announce it is clickable has failed to
+            // look clickable, and the instruction costs the one line that could
+            // carry information instead.
+            label: "Receivables",
+            value: kpis.loading ? "…" : money(kpis.receivables),
+            sub: "Debtors (1100)",
+            href: ledgerHref(kpis.receivableAccountIds, "Receivables"),
+          },
+          {
+            label: "Payables",
+            value: kpis.loading ? "…" : money(kpis.payables),
+            sub: "Creditors (2000)",
+            href: ledgerHref(kpis.payableAccountIds, "Payables"),
+          },
+          {
+            // Cash spans two accounts and the ledger filter takes one, so this
+            // goes to the Balance Sheet, where Cash and Bank are itemised and
+            // each is separately drillable.
+            label: "Cash & bank",
+            value: kpis.loading ? "…" : money(kpis.cash),
+            sub: "Cash (1000) · Bank (1010)",
+            href: "/reports/balance-sheet",
+          },
+          {
+            label: "Net profit",
+            value: kpis.loading ? "…" : money(kpis.netProfit),
+            sub: "Income − expense",
+            href: "/reports/profit-and-loss",
+          },
         ]}
       />
 
+      {/* The mockup's per-module counts. Each chip is a filtered list, so
+          "Draft 4" answers "which four?" in one click instead of leaving a
+          number the reader has to go hunting for. */}
       <div className="card">
         <div className="card-head">
-          <span className="card-title">Recent notifications</span>
+          <span className="card-title">Documents by state</span>
+        </div>
+        {statusCounts.modules.map((module) => (
+          <div key={module} className="status-module">
+            <Link href={MODULE_ROUTES[module]} className="status-module-name">
+              {MODULE_LABELS[module]}
+            </Link>
+            <StatusChips
+              chips={statusCounts.chipsFor(module)}
+              aria-label={`${MODULE_LABELS[module]} by state`}
+              hrefFor={(status) =>
+                status ? `${MODULE_ROUTES[module]}?status=${status}` : MODULE_ROUTES[module]
+              }
+            />
+          </div>
+        ))}
+      </div>
+
+      <ChartCard
+        title="Income and expense"
+        subtitle={`Monthly, last ${months} months — aggregated from the same journal lines the reports read`}
+        options={CHART_OPTIONS.series}
+        active={trendKind}
+        onSelect={setTrendKind}
+        action={
+          <div className="chart-switch" role="group" aria-label="Date range">
+            {MONTH_RANGES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className="chart-switch-btn"
+                aria-pressed={months === value}
+                onClick={() => setMonths(value)}
+              >
+                {value}m
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <AsyncState
+          loading={trend.loading}
+          error={trend.error}
+          data={trend.data}
+          onRetry={trend.reload}
+        >
+          {(data) => <TrendChart data={data.points} kind={trendKind} />}
+        </AsyncState>
+      </ChartCard>
+
+      <div className="grid-2">
+        <ChartCard
+          title="Net profit"
+          subtitle="A loss month is dimmed, not just negative"
+          options={CHART_OPTIONS.series}
+          active={netKind}
+          onSelect={setNetKind}
+        >
+          <AsyncState
+            loading={trend.loading}
+            error={trend.error}
+            data={trend.data}
+            onRetry={trend.reload}
+          >
+            {(data) => <NetProfitChart data={data.points} kind={netKind} />}
+          </AsyncState>
+        </ChartCard>
+
+        <ChartCard
+          title="Revenue by analytic account"
+          subtitle="Where the income came from"
+          options={CHART_OPTIONS.composition}
+          active={breakdownKind}
+          onSelect={setBreakdownKind}
+        >
+          <AsyncState
+            loading={analytics.breakdown.loading}
+            error={analytics.breakdown.error}
+            data={analytics.breakdown.incomeSlices.length ? analytics.breakdown.incomeSlices : null}
+            emptyTitle="Nothing posted with an analytic tag yet"
+            onRetry={analytics.breakdown.reload}
+          >
+            {(slices) => <CategoryChart data={slices} kind={breakdownKind} />}
+          </AsyncState>
+        </ChartCard>
+      </div>
+
+      <div className="grid-2">
+        {/* Ageing is the one figure here that reads documents rather than the
+            ledger, and deliberately: how late a debt is comes from the
+            invoice's due date, which no journal line carries. */}
+        <ChartCard
+          title="Ageing"
+          subtitle="What is outstanding, and how overdue — owed to us against what we owe"
+        >
+          <AsyncState
+            loading={analytics.ageing.loading}
+            error={analytics.ageing.error}
+            data={analytics.ageing.hasOutstanding ? analytics.ageing.rows : null}
+            emptyTitle="Nothing outstanding"
+            emptyHint="Every invoice and bill is settled — there is no ageing to show."
+            onRetry={analytics.ageing.reload}
+          >
+            {(rows) => <AgeingChart data={rows} />}
+          </AsyncState>
+        </ChartCard>
+
+        <ChartCard
+          title={analytics.direction === "customer" ? "Top customers" : "Top vendors"}
+          subtitle="By posted value over the last twelve months"
+          action={
+            <div className="chart-switch" role="group" aria-label="Contact direction">
+              {DIRECTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="chart-switch-btn"
+                  aria-pressed={analytics.direction === value}
+                  onClick={() => analytics.setDirection(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <AsyncState
+            loading={analytics.topContacts.loading}
+            error={analytics.topContacts.error}
+            data={analytics.topContacts.data}
+            isEmpty={(report) => report.rows.length === 0}
+            emptyTitle="Nothing posted against a contact yet"
+            onRetry={analytics.topContacts.reload}
+          >
+            {(report) => <CategoryChart data={report.rows} kind="bar" />}
+          </AsyncState>
+        </ChartCard>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <span className="card-title">Recent ledger activity</span>
+          <Link href="/account/journal-entries" className="btn btn-sm">View all</Link>
         </div>
 
         <AsyncState
-          loading={notifications.loading}
-          error={notifications.error}
-          data={notifications.data}
+          loading={recentEntries.loading}
+          error={recentEntries.error}
+          data={recentEntries.data}
           isEmpty={(page) => page.items.length === 0}
-          emptyTitle="No notifications yet"
-          emptyHint="Seeded notifications appear here once the database is populated."
-          onRetry={notifications.reload}
+          emptyTitle="Nothing posted yet"
+          emptyHint="Every posted invoice, bill and payment shows up here the moment it's posted."
+          onRetry={recentEntries.reload}
         >
           {(page) => (
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Title</th>
-                    <th>Message</th>
-                    <th>Received</th>
+                    <th>Entry</th>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Source</th>
+                    <th>State</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {page.items.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.title}</td>
-                      <td style={{ whiteSpace: "normal" }}>{item.message}</td>
-                      <td>{dateTime(item.created_at)}</td>
+                  {page.items.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>
+                        <Link href={`/account/journal-entries?open=${entry.id}`}>{entry.entry_number}</Link>
+                      </td>
+                      <td>{date(entry.entry_date)}</td>
+                      <td>{entry.reference ?? "—"}</td>
+                      <td>{entry.source_type}</td>
+                      <td><StatusBadge status={entry.state} /></td>
                     </tr>
                   ))}
                 </tbody>

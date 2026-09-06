@@ -22,7 +22,11 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 /** Routes reachable without a session. */
-const PUBLIC_ROUTES = ["/login"];
+const PUBLIC_ROUTES = ["/login", "/signup"];
+
+/** The User role only ever sees the portal shell (05_FRONTEND.md §2) — never
+ *  the internal nav, not even disabled. */
+const isPortalRoute = (pathname: string) => pathname.startsWith("/portal");
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -51,15 +55,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const isPublic = PUBLIC_ROUTES.includes(pathname);
-    if (!user && !isPublic) router.replace("/login");
-    if (user && isPublic) router.replace("/");
+
+    if (!user && !isPublic) {
+      router.replace("/login");
+      return;
+    }
+    if (!user) return;
+
+    const isPortalUser = user.role.name === "User";
+    if (isPublic) {
+      router.replace(isPortalUser ? "/portal/documents" : "/");
+    } else if (isPortalUser && !isPortalRoute(pathname)) {
+      router.replace("/portal/documents");
+    } else if (!isPortalUser && isPortalRoute(pathname)) {
+      router.replace("/");
+    }
   }, [user, loading, pathname, router]);
 
   const login = useCallback(
     async (email: string, password: string) => {
       const me = await api.auth.login(email, password);
       setUser(me);
-      router.replace("/");
+      router.replace(me.role.name === "User" ? "/portal/documents" : "/");
     },
     [router],
   );

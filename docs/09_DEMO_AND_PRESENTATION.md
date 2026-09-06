@@ -39,11 +39,13 @@ incognito window before submitting.**
 | Segment | Length | Content |
 |---|---|---|
 | **Hook + problem** | 0:25 | *"Every business runs on two questions: what do we own, and what do we owe. This is a full double-entry accounting system for a furniture business, built in 24 hours."* |
-| **Master data, fast** | 0:30 | Contacts, products, chart of accounts — move quickly. This is setup, not the story. Say *"these accounts are what every transaction gets classified into."* |
+| **Master data, fast** | 0:20 | Contacts, products, chart of accounts — move quickly. This is setup, not the story. Say *"these accounts are what every transaction gets classified into."* Ten seconds came off this segment to pay for the two added below; it is the cheapest place to buy them. |
 | **The star flow** | 1:15 | Sales Order → Invoice → **pause on the posting preview** → Post → Payment. Say the words: *"before I post this, the system shows me the exact accounting entry it's about to make — debit Debtors, credit Sales and Tax. They balance."* |
 | **The proof** | 0:40 | Open the Balance Sheet. Click a figure → the accounts → the journal lines → **the invoice we just created**. *"Nothing here is stored on the invoice. Every number on this report is computed from the ledger."* |
 | **Live data** | 0:20 | Leave the dashboard open; a payment posts on its own. Cash rises, receivables fall, the trial balance re-asserts. *"This is live from our database — nothing here is hardcoded."* |
+| **Where the business stands** | 0:20 | Stay on the dashboard: twelve months of income against expense, switch the chart type on camera, then the ageing bars. *"Two hundred thousand of this is not overdue at all; four hundred thousand is more than ninety days late. That is the difference between a healthy month and a cash-flow problem, and it comes out of the same journal lines."* Click a status count to land on exactly those documents. |
 | **Robustness** | 0:45 | Submit an invoice with no lines → inline error. Try to edit a posted invoice → refused. Try to over-allocate a payment → `OVERALLOCATED_PAYMENT`. Then resize to mobile. Hits two criteria in 45 seconds. |
+| **Who did what** | 0:15 | Open the audit log on the refusal you just triggered. *"It records what was refused, not only what succeeded — including who was told no."* Then filter to Refused. |
 | **Under the hood** | 0:30 | Architecture diagram. Stack in one line. Point at the contributor graph. |
 | **Close** | 0:15 | Team name, thanks. |
 

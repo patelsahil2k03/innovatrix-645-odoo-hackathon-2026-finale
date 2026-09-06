@@ -1,10 +1,13 @@
 /** Display formatting. Keep every user-facing number/date going through here so
  *  the whole app is consistent — mixed formats read as sloppy at a glance. */
 
+// 05_FRONTEND.md §4: always two decimals, always grouped — ₹1,25,000.00, never
+// rounded. Never use toFixed() inline; every screen goes through this helper.
 const INR = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
 export const money = (value: number | null | undefined): string =>

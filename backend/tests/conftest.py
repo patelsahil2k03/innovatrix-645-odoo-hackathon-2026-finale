@@ -66,6 +66,24 @@ def admin_client(client: TestClient) -> TestClient:
 
 
 @pytest.fixture
+def portal_client() -> TestClient:
+    """The seeded contact-portal login (role `User`).
+
+    `portal@`, not `customer@`: the portal user is a login that points at a
+    customer contact, not the contact's own address. The login page had the
+    wrong one of those two hard-coded, so the portal could not be signed into
+    at all — this fixture is the regression guard for that.
+    """
+    c = TestClient(app)
+    response = c.post(
+        "/api/v1/auth/login",
+        json={"email": "portal@urbanfurniture.in", "password": settings.seed_password},
+    )
+    assert response.status_code == 200, response.text
+    return c
+
+
+@pytest.fixture
 def second_user_client() -> TestClient:
     """A signed-in client distinct from admin_client — for scoping tests, not
     permission tests. Logs in as the seeded Accountant."""

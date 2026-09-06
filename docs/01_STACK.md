@@ -87,6 +87,43 @@ These were deliberately left open. **Urban Furniture: Accounting System** settle
 > trendy technologies only if they add real value"* — and the defence for each of these is an
 > annotation on the official mockup, which is the strongest justification available.
 
+> ### ⚠️ REVERSED IN IMPLEMENTATION — the PDF engine is `xhtml2pdf`, not `weasyprint`
+>
+> **WeasyPrint does not work on this team's Windows machines.** It binds to GTK
+> (`libgobject-2.0-0`, Pango, cairo), a separate native install that is not
+> present, and it fails when the library loads rather than at import — so the
+> endpoint looks healthy right up until someone clicks Download in the demo.
+>
+> `xhtml2pdf` replaces it: pure Python, no native dependencies, installs with
+> `uv sync` like everything else. It renders the **same Jinja template** the
+> print view uses, so the "one artefact, no drift" reasoning that chose an
+> HTML-based engine in the first place is untouched — only the engine changed.
+>
+> WeasyPrint is deliberately **not** in `pyproject.toml`: on a machine that
+> cannot use it, importing it writes a multi-line troubleshooting banner to
+> stderr on every PDF request. `services/rendering.py` still tries it first, so
+> a Linux deployment (or Windows plus the GTK runtime) that installs it gets the
+> better renderer with no code change. CSS is kept plain — no flexbox, no grid,
+> no web fonts — so both engines produce the same layout.
+>
+> ### And `aiosmtplib` turned out not to be needed either
+>
+> `services/mail.py` uses the **standard library's `smtplib`**. The reason to
+> reach for the async client is to avoid blocking the event loop, and this
+> endpoint never does: `POST /{doc}/{id}/send` is a sync `def`, so FastAPI runs
+> it in the threadpool, where a blocking socket with a 10s timeout costs
+> nothing. An async client here would add a dependency to solve a problem the
+> framework already solved.
+>
+> It also lets the endpoint report the **real** outcome rather than only that a
+> message was handed off — `{queued, to, error}` — which is what makes
+> `last_send_error` meaningful.
+>
+> **Net new dependencies: one.** `xhtml2pdf`, traceable to the mockup's *"Pdf
+> download on click"*. (`jinja2` comes in with it and is already in FastAPI's
+> own tree.) Fewer moving parts than planned, and the two that were dropped were
+> dropped for stated reasons rather than forgotten.
+
 ### 3.2 Email is the one thing that can fail on the day
 
 The organizers ask for solutions that *"plan for offline or local"*. Real SMTP is the
@@ -138,6 +175,16 @@ defence against double-posting ([`06_BACKEND.md`](06_BACKEND.md) §4) — become
 That is exactly the class of failure [`10_LESSONS.md`](10_LESSONS.md) is about: a guard
 that silently stops guarding.
 
+**Corollary bug this surfaced (2026-09-05):** `lock_row()`'s plain `SELECT ... FOR UPDATE`
+locks whatever table it's given — but four models (`SalesOrder`, `PurchaseOrder`,
+`VendorBill`, `CustomerInvoice`) declare their contact relationship as `lazy="joined"`,
+so the ORM folds a `LEFT OUTER JOIN` into that same SELECT automatically. Postgres
+outright rejects `FOR UPDATE` on the nullable side of an outer join
+(`FeatureNotSupported`); SQLite drops the clause entirely per Claim 2 above, so this was
+invisible until the first real run against the shared Postgres instance. Fixed by naming
+the table explicitly — `with_for_update(of=model)` in `services/rules.py` — which locks
+only the row being mutated and works whether or not the join is present.
+
 **So:**
 - **Shared / demo / anything being graded → PostgreSQL**, because `lock_row` actually locks.
   `./scripts/dev.sh --db docker` and `uv sync --extra postgres`.
@@ -151,6 +198,169 @@ that silently stops guarding.
 - **The concurrency test in [`07_TESTING_AND_REVIEW.md`](07_TESTING_AND_REVIEW.md) §1.3
   only proves anything on Postgres.** Mark it `@pytest.mark.postgres` and skip it on
   SQLite rather than letting it pass vacuously.
+- **In practice, this team only ever runs Postgres.** There is one shared instance
+  (`08_RUNBOOK.md` §1–2), not one-per-laptop, so the SQLite path above is a theoretical
+  fallback for isolated offline work, never the actual team workflow.
+
+---
+
+## 3.2 SHARED DATABASE — OPERATIONAL REFERENCE
+
+Setup commands live in [`08_RUNBOOK.md`](08_RUNBOOK.md) §1–2. This is the reasoning and
+the edge cases behind them.
+
+**Rotating `POSTGRES_PASSWORD`.** Postgres only reads it once, on first init of an empty
+volume — editing `.env` later does nothing to an already-running instance. Rotate the live
+one instead: `docker exec hackathon-db psql -U app -d app -c "ALTER USER app WITH
+PASSWORD '<new>';"`, then update `DATABASE_URL` in `.env` to match.
+
+**A `docker exec ... psql` test proves nothing about real remote auth.** The base image's
+`pg_hba.conf` trusts `127.0.0.1`/`::1` unconditionally for connections from *inside the
+container's own network namespace* — an old, already-rotated password will still look
+like it "works" tested that way. Anything from outside that namespace (the host via
+`localhost`, a teammate via LAN IP) hits the real `scram-sha-256` rule. Test a password
+change from the host or another machine, never via `docker exec`.
+
+**AP client isolation.** Some venue/office wifi blocks device-to-device connections on
+purpose. Test the moment everyone's on the same network: `nc -zv <host-ip> 5432`
+(Windows: `Test-NetConnection <host-ip> -Port 5432`). Connects → fine. "Connection
+refused" → check the container's healthy and `sudo ufw allow 5432/tcp` on the host. Times
+out / hangs → that's the isolation signature; stop debugging Postgres, use the fallback
+below.
+
+**Fallback: a phone hotspot.** A phone's hotspot is a NAT you control and typically
+doesn't isolate its own clients. One person tethers, everyone — including whoever hosts
+Postgres — joins that hotspot instead of venue wifi, then re-run `hostname -I` on the
+host for the new IP. The phone doesn't have to belong to whoever hosts Postgres.
+
+**Migrations.** Only one person ever runs `alembic upgrade head` — whoever's actively on
+the schema. Everyone else only reads/writes rows; a second uncoordinated `alembic
+revision --autogenerate` against a database someone else is also migrating is how two
+migration histories diverge. Schema change → say so in the group chat first, same as any
+other contract change (`04_API_CONTRACT.md` §5).
+
+**Two people running their own backends against it do not interfere — tested.**
+Two uvicorn processes on one database, 16 invoices created and posted
+simultaneously across both: 0 errors, 16 gapless invoice numbers with no
+duplicate, and every journal entry number unique with the ledger still balancing
+exactly. `_lock_sequence`'s `SELECT … FOR UPDATE` is a real cross-process lock in
+Postgres, which is the whole reason SQLite is not an option here (§3.1).
+
+**The one thing that is per-process: live updates.** `core/events.hub` is an
+in-memory pub/sub inside a single uvicorn, so a write on your backend does not
+push an SSE frame to a teammate's browser — measured: their stream receives
+nothing. The *data* is shared, so they see it on their next fetch or refresh;
+only the instant push is local. Making it cross-process would mean a Postgres
+`LISTEN/NOTIFY` bridge or Redis, which is not worth it for a demo where each
+person drives their own screen.
+
+**Confirming a teammate's write actually reached the shared database.** Log in as
+`admin@urbanfurniture.in` and open `GET /api/v1/audit-logs` (or the frontend page backed
+by it) — every successful write, by anyone, anywhere, is recorded there automatically
+(`core/audit.py`) with who, what, and when. If a teammate says they created something and
+it isn't there, their `DATABASE_URL` is pointed at the wrong place — most likely still
+`localhost` (talking to a database that doesn't exist on their machine, or worse, a stray
+local Postgres container they forgot they started: check `docker ps` for a `hackathon-db`
+on THEIR machine, which should never exist). Adminer (`08_RUNBOOK.md` §1) is the fallback
+if the audit log itself is what's in question.
+
+---
+
+## 3.3 TROUBLESHOOTING
+
+**Port already in use / frontend starts on 3001**
+A leftover process is holding the port, and the port change then breaks CORS in
+confusing ways.
+```bash
+fuser -k 3000/tcp 8000/tcp
+```
+`dev.sh` already does this on start and exit.
+
+**Every screen shows an error state**
+Your own backend isn't running — the web app proxies `/api` to `localhost:8000` on
+your machine. Check it: `curl localhost:8000/api/v1/health` should return JSON.
+
+**"CORS error" in the browser console**
+Means `NEXT_PUBLIC_API_URL` has been set. It should stay **unset** — the app is
+same-origin through the proxy and needs no API host. Unset it in `.env`, delete
+`frontend/.env.local`, restart `npm run dev`.
+
+**Live "Offline" badge, but the rest of the app works**
+The SSE stream isn't connecting. It is same-origin like everything else, served by
+`frontend/src/app/api/v1/events/route.ts`, so this is almost always just your own
+backend being down — check `curl localhost:8000/api/v1/health`.
+
+**401 on every request even after signing in**
+The session cookie isn't coming back. Every call is same-origin through the proxy,
+so the cookie is first-party and this should not happen — unless `NEXT_PUBLIC_API_URL`
+has been set to some other host, which makes it third-party and lets the browser or
+an intervening network drop it. Leave that variable unset.
+
+**`ModuleNotFoundError: app`**
+Run backend commands from `backend/` via `uv run` — `pythonpath = ["src"]` in
+`pyproject.toml` is what makes the package importable.
+
+**Database looks empty / stale**
+```bash
+./scripts/demo-reset.sh          # ⚠️ destructive, prompts first
+```
+
+**Migration conflicts or a broken chain**
+For a demo, deleting the SQLite file and re-seeding is a legitimate escape hatch:
+```bash
+rm backend/app.db && cd backend && uv run python -m app.seed
+```
+
+**Real-time isn't updating**
+```bash
+./scripts/verify-sse.sh          # proves the stream end to end
+```
+Also confirm `SIMULATOR_ENABLED=true` in `.env` if you expect data to move on its own.
+
+---
+
+### Accounting-specific
+
+**`Trial balance` badge is red / the balance sheet doesn't balance**
+Something wrote `journal_lines` outside `services/posting.py`. That is the only permitted
+write path. Find it:
+```bash
+grep -rn "JournalLine(" backend/src/app --include="*.py" | grep -v services/posting.py
+```
+Then check for orphaned or one-sided entries:
+```sql
+SELECT e.entry_number, SUM(l.debit) AS d, SUM(l.credit) AS c
+FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id
+GROUP BY e.entry_number HAVING SUM(l.debit) <> SUM(l.credit);
+```
+
+**`MISSING_ACCOUNT_MAPPING` when posting**
+The contact has no receivable/payable account, or the product has no income/expense
+account. The seed sets these; a hand-created record won't have them. Fix the record — do
+**not** add a fallback account in the posting code, or the error stops being informative.
+
+**`ALREADY_POSTED` on a document that looks unposted**
+A previous attempt committed the entry but failed afterwards. Check:
+```sql
+SELECT * FROM journal_entries WHERE source_id = '<document-uuid>';
+```
+If a live entry exists, the document is genuinely posted — refresh the UI.
+
+**A payment is rejected**
+`amount` may not exceed the document's remaining balance (`total - amount_paid`), and the
+journal must be a `BANK` or `CASH` journal. Both are enveloped 4xx
+(`OVERALLOCATED_PAYMENT`, `INVALID_JOURNAL_TYPE`), never a 500. A payment smaller than the
+balance is valid — the document simply moves to `PARTIAL`.
+
+**Reports are empty but documents exist**
+The documents are still `DRAFT`. Only `POSTED` entries reach a report — that is correct
+behaviour, not a bug.
+
+**Frontend build fails on a Next config key**
+Next.js 16 removed the `eslint` key from `next.config.ts` (and `next lint`). Lint is a
+separate step: `npm run lint`.
+
+---
 
 ---
 

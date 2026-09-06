@@ -18,8 +18,17 @@ type EventHandler = (data: Record<string, unknown>) => void;
  *   });
  *
  * Returns whether the stream is currently connected, for a "live" indicator.
+ *
+ * `enabled` gates the connection — pass `false` while the session is still
+ * loading or unauthenticated. `/events` requires a logged-in user, and
+ * `EventSource` retries forever on its own, so an ungated call from `AppShell`
+ * hammers the API with 401s from the moment any page mounts, before the auth
+ * check has even resolved.
  */
-export function useEventStream(handlers: Record<string, EventHandler>): boolean {
+export function useEventStream(
+  handlers: Record<string, EventHandler>,
+  enabled = true,
+): boolean {
   const [connected, setConnected] = useState(false);
 
   // Keep handlers in a ref so re-renders don't tear down the connection.
@@ -33,6 +42,10 @@ export function useEventStream(handlers: Record<string, EventHandler>): boolean 
   const eventNames = Object.keys(handlers).sort().join(",");
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const source = new EventSource(`${API_BASE}/events`, { withCredentials: true });
 
     source.addEventListener("connected", () => setConnected(true));
@@ -59,8 +72,11 @@ export function useEventStream(handlers: Record<string, EventHandler>): boolean 
       );
       source.close();
     };
-    // Re-subscribe only if the SET of event names changes, not on every render.
-  }, [eventNames]);
+    // Re-subscribe if the SET of event names changes, or once `enabled` flips true.
+  }, [eventNames, enabled]);
 
-  return connected;
+  // Gated rather than reset inside the effect: writing state from an effect body
+  // costs a second render pass, and while disabled there is no stream to be
+  // connected to regardless of what the last run left behind.
+  return enabled && connected;
 }

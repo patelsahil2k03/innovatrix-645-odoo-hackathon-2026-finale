@@ -9,7 +9,7 @@ import enum
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Numeric, String
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
@@ -134,6 +134,7 @@ class Product(UUIDMixin, Base):
     category_id: Mapped[str | None] = mapped_column(
         ForeignKey("product_categories.id"), index=True
     )
+    category: Mapped[ProductCategory | None] = relationship(lazy="joined")
     sales_tax_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0, nullable=False)
 
     income_account_id: Mapped[str | None] = mapped_column(ForeignKey("accounts.id"))
