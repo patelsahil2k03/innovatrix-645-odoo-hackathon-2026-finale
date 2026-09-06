@@ -1,7 +1,16 @@
 """Audit trail middleware: who changed what, when.
 
-Cheap to build, and it reads as an enterprise feature to an evaluator.
-Records only SUCCESSFUL writes (2xx on POST/PATCH/PUT/DELETE).
+Records every write attempt by a signed-in user — POST/PATCH/PUT/DELETE —
+whether the API accepted it or refused it.
+
+Refusals used to be dropped, which removed exactly the rows an audit trail is
+consulted for: an accountant who tried to archive a contact and was told no is
+the event worth keeping, and a log that only holds successes cannot answer
+"did anyone try". It also left the screen's outcome column unable to render
+anything but "accepted".
+
+Anonymous attempts are still skipped: with no valid token there is no "who",
+and an audit row whose actor is unknown is a log line, not an audit record.
 """
 
 import json
@@ -27,8 +36,6 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if request.method not in _WRITE_METHODS:
             return response
         if any(skip in request.url.path for skip in _SKIP_PATHS):
-            return response
-        if not (200 <= response.status_code < 300):
             return response
 
         try:

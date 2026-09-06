@@ -1194,3 +1194,14 @@ a.status-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 
 }
 .status-module:first-child { border-top: 0; padding-top: 0; }
 .status-module-name { font-size: var(--t-sm); font-weight: 600; color: var(--text); }
+
+/* A row of list filters sitting between the search box and the table.
+   Wraps rather than scrolls, so a narrow screen stacks the controls instead
+   of hiding one off the edge. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.filter-bar .select { max-width: 220px; }

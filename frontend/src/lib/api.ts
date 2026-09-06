@@ -147,6 +147,9 @@ export interface Notification {
 export interface AuditLog {
   id: string;
   user_id: string;
+  /** Flattened off the joined user — null only if the account was removed. */
+  user_name: string | null;
+  user_email: string | null;
   action: string;
   entity_name: string;
   entity_id: string | null;
@@ -575,6 +578,9 @@ export const api = {
 
   auditLogs: {
     list: (params?: ListParams) => get<Page<AuditLog>>("/audit-logs", params),
+    /** Only the modules that actually have rows — the filter offers nothing
+     *  that would come back empty. */
+    entities: () => get<string[]>("/audit-logs/entities"),
   },
 
   // ── Master data (04_API_CONTRACT.md §3.1) ────────────────────────────────

@@ -72,7 +72,7 @@ Query params supported by `core/pagination.py` on any list endpoint:
 | `GET` | `/events` | user | **SSE stream**, 15s heartbeat |
 | `GET` | `/notifications` | user | Paginated, scoped to the calling user only |
 | `POST` | `/notifications/read-all` | user | `{marked_read: n}` |
-| `GET` | `/audit-logs` | admin role | Paginated audit trail |
+| `GET` | `/audit-logs` | admin role | Paginated audit trail. Each row carries the acting `user` (id, name, email) rather than a bare `user_id` — a screen showing UUIDs answers "who" with something nobody can read. Filters: `entity_name`, `outcome` (`accepted` · `rejected`), `user_id`. Records **rejected** writes too, so a refused permission is visible; only 2xx were kept before, which made the outcome column unable to ever say anything but "accepted". |
 
 ### SSE event frames
 ```
