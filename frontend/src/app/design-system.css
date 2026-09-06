@@ -293,6 +293,25 @@ html, body {
 /* Judging criterion: zero horizontal scroll at 360px. */
 html, body { overflow-x: hidden; max-width: 100%; }
 
+/* The staff console is a fixed 100vh frame where only `.app-main` should
+   scroll (see the comment on `.app-shell` below) — but `body` had no opinion
+   of its own, so any sub-pixel rounding in the 100vh grid/flex chain (routine
+   with a bordered sidebar column) gave the document its own scrollbar too.
+   Two independent scroll containers stacked on one screen is what produced
+   the "cut in half" look: the mouse wheel could land on either one depending
+   on cursor position, landing the visible viewport between two different
+   scroll offsets.
+   Scoped to when `.app-shell` is mounted, not applied globally — `/login`,
+   `/signup` and the portal shell are ordinary `min-height: 100vh` documents
+   that are meant to scroll the normal way, and this must not touch them. */
+body:has(.app-shell) { overflow-y: hidden; }
+@media (max-width: 860px) {
+  /* Below 860px `.app-shell` itself drops the fixed-height trick (§ the
+     `.app-shell` media query) and `.app-main` becomes the page's natural
+     flow — body has to be the scroll container again down here. */
+  body:has(.app-shell) { overflow-y: visible; }
+}
+
 /* Negative tracking at display sizes = DESIGN.md's "Apple tight" headline cadence. */
 h1, h2, h3, h4 { margin: 0; text-wrap: balance; letter-spacing: -0.017em; font-weight: 600; }
 h1 { font-size: var(--t-2xl); }
