@@ -83,13 +83,12 @@ def _signed_totals_by_month(
     """
     credit_positive = AccountType.INCOME in types
     amount = (
-        func.sum(JournalLine.credit - JournalLine.debit)
+        (JournalLine.credit - JournalLine.debit)
         if credit_positive
-        else func.sum(JournalLine.debit - JournalLine.credit)
+        else (JournalLine.debit - JournalLine.credit)
     )
-    month = func.date_trunc("month", JournalEntry.entry_date)
     rows = db.execute(
-        select(month.label("month"), amount.label("amount"))
+        select(JournalEntry.entry_date, amount.label("amount"))
         .select_from(JournalLine)
         .join(JournalEntry, JournalLine.entry_id == JournalEntry.id)
         .join(Account, JournalLine.account_id == Account.id)
@@ -99,14 +98,17 @@ def _signed_totals_by_month(
             JournalEntry.entry_date >= date_from,
             JournalEntry.entry_date <= date_to,
         )
-        .group_by("month")
     ).all()
-    return {
-        (row.month.date() if hasattr(row.month, "date") else row.month): Decimal(
-            row.amount or 0
-        )
-        for row in rows
-    }
+
+    # Bucketed in Python rather than with a SQL `date_trunc`/`strftime`, which
+    # isn't the same function name across Postgres and SQLite (both are
+    # supported backends — see .env.example) — see module docstring on why
+    # summing at this volume is cheap enough to not need the DB to do it.
+    totals: dict[date, Decimal] = {}
+    for row in rows:
+        month = _month_floor(row.entry_date)
+        totals[month] = totals.get(month, ZERO) + Decimal(row.amount or 0)
+    return totals
 
 
 def trend(db: Session, *, months: int, as_of: date) -> dict:

@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -87,12 +88,11 @@ export default function AuditLogPage() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Dashboard", href: "/" }, { label: "Audit log" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Audit log</h1>
-          <p>Every write the API accepted or refused — who, what, and the answer it gave.</p>
-        </div>
-      </div>
+      <PageHeading
+        image="/img/tabs/audit-log.webp"
+        title="Audit log"
+        subtitle="Every write the API accepted or refused — who, what, and the answer it gave."
+      />
 
       <SearchInput
         value={search}

@@ -1183,16 +1183,16 @@ a.status-chip, a.status-chip:hover, a.status-chip:focus { text-decoration: none;
 a.status-chip:hover { color: var(--text); border-color: var(--border-firm); }
 a.status-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .status-chip[data-active="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
 }
 .status-chip-count {
   font-variant-numeric: tabular-nums;
   font-weight: 650;
   color: var(--text);
 }
-.status-chip[data-active="true"] .status-chip-count { color: #fff; }
+.status-chip[data-active="true"] .status-chip-count { color: var(--surface); }
 
 /* The dashboard's module list: a label, then that module's chips. */
 .status-module {

@@ -12,6 +12,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { DrillAmount } from "@/components/ui/drill-amount";
 import { Field } from "@/components/ui/field";
 import { KanbanGrid } from "@/components/ui/kanban";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -411,18 +412,19 @@ function BudgetsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Account" }, { label: "Analytical Budget" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Analytical Budget</h1>
-          <p>Planned vs. achieved, by analytic account and period.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New budget
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/budget.webp"
+        title="Analytical Budget"
+        subtitle="Planned vs. achieved, by analytic account and period."
+        action={
+          canRecord ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New budget
+            </Link>
+          ) : null
+        }
+      />
 
       <div className="row-between">
         <SearchInput value={search} onChange={handleSearchChange} label="Search budgets" />

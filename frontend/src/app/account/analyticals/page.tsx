@@ -9,6 +9,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { KanbanGrid } from "@/components/ui/kanban";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -104,18 +105,19 @@ function AnalyticAccountsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Account" }, { label: "Analyticals" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Analyticals</h1>
-          <p>Analytic accounts — the tags that measure a budget without touching the Chart of Accounts.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New analytic account
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/analyticals.webp"
+        title="Analyticals"
+        subtitle="Analytic accounts — the tags that measure a budget without touching the Chart of Accounts."
+        action={
+          canRecord ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New analytic account
+            </Link>
+          ) : null
+        }
+      />
 
       <div className="row-between">
         <SearchInput

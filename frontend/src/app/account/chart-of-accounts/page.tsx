@@ -8,6 +8,7 @@ import { AsyncState } from "@/components/ui/async-state";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Drawer } from "@/components/ui/drawer";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -91,18 +92,19 @@ function ChartOfAccountsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Account" }, { label: "Chart of Account" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Chart of Accounts</h1>
-          <p>The general ledger&apos;s accounts — pre-configured, rarely added to.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New account
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/chart-of-accounts.webp"
+        title="Chart of Accounts"
+        subtitle="The general ledger's accounts — pre-configured, rarely added to."
+        action={
+          canRecord ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New account
+            </Link>
+          ) : null
+        }
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search accounts" placeholder="Search by code or name" />
 

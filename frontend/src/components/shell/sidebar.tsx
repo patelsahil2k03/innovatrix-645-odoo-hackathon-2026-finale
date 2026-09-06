@@ -163,10 +163,10 @@ export function Sidebar() {
   })).filter((group) => group.items.length > 0);
 
   // Accordion behavior: single section open at a time.
-  // Auto-expand the section containing the current active route, defaulting to the first visible group.
+  // Auto-expand the section containing the current active route.
   const activeGroupLabel = visibleGroups.find((group) =>
     group.items.some((item) => isActive(pathname, item.href))
-  )?.label ?? visibleGroups[0]?.label ?? null;
+  )?.label ?? null;
 
   const [openGroup, setOpenGroup] = useState<string | null>(activeGroupLabel);
 

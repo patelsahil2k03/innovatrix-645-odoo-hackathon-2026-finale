@@ -13,6 +13,7 @@ import { LineItemsEditor } from "@/components/ui/line-items-editor";
 import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { PageHeading } from "@/components/ui/page-heading";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -326,18 +327,19 @@ function VendorBillsPageInner() {
   return (
     <AppShell>
       <Breadcrumbs items={[{ label: "Purchase" }, { label: "Purchase Bill" }]} />
-      <div className="page-head">
-        <div>
-          <h1>Purchase Bills</h1>
-          <p>Post a bill to write it into the ledger.</p>
-        </div>
-        {canRecord ? (
-          <Link href={panel.hrefFor("new")} className="btn btn-primary">
-            <PlusIcon size={14} />
-            New bill
-          </Link>
-        ) : null}
-      </div>
+      <PageHeading
+        image="/img/tabs/purchase-bill.webp"
+        title="Purchase Bills"
+        subtitle="Post a bill to write it into the ledger."
+        action={
+          canRecord ? (
+            <Link href={panel.hrefFor("new")} className="btn btn-primary">
+              <PlusIcon size={14} />
+              New bill
+            </Link>
+          ) : null
+        }
+      />
 
       <SearchInput value={search} onChange={handleSearchChange} label="Search bills" placeholder="Search by number or reference" />
 

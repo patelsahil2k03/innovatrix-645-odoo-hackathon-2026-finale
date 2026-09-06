@@ -339,8 +339,10 @@ def test_report_pdf_route_is_not_shadowed_by_the_document_route(admin_client):
     assert unknown.json()["error"]["code"] == "NOT_FOUND"
 
 
-def test_send_refuses_explicitly_when_smtp_is_not_configured(admin_client):
+def test_send_refuses_explicitly_when_smtp_is_not_configured(admin_client, monkeypatch):
     """A silent no-op is the one behaviour that would let the UI claim it sent."""
+    from app.core.settings import get_settings
+    monkeypatch.setattr(get_settings(), "smtp_host", "")
     invoice = _first(admin_client, "/customer-invoices", status="PAID")
     response = admin_client.post(
         f"{API}/customer-invoices/{invoice['id']}/send", json={}
