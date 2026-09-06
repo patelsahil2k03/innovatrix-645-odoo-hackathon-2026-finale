@@ -77,6 +77,19 @@ everything else. Get Customer Invoices right first — it is the demo path — t
 | `<AsyncState>` | loading / error / empty / content — no blank boxes on failure |
 | `<StatusBadge>` | colour **plus** a dot **plus** text, never colour alone |
 | `<Pagination>` | uses `total`, not `items.length` |
+| `<Drawer>` | opened by a URL query param, so every panel is a shareable, reloadable link |
+| `<StatusChips>` | the mockup's All / Draft / Confirmed counts; each chip is a filtered list |
+| `<ChartCard>` | the chart frame and type switcher — hidden when a shape has one honest encoding |
+| `<KanbanGrid>` | the card view every master-data screen toggles into |
+| `<TAccountPreview>` | the entry a document *will* post, before it is posted |
+| `<PageHeading>` | title, subtitle, action, and the optional per-tab illustration |
+| `<KpiGrid>` | the figure tiles, each linking to the ledger behind its number |
+
+**Where the decisions live.** A component renders; it does not decide. Which chips a
+module shows, whether a document can take a payment, which slices belong in a revenue
+chart — each of those sits in a hook or a `lib/` function, never inline in JSX
+(`brain/RULES.md` §8). If a `.tsx` needs an `if` to answer something a user would call a
+rule, that logic is in the wrong file.
 
 Hand-rolling a second modal is how half your dialogs end up inaccessible.
 

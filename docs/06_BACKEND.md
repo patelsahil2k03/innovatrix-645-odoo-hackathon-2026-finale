@@ -26,6 +26,26 @@ document chain first means writing it twice.
 > Ship the sales slice end-to-end before starting the purchase chain. Two half-built
 > chains demo as nothing; one finished chain demos as a product.
 
+**All eleven are built.** What the tree holds now, so a reader can find a thing without
+grepping:
+
+| Service | Answers |
+|---|---|
+| `posting.py` | the `post_entry()` primitive — **the only writer of `journal_lines`** |
+| `documents.py` | the document chains and their state transitions |
+| `payments.py` | allocation against a document, idempotent by key |
+| `numbering.py` | `INV/2026/0042`, `Bill/2026/0001`, `S00001`, `P00001` |
+| `reports.py` | Balance Sheet, P&L, Trial Balance, Budget, dashboard KPIs |
+| `analytics.py` | trend, analytic breakdown, top contacts, ageing |
+| `status_counts.py` | documents per state — the one read that counts documents, not lines |
+| `budgets.py` | planned against achieved, and the revision chain |
+| `rules.py` | `lock_row`, `require`, `require_status`, `emit` |
+| `rendering.py` · `mail.py` | print view → PDF, and sending it |
+| `simulator.py` | the optional live-data ticker |
+
+Routers mirror those one for one, plus `auth`, `masters`, `sales`, `purchases`, `ledger`,
+`portal`, `notifications`, `audit_logs`, `events`, `output` and `health`.
+
 ---
 
 ## 2. THE POSTING ENGINE

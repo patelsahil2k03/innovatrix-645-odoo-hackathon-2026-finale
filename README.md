@@ -6,10 +6,13 @@
 Team Innovatrix's entry for the Odoo Hackathon 2026 **final round** — a 24-hour on-site
 build at Odoo India, Gandhinagar, against a problem statement released on the day.
 
-This repository starts as a production-shaped foundation: authentication, role-based
-access control, a single error contract, pagination, real-time updates, an audit trail
-and an accessible design system — all working and tested — so the build time goes into
-the actual problem domain rather than into plumbing.
+A working double-entry accounting system for a furniture business, built on a
+production-shaped foundation: authentication, role-based access control, a single error
+contract, pagination, real-time updates, an audit trail and an accessible design system.
+
+The guarantee the whole design turns on: **a document never stores a balance that a report
+reads.** Documents post; reports aggregate. Every figure on every screen is a live query
+against the ledger, and the trial balance is asserted on every posting.
 
 ## Table of Contents
 
@@ -65,7 +68,8 @@ Full statement, data model and API contract: [`docs/`](docs/README.md).
 | Design | Hand-rolled design tokens — light + dark, re-themed from one variable |
 | Validation | Zod on the client, mirroring Pydantic on the server |
 | Backend | FastAPI · Python 3.13 (managed by [uv](https://docs.astral.sh/uv/)) · REST + Server-Sent Events |
-| Database | SQLAlchemy 2.0 · Alembic migrations · SQLite by default, PostgreSQL by one variable |
+| Database | SQLAlchemy 2.0 · Alembic migrations · PostgreSQL 18 in Docker by default, SQLite by one variable |
+| Charts | Recharts — themed through CSS custom properties, so light and dark cost no JavaScript |
 | Auth | JWT in an httpOnly cookie, with role-based access control enforced server-side |
 
 Version pins and the dependency landmines we verified against the live registries are
@@ -73,27 +77,55 @@ in [`docs/01_STACK.md`](docs/01_STACK.md).
 
 ## What's Built
 
-The domain-independent half is complete and tested:
+**Every mandatory deliverable is complete**, with the evidence for each one listed in
+[`docs/PROBLEM_STATEMENT.md`](docs/PROBLEM_STATEMENT.md) §2.
+
+### The accounting system
+
+| | |
+|---|---|
+| **Master data** | Contacts, products (with categories), chart of accounts across 8 account types, journals, journal entries — list and kanban views, created and edited in place |
+| **Purchase cycle** | Purchase Order → confirm → Vendor Bill → post → Payment, or a bill raised with no order behind it |
+| **Sales cycle** | Sales Order → confirm → Customer Invoice → post → Payment, with tax computed per line by the server and never taken from the request |
+| **The ledger** | Every posted document emits one immutable, balanced journal entry. `services/posting.py` is the only writer of `journal_lines`, anywhere |
+| **Reports** | Balance Sheet (with a live trial-balance badge), Profit & Loss, Budget Report — every figure aggregated from journal lines, never summed off a document |
+| **Analytics** | Income and expense trend, net profit, revenue by analytic account, receivables/payables ageing, top customers and vendors — with switchable chart types |
+| **Analytic accounting** | Analytic accounts and budgets with a `DRAFT → CONFIRMED → REVISED → CANCELLED` state machine and a linked revision chain |
+| **Customer portal** | A contact signs in, sees only their own invoices and bills, and pays them |
+| **Drill-down** | A report figure opens the accounts behind it, then the entries, then the source document |
+| **Documents out** | Print view, PDF download and email for invoices and bills; PDF for the P&L |
+
+### The platform underneath
 
 | | |
 |---|---|
 | **Auth** | JWT in an httpOnly cookie (plus bearer tokens for curl and Swagger), bcrypt hashing |
-| **RBAC** | `require_roles(...)` dependency — reads open, writes gated |
+| **RBAC** | `require_roles(...)` dependency — reads open to staff, writes gated, portal users scoped to their own records |
 | **Errors** | One envelope everywhere: `{error: {code, message, fields}}` — bad input never returns a 500 |
-| **Lists** | `page` / `page_size` / `sort` / `q` on any endpoint, with allowlisted columns |
-| **Real-time** | Server-Sent Events hub, plus an optional background task that mutates data live |
-| **Audit trail** | Every successful write recorded with actor, action and entity |
-| **Notifications** | Per-user, scoped so one user cannot read another's |
-| **CSV export** | Streaming helper |
-| **Seed framework** | Deterministic, realistic Indian demo data — names, cities, coordinates, plates |
-| **Design system** | Light and dark, one accent variable to re-theme, no flash on load |
-| **UI primitives** | Modal (focus trap, Escape, dialog role), Field (full ARIA wiring), Tabs (roving tabindex), SortableTh (`aria-sort`), Pagination, AsyncState, SearchInput, StatusBadge, KpiGrid |
-| **Tests** | Auth, RBAC, pagination, error envelope, event hub and seed integrity |
+| **Lists** | `page` / `page_size` / `sort` / `q` on every endpoint, with allowlisted columns |
+| **Real-time** | Server-Sent Events — a posting updates every open screen without a reload |
+| **Audit trail** | Every write attempt recorded with actor, action and outcome — refusals included, because "who was told no" is what an audit log is consulted for |
+| **Concurrency** | Row-level locking with a re-check after the lock, so two people posting the same document produce one entry |
+| **Seed** | Deterministic demo data — twelve months of weighted trading, budgets derived from actuals, and an audit history to match |
+| **Design system** | Light and dark from one accent variable, no flash on load; charts theme themselves through CSS custom properties with no JavaScript |
+| **UI components** | Drawer, Modal (focus trap, Escape, dialog role), Field (full ARIA wiring), Tabs (roving tabindex), SortableTh (`aria-sort`), Pagination, AsyncState, SearchInput, StatusBadge, StatusChips, KpiGrid, ChartCard, KanbanGrid, TAccountPreview, PageHeading |
 
-**Not built yet, by design:** the domain layer. Models, schemas, routers, business rules
-and screens are written once the problem statement is known. The files exist with `★`
-markers and worked examples showing where each piece goes —
-[`docs/06_BACKEND.md`](docs/06_BACKEND.md) has the per-resource recipe.
+### Verified, not asserted
+
+| Check | Result |
+|---|---|
+| Backend tests | 103 passing |
+| Types · lint · production build | clean |
+| Ledger | balanced; no unbalanced entry, no one-sided line, no future-dated posting |
+| Balance sheet | assets = liabilities + retained earnings, exactly |
+| Roles | 3 roles × 18 endpoints — every allow and every refusal as intended |
+| Screens | all 21 render; no dead internal links |
+| Reads | 10–22 ms through the app's own proxy |
+
+**Not built, deliberately:** image upload on contacts and products (the storage decision is
+open), advance payments against an order before an invoice exists, and period locking. Each
+is recorded with its reasoning rather than left as a silent gap —
+[`docs/PROBLEM_STATEMENT.md`](docs/PROBLEM_STATEMENT.md) §2.
 
 ## Getting Started
 
@@ -101,19 +133,22 @@ markers and worked examples showing where each piece goes —
 
 - Node.js ≥ 20
 - [uv](https://docs.astral.sh/uv/) ≥ 0.9 (installs Python 3.13 for you)
-- Docker is **optional** — only needed if you switch to PostgreSQL
+- Docker — for PostgreSQL, which is the default. SQLite needs none, see below
 
 ### Quick start
 
 ```bash
 git clone https://github.com/patelsahil2k03/innovatrix-645-odoo-hackathon-2026-finale.git
 cd innovatrix-645-odoo-hackathon-2026-finale
-cp .env.example .env
+cp .env.example .env          # then set a real password and JWT secret
 ./scripts/dev.sh
 ```
 
-That starts the API on **:8000** and the web app on **:3000** using SQLite — no Docker,
-no external services, works offline. `Ctrl+C` stops both.
+That brings up the database, the API on **:8000** and the web app on **:3000**, and seeds
+demo data on first run. `Ctrl+C` stops everything it started.
+
+Step-by-step commands, including how a teammate points their own frontend and backend at
+one shared database, are in [`docs/08_RUNBOOK.md`](docs/08_RUNBOOK.md).
 
 ### Running the pieces separately
 
@@ -138,15 +173,17 @@ npm run dev
 
 Demo logins are printed by the seed script. Default password: `Demo@1234`.
 
-### Switching to PostgreSQL
+### Working offline, without Docker
 
 One line in `.env`, nothing else changes:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app
+DATABASE_URL=sqlite:///./app.db
 ```
 
-Then `./scripts/dev.sh --db docker` and `uv sync --extra postgres`.
+Fine for solo local work. Not for the shared instance, and not for judging concurrency:
+SQLite silently ignores `SELECT ... FOR UPDATE`, so the row locking that makes two
+simultaneous postings safe is not exercised at all.
 
 ### Troubleshooting
 
@@ -157,13 +194,18 @@ database, real-time not updating — are covered in
 ## Commands
 
 ```bash
-./scripts/dev.sh                    # run everything (SQLite)
-./scripts/dev.sh --db docker        # ...with PostgreSQL instead
+./scripts/dev.sh                    # database + API + web app, seeded on first run
+./scripts/dev.sh --db docker        # force the Docker database
+./scripts/kill-ports.sh             # free 3000 / 8000 after a crashed run
 ./scripts/demo-reset.sh             # ⚠️ wipe + reseed demo data
 ./scripts/verify-sse.sh             # prove real-time works end to end
+./scripts/clean-cache.sh            # drop build caches
 
-cd backend  && uv run pytest        # backend tests
-cd frontend && npm run build        # frontend build (must stay green)
+cd backend  && uv run pytest        # backend tests — 103, all green
+cd backend  && uv run python -m app.seed          # top up demo data (safe to re-run)
+cd backend  && uv run python -m app.seed --reset  # ⚠️ destructive, prompts first
+cd frontend && npm ci               # install exactly the lockfile (use over `npm i`)
+cd frontend && npm run build        # production build (must stay green)
 cd frontend && npm run lint         # lint — a separate step, Next 16 removed `next lint`
 ```
 

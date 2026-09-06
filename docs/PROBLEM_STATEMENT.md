@@ -206,15 +206,27 @@ Each of these gets a rejecting test **and** an accepting test — see
 
 ### Mandatory deliverables (explicitly required)
 
-- [ ] Contact, Product, Chart of Accounts, Journal, Journal Entry master data
-- [ ] Purchase Order → Vendor Bill → Payment
-- [ ] Sales Order → Customer Invoice → Payment (with tax)
-- [ ] Analytic Account + Budget
-- [ ] Balance Sheet
-- [ ] Profit & Loss
-- [ ] Budget Report
-- [ ] Contact portal — view own documents, make payment
-- [ ] Three roles enforced server-side
+All nine are **built and verified end to end against the running system** — each line
+below names the evidence rather than asserting completion.
+
+- [x] Contact, Product, Chart of Accounts, Journal, Journal Entry master data — 21
+      contacts, 25 products, 9 live accounts, 4 journals, 109 entries; list, create and
+      edit screens for each
+- [x] Purchase Order → Vendor Bill → Payment — driven through the API end to end:
+      `P00031 → Bill/2026/0024 → PAID`, balance due 0.00
+- [x] Sales Order → Customer Invoice → Payment (with tax) — `S00042 → INV/2026/0033 →
+      PAID`; tax is computed per line by the server and never accepted from the request
+      (`test_sales_chain_posts_a_balanced_entry_and_settles`)
+- [x] Analytic Account + Budget — 6 analytic accounts, 3 budgets with the
+      `DRAFT → CONFIRMED → REVISED → CANCELLED` state machine
+- [x] Balance Sheet — assets 37,68,761.00 = liabilities 12,98,461.00 + retained earnings
+      24,70,300.00, `is_balanced: true`
+- [x] Profit & Loss — income, expenses and other expenses reported separately, PDF export
+- [x] Budget Report — planned against achieved per line, from the ledger
+- [x] Contact portal — view own documents, make payment — a portal login sees only its own
+      documents and settles them from the portal
+- [x] Three roles enforced server-side — 3 roles × 18 endpoints verified, every allow and
+      every 403 as intended
 
 ### Bonus / optional (not asked for — build only after the above is green)
 
@@ -222,8 +234,12 @@ Each of these gets a rejecting test **and** an accepting test — see
       *before* a Bill or Invoice exists. Not asked for by either source, and the current
       schema deliberately doesn't support it — see [`03_DATA_MODEL.md`](03_DATA_MODEL.md)
       §4 for exactly what's missing and how it would be added if wanted.
-- [ ] Drill-down: report figure → account → journal lines → source document
-- [ ] Aged receivables / payables
+- [x] Drill-down: report figure → account → journal lines → source document — a balance
+      sheet row opens the entries behind it (`/journal-entries?account_id=…`), and each
+      entry carries `source_type` + `source_id` through to the document that created it
+- [x] Aged receivables / payables — 0–30 · 31–60 · 61–90 · 90+, receivables against
+      payables, on the dashboard. The buckets reconcile with the outstanding balance
+      (`test_ageing_buckets_account_for_every_outstanding_rupee`)
 - [ ] Period lock (a closed month cannot be posted into)
 
 > Partial payment itself is **not** on this list — entering less than the amount due is
