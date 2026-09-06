@@ -5,6 +5,7 @@
 
 | Date | What | File |
 |---|---|---|
+| 2026-09-06 | DRAFT-stage edit added to Purchase Orders/Bills, Sales Orders/Invoices, Budgets via existing backend `PATCH` endpoints (frontend never called them); fixed 4 dead "New …" links left by the drawer refactor; fixed a real archived-responsible-contact data-loss bug in Budget edit | [`2026-09-06-draft-document-edit-and-new-link-fixes.md`](2026-09-06-draft-document-edit-and-new-link-fixes.md) |
 | 2026-09-05 | `useCallback`/`useMemo`/`React.memo` applied across every table/list page (row-level memo where it's a real win — LineItemsEditor, budget line editors, report GroupTables; useCallback+useMemo on search handlers and duplicate Kanban-map derivations elsewhere) — lint/tsc/build all clean | [`2026-09-05-table-usecallback-usememo.md`](2026-09-05-table-usecallback-usememo.md) |
 | 2026-09-05 | Frontend UX audit (47 routes) → P0 fixed: reusable `ConfirmDialog` + toast system, wired into all archive actions + posted-document/draft cancel actions; P1–P3 documented, not yet built | [`2026-09-05-frontend-ux-audit-p0-confirmations-toasts.md`](2026-09-05-frontend-ux-audit-p0-confirmations-toasts.md) |
 | 2026-09-05 | Apple-consistency sweep: sidebar's border-stripe selection → solid capsule, custom `<select>` chevron everywhere, dark-mode date icon fix, built the missing `/audit-log` page + a real 404 page | [`2026-09-05-design-apple-consistency-fixes.md`](2026-09-05-design-apple-consistency-fixes.md) |
