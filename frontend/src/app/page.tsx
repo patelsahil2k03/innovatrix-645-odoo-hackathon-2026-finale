@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { AsyncState } from "@/components/ui/async-state";
 import { ChartCard } from "@/components/ui/chart-card";
-import { CategoryChart, NetProfitChart, TrendChart } from "@/components/ui/charts";
+import { AgeingChart, CategoryChart, NetProfitChart, TrendChart } from "@/components/ui/charts";
 import { PageHeading } from "@/components/ui/page-heading";
 import { KpiGrid } from "@/components/ui/kpi-grid";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StatusChips } from "@/components/ui/status-chips";
 import { MODULE_LABELS, MODULE_ROUTES, useStatusCounts } from "@/lib/use-status-counts";
+import { useDashboardAnalytics } from "@/lib/use-dashboard-analytics";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { CHART_OPTIONS, type ChartKind } from "@/lib/chart-types";
@@ -22,6 +23,12 @@ import { date, money } from "@/lib/format";
 import Link from "next/link";
 
 const MONTH_RANGES = [6, 12, 24] as const;
+
+/** Who the money moves through, from each side of the ledger. */
+const DIRECTIONS = [
+  { value: "customer", label: "Customers" },
+  { value: "vendor", label: "Vendors" },
+] as const;
 
 /**
  * Dashboard — the four KPIs a business actually asks about (Receivables,
@@ -38,6 +45,7 @@ export default function DashboardPage() {
   const [breakdownKind, setBreakdownKind] = useState<ChartKind>("donut");
 
   const statusCounts = useStatusCounts();
+  const analytics = useDashboardAnalytics(!!user);
 
   const recentEntries = useFetch(
     () => api.journalEntries.list({ page: 1, page_size: 8, sort: "-entry_date" }),
@@ -47,10 +55,6 @@ export default function DashboardPage() {
     () => (user ? api.analytics.trend(months) : Promise.resolve(null)),
     [user, months],
   );
-  const breakdown = useFetch(
-    () => (user ? api.analytics.breakdown() : Promise.resolve(null)),
-    [user],
-  );
 
   useEventStream({
     "document.posted": () => {
@@ -58,18 +62,8 @@ export default function DashboardPage() {
       trend.reload();
     },
     "payment.registered": () => recentEntries.reload(),
-    "ledger.changed": () => {
-      trend.reload();
-      breakdown.reload();
-    },
+    "ledger.changed": () => trend.reload(),
   });
-
-  // Income and expense are separate compositions — one chart mixing revenue
-  // slices with cost slices has no total that means anything.
-  const incomeSlices = useMemo(
-    () => (breakdown.data?.slices ?? []).filter((s) => s.type === "INCOME"),
-    [breakdown.data],
-  );
 
   if (authLoading || !user) return null;
 
@@ -199,13 +193,65 @@ export default function DashboardPage() {
           onSelect={setBreakdownKind}
         >
           <AsyncState
-            loading={breakdown.loading}
-            error={breakdown.error}
-            data={incomeSlices.length ? incomeSlices : null}
+            loading={analytics.breakdown.loading}
+            error={analytics.breakdown.error}
+            data={analytics.breakdown.incomeSlices.length ? analytics.breakdown.incomeSlices : null}
             emptyTitle="Nothing posted with an analytic tag yet"
-            onRetry={breakdown.reload}
+            onRetry={analytics.breakdown.reload}
           >
             {(slices) => <CategoryChart data={slices} kind={breakdownKind} />}
+          </AsyncState>
+        </ChartCard>
+      </div>
+
+      <div className="grid-2">
+        {/* Ageing is the one figure here that reads documents rather than the
+            ledger, and deliberately: how late a debt is comes from the
+            invoice's due date, which no journal line carries. */}
+        <ChartCard
+          title="Ageing"
+          subtitle="What is outstanding, and how overdue — owed to us against what we owe"
+        >
+          <AsyncState
+            loading={analytics.ageing.loading}
+            error={analytics.ageing.error}
+            data={analytics.ageing.hasOutstanding ? analytics.ageing.rows : null}
+            emptyTitle="Nothing outstanding"
+            emptyHint="Every invoice and bill is settled — there is no ageing to show."
+            onRetry={analytics.ageing.reload}
+          >
+            {(rows) => <AgeingChart data={rows} />}
+          </AsyncState>
+        </ChartCard>
+
+        <ChartCard
+          title={analytics.direction === "customer" ? "Top customers" : "Top vendors"}
+          subtitle="By posted value over the last twelve months"
+          action={
+            <div className="chart-switch" role="group" aria-label="Contact direction">
+              {DIRECTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="chart-switch-btn"
+                  aria-pressed={analytics.direction === value}
+                  onClick={() => analytics.setDirection(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <AsyncState
+            loading={analytics.topContacts.loading}
+            error={analytics.topContacts.error}
+            data={analytics.topContacts.data}
+            isEmpty={(report) => report.rows.length === 0}
+            emptyTitle="Nothing posted against a contact yet"
+            onRetry={analytics.topContacts.reload}
+          >
+            {(report) => <CategoryChart data={report.rows} kind="bar" />}
           </AsyncState>
         </ChartCard>
       </div>
