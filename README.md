@@ -32,7 +32,7 @@ the actual problem domain rather than into plumbing.
 |---|---|---|
 | Sahil Patel | Team Lead | [@patelsahil2k03](https://github.com/patelsahil2k03) |
 | Devasya Joshi | Member | [@Devasya-Joshi](https://github.com/Devasya-Joshi) |
-| Gaurav Rathva | Member | [@gaurav-digiflux](https://github.com/gaurav-digiflux) |
+| Gaurav Rathva | Member | [@gaurav3000R](https://github.com/gaurav3000R) |
 | Pranjal Shah | Member | [@PranjalShah86](https://github.com/PranjalShah86) |
 
 Four working lanes — frontend, backend, reports and pitch, QA and review — are described in
